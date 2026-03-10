@@ -511,7 +511,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 			avg, ok := avgAgg.(*types.AvgAggregate)
 			assert.Assert(t, ok)
 			// avg of 999.99 and 699.99 ≈ 849.99
-			assert.Assert(t, math.Abs(849.99-*avg.Value) < 0.1)
+			assert.Assert(t, math.Abs(849.99-float64(*avg.Value)) < 0.1)
 		}
 	}
 }
@@ -823,7 +823,7 @@ func TestIntegration_Search_Request(t *testing.T) {
 	statsAgg, ok := statsRaw.(*types.StatsAggregate)
 	assert.Assert(t, ok)
 	assert.Equal(t, int64(2), statsAgg.Count)
-	assert.Assert(t, math.Abs(15.0-*statsAgg.Avg) < 0.001)
+	assert.Assert(t, math.Abs(15.0-float64(*statsAgg.Avg)) < 0.001)
 }
 
 // TestIntegration_SearchWithRequest demonstrates using the lower-level
