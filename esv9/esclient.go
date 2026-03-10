@@ -2,6 +2,8 @@
 // typed client, offering a type-safe Go API with distinct types for Index names,
 // Alias names, and other Elasticsearch concepts to prevent misuse.
 // Logging is provided via the standard slog package.
+//
+//go:generate go run ./generator
 package esv9
 
 import (
