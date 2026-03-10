@@ -7,7 +7,8 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
 	"gotest.tools/v3/assert"
-	"github.com/tomtwinkle/es-typed-go/query"
+
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
 func TestNewAggregations_Empty(t *testing.T) {

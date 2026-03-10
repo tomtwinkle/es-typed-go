@@ -1,4 +1,4 @@
-package estypedgo
+package esv8
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-// Package query provides a fluent QueryBuilder for constructing Elasticsearch queries.
+// Package query provides a fluent QueryBuilder for constructing Elasticsearch v8 queries.
 // Method chaining is intentionally limited to this package only.
 package query
 

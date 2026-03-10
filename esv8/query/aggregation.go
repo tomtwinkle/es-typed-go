@@ -5,7 +5,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
 )
 
-// AggregationBuilder constructs Elasticsearch aggregations using method chaining.
+// AggregationBuilder constructs Elasticsearch v8 aggregations using method chaining.
 // Method chaining is intentionally allowed only in this package (query).
 type AggregationBuilder struct {
 	aggs map[string]types.Aggregations

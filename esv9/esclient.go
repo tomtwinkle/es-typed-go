@@ -1,33 +1,34 @@
-// Package estypedgo provides a wrapper around the Elasticsearch go-elasticsearch typed client,
-// offering a type-safe Go API with distinct types for Index names, Alias names, and other
-// Elasticsearch concepts to prevent misuse. Logging is provided via the standard slog package.
-package estypedgo
+// Package esv9 provides a wrapper around the Elasticsearch go-elasticsearch v9
+// typed client, offering a type-safe Go API with distinct types for Index names,
+// Alias names, and other Elasticsearch concepts to prevent misuse.
+// Logging is provided via the standard slog package.
+package esv9
 
 import (
 	"context"
 	"fmt"
 	"time"
 
-	es8 "github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/count"
-	coredelete "github.com/elastic/go-elasticsearch/v8/typedapi/core/delete"
-	coreget "github.com/elastic/go-elasticsearch/v8/typedapi/core/get"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/info"
-	coreidx "github.com/elastic/go-elasticsearch/v8/typedapi/core/index"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/reindex"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
-	idxcreate "github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
-	idxdelete "github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete"
-	idxputalias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putalias"
-	idxputsettings "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putsettings"
-	idxrefresh "github.com/elastic/go-elasticsearch/v8/typedapi/indices/refresh"
-	idxupdatealiases "github.com/elastic/go-elasticsearch/v8/typedapi/indices/updatealiases"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	es9 "github.com/elastic/go-elasticsearch/v9"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/count"
+	coredelete "github.com/elastic/go-elasticsearch/v9/typedapi/core/delete"
+	coreget "github.com/elastic/go-elasticsearch/v9/typedapi/core/get"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/info"
+	coreidx "github.com/elastic/go-elasticsearch/v9/typedapi/core/index"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/reindex"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/update"
+	idxcreate "github.com/elastic/go-elasticsearch/v9/typedapi/indices/create"
+	idxdelete "github.com/elastic/go-elasticsearch/v9/typedapi/indices/delete"
+	idxputalias "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putalias"
+	idxputsettings "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putsettings"
+	idxrefresh "github.com/elastic/go-elasticsearch/v9/typedapi/indices/refresh"
+	idxupdatealiases "github.com/elastic/go-elasticsearch/v9/typedapi/indices/updatealiases"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
-// ESClient defines the interface for interacting with Elasticsearch.
+// ESClient defines the interface for interacting with Elasticsearch v9.
 // It is split into Index-oriented and Alias-oriented operations to encourage
 // correct use of Index vs Alias types.
 type ESClient interface {
@@ -113,12 +114,13 @@ type ESClient interface {
 	) (*reindex.Response, error)
 
 	// WaitForTaskCompletion polls the task API until the task finishes or the timeout elapses.
-	WaitForTaskCompletion(ctx context.Context, taskID types.TaskId, timeout time.Duration) error
+	// taskID is the task identifier string (e.g. "node:task_number").
+	WaitForTaskCompletion(ctx context.Context, taskID string, timeout time.Duration) error
 }
 
-// NewClient constructs an ESClient backed by the Elasticsearch typed client.
-func NewClient(config es8.Config) (ESClient, error) {
-	typedClient, err := es8.NewTypedClient(config)
+// NewClient constructs an ESClient backed by the Elasticsearch v9 typed client.
+func NewClient(config es9.Config) (ESClient, error) {
+	typedClient, err := es9.NewTypedClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create elasticsearch TypedClient: %w", err)
 	}

@@ -1,6 +1,6 @@
 //go:build integration
 
-package estypedgo_test
+package esv8_test
 
 import (
 	"context"
@@ -19,9 +19,9 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 	"gotest.tools/v3/assert"
 
-	estypedgo "github.com/tomtwinkle/es-typed-go"
+	esv8 "github.com/tomtwinkle/es-typed-go/esv8"
 	"github.com/tomtwinkle/es-typed-go/estype"
-	"github.com/tomtwinkle/es-typed-go/query"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
 // ---------------------------------------------------------------------------
@@ -35,9 +35,9 @@ func esURL() string {
 	return "http://localhost:9200"
 }
 
-func newTestClient(t *testing.T) estypedgo.ESClient {
+func newTestClient(t *testing.T) esv8.ESClient {
 	t.Helper()
-	client, err := estypedgo.NewClient(es8.Config{
+	client, err := esv8.NewClient(es8.Config{
 		Addresses: []string{esURL()},
 	})
 	assert.NilError(t, err)
@@ -45,7 +45,7 @@ func newTestClient(t *testing.T) estypedgo.ESClient {
 }
 
 // uniqueIndex returns a test-local index name that is cleaned up after the test.
-func uniqueIndex(t *testing.T, client estypedgo.ESClient) estype.Index {
+func uniqueIndex(t *testing.T, client esv8.ESClient) estype.Index {
 	t.Helper()
 	name := fmt.Sprintf("test-%d", time.Now().UnixNano())
 	idx, err := estype.ParseESIndex(name)

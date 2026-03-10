@@ -1,4 +1,4 @@
-package estypedgo
+package esv9
 
 import (
 	"context"
@@ -7,47 +7,47 @@ import (
 	"net/http"
 	"time"
 
-	es8 "github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/count"
-	coredelete "github.com/elastic/go-elasticsearch/v8/typedapi/core/delete"
-	coreget "github.com/elastic/go-elasticsearch/v8/typedapi/core/get"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/info"
-	coreidx "github.com/elastic/go-elasticsearch/v8/typedapi/core/index"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/reindex"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
-	idxcreate "github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
-	idxdelete "github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete"
-	idxputalias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putalias"
-	idxputsettings "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putsettings"
-	idxrefresh "github.com/elastic/go-elasticsearch/v8/typedapi/indices/refresh"
-	idxupdatealiases "github.com/elastic/go-elasticsearch/v8/typedapi/indices/updatealiases"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/conflicts"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/optype"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
+	es9 "github.com/elastic/go-elasticsearch/v9"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/count"
+	coredelete "github.com/elastic/go-elasticsearch/v9/typedapi/core/delete"
+	coreget "github.com/elastic/go-elasticsearch/v9/typedapi/core/get"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/info"
+	coreidx "github.com/elastic/go-elasticsearch/v9/typedapi/core/index"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/reindex"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/update"
+	idxcreate "github.com/elastic/go-elasticsearch/v9/typedapi/indices/create"
+	idxdelete "github.com/elastic/go-elasticsearch/v9/typedapi/indices/delete"
+	idxputalias "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putalias"
+	idxputsettings "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putsettings"
+	idxrefresh "github.com/elastic/go-elasticsearch/v9/typedapi/indices/refresh"
+	idxupdatealiases "github.com/elastic/go-elasticsearch/v9/typedapi/indices/updatealiases"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/conflicts"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/optype"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/refresh"
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
 // esClient is the concrete implementation of ESClient.
 type esClient struct {
-	typedClient *es8.TypedClient
+	typedClient *es9.TypedClient
 	logger      *slog.Logger
 }
 
 // newESClient creates a new esClient with the given typed client.
 // Uses the default slog logger.
-func newESClient(typedClient *es8.TypedClient) *esClient {
+func newESClient(typedClient *es9.TypedClient) *esClient {
 	return &esClient{
 		typedClient: typedClient,
 		logger:      slog.Default(),
 	}
 }
 
-// NewClientWithLogger constructs an ESClient backed by the Elasticsearch typed client
+// NewClientWithLogger constructs an ESClient backed by the Elasticsearch v9 typed client
 // using a custom slog.Logger.
-func NewClientWithLogger(config es8.Config, logger *slog.Logger) (ESClient, error) {
-	typedClient, err := es8.NewTypedClient(config)
+func NewClientWithLogger(config es9.Config, logger *slog.Logger) (ESClient, error) {
+	typedClient, err := es9.NewTypedClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create elasticsearch TypedClient: %w", err)
 	}
@@ -204,9 +204,14 @@ func (c *esClient) UpdateRefreshInterval(
 	if len(indices) == 0 {
 		return nil, fmt.Errorf("no indices found for alias %s", aliasName)
 	}
+	// In v9 the fluent RefreshInterval method requires a DurationVariant; set the field
+	// directly on the request struct (types.IndexSettings) to avoid the type constraint.
+	req := idxputsettings.NewRequest()
+	dur := types.Duration(interval.ESTypeDuration())
+	req.RefreshInterval = dur
 	res, err := c.typedClient.Indices.PutSettings().
 		Indices(indices[0].String()).
-		RefreshInterval(interval.ESTypeDuration()).
+		Request(req).
 		Do(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update refresh interval for alias %s: %w", aliasName, err)
@@ -383,14 +388,9 @@ func (c *esClient) DeltaReindex(
 	return c.typedClient.Reindex().Request(req).WaitForCompletion(waitForCompletion).Do(ctx)
 }
 
-func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID types.TaskId, timeout time.Duration) error {
+func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID string, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-
-	taskIDStr, err := taskIDToString(taskID)
-	if err != nil {
-		return err
-	}
 
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -400,9 +400,9 @@ func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID types.TaskI
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for task completion: %w", ctx.Err())
 		case <-ticker.C:
-			res, err := c.typedClient.Tasks.Get(taskIDStr).Do(ctx)
+			res, err := c.typedClient.Tasks.Get(taskID).Do(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get task status for task ID %s: %w", taskIDStr, err)
+				return fmt.Errorf("failed to get task status for task ID %s: %w", taskID, err)
 			}
 			if res.Completed {
 				if res.Error != nil {
@@ -411,45 +411,15 @@ func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID types.TaskI
 						reason = *res.Error.Reason
 					}
 					return fmt.Errorf("task %s completed with error: type=%s, reason=%s",
-						taskIDStr, res.Error.Type, reason)
+						taskID, res.Error.Type, reason)
 				}
 				c.logger.InfoContext(ctx, "Task completed successfully",
-					slog.String("task_id", taskIDStr))
+					slog.String("task_id", taskID))
 				return nil
 			}
 			c.logger.InfoContext(ctx, "Waiting for task to complete...",
-				slog.String("task_id", taskIDStr))
+				slog.String("task_id", taskID))
 		}
-	}
-}
-
-// taskIDToString converts a types.TaskId (any) to its string representation.
-func taskIDToString(taskID types.TaskId) (string, error) {
-	switch v := taskID.(type) {
-	case string:
-		return v, nil
-	case int:
-		return fmt.Sprintf("%d", v), nil
-	case int8:
-		return fmt.Sprintf("%d", v), nil
-	case int16:
-		return fmt.Sprintf("%d", v), nil
-	case int32:
-		return fmt.Sprintf("%d", v), nil
-	case int64:
-		return fmt.Sprintf("%d", v), nil
-	case uint:
-		return fmt.Sprintf("%d", v), nil
-	case uint8:
-		return fmt.Sprintf("%d", v), nil
-	case uint16:
-		return fmt.Sprintf("%d", v), nil
-	case uint32:
-		return fmt.Sprintf("%d", v), nil
-	case uint64:
-		return fmt.Sprintf("%d", v), nil
-	default:
-		return "", fmt.Errorf("unsupported task ID type: %T", v)
 	}
 }
 

@@ -5,7 +5,8 @@ import (
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"gotest.tools/v3/assert"
-	"github.com/tomtwinkle/es-typed-go/query"
+
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
 func TestBuilder_Build_Empty(t *testing.T) {
