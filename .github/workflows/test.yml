@@ -30,14 +30,12 @@ jobs:
         env:
           "cluster.name": elasticsearch-test
           "xpack.security.enabled": "false"
-          "http.host": "127.0.0.1"
-          "http.port": "9200"
           "discovery.type": single-node
           ES_JAVA_OPTS: "-Xms1g -Xmx1g"
         ports:
           - 9200:9200
         options: >-
-          --health-cmd "curl -sf http://127.0.0.1:9200/_cluster/health"
+          --health-cmd "curl -sf http://localhost:9200/_cluster/health"
           --health-interval 10s
           --health-timeout 10s
           --health-retries 30
