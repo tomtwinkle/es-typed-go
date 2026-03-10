@@ -1,0 +1,73 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+      - "copilot/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run unit tests
+        run: go test -v -count=1 -timeout=60s ./...
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      elasticsearch:
+        image: andpad/elasticsearch_with_kuromoji:8.9.0
+        env:
+          "cluster.name": elasticsearch-test
+          "xpack.security.enabled": "false"
+          "http.host": "127.0.0.1"
+          "http.port": "9200"
+          "discovery.type": single-node
+          ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -sf http://127.0.0.1:9200/_cluster/health"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 30
+          --health-start-period 60s
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Wait for Elasticsearch to be ready
+        run: |
+          echo "Waiting for Elasticsearch..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9200/_cluster/health; then
+              echo "Elasticsearch is ready"
+              break
+            fi
+            echo "Attempt $i: not ready yet, waiting 5s..."
+            sleep 5
+          done
+          curl -sf http://localhost:9200/_cluster/health || (echo "Elasticsearch failed to start" && exit 1)
+
+      - name: Run integration tests
+        run: go test -v -count=1 -tags=integration -timeout=180s ./...
+        env:
+          ES_URL: http://localhost:9200

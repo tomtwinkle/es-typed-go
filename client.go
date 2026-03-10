@@ -16,6 +16,7 @@ import (
 	coreidx "github.com/elastic/go-elasticsearch/v8/typedapi/core/index"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/reindex"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	idxcreate "github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
 	idxdelete "github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete"
 	idxputalias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putalias"
@@ -78,6 +79,9 @@ type ESClient interface {
 	// DeleteDocument deletes a document from the index by its ID.
 	DeleteDocument(ctx context.Context, indexName estype.Index, id string) (*coredelete.Response, error)
 
+	// UpdateDocument partially updates a document in the index.
+	UpdateDocument(ctx context.Context, indexName estype.Index, id string, req *update.Request) (*update.Response, error)
+
 	// Search executes a search request against the alias.
 	Search(
 		ctx context.Context,
@@ -91,6 +95,10 @@ type ESClient interface {
 		collapse *types.FieldCollapse,
 		scriptFields map[string]types.ScriptField,
 	) (*search.Response, error)
+
+	// SearchWithRequest executes a search using a fully-constructed search.Request.
+	// Use this for advanced scenarios not covered by the Search helper.
+	SearchWithRequest(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error)
 
 	// Reindex copies documents from sourceIndex to destIndex.
 	Reindex(ctx context.Context, sourceIndex, destIndex estype.Index, waitForCompletion bool) (*reindex.Response, error)

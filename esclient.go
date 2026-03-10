@@ -15,6 +15,7 @@ import (
 	coreidx "github.com/elastic/go-elasticsearch/v8/typedapi/core/index"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/reindex"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	idxcreate "github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
 	idxdelete "github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete"
 	idxputalias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putalias"
@@ -235,6 +236,10 @@ func (c *esClient) DeleteDocument(ctx context.Context, indexName estype.Index, i
 	return c.typedClient.Delete(indexName.String(), id).Do(ctx)
 }
 
+func (c *esClient) UpdateDocument(ctx context.Context, indexName estype.Index, id string, req *update.Request) (*update.Response, error) {
+	return c.typedClient.Update(indexName.String(), id).Request(req).Do(ctx)
+}
+
 func (c *esClient) Search(
 	ctx context.Context,
 	aliasName estype.Alias,
@@ -280,6 +285,22 @@ func (c *esClient) Search(
 	if err != nil {
 		searchErr := c.buildSearchError(err)
 		c.logger.ErrorContext(ctx, "Elasticsearch Search Request failed",
+			slog.String("alias", aliasName.String()),
+			slog.Any("error", searchErr),
+		)
+		return nil, searchErr
+	}
+	return res, nil
+}
+
+func (c *esClient) SearchWithRequest(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error) {
+	c.logger.DebugContext(ctx, "Elasticsearch SearchWithRequest",
+		slog.String("alias", aliasName.String()),
+	)
+	res, err := c.typedClient.Search().Index(aliasName.String()).Request(req).Do(ctx)
+	if err != nil {
+		searchErr := c.buildSearchError(err)
+		c.logger.ErrorContext(ctx, "Elasticsearch SearchWithRequest failed",
 			slog.String("alias", aliasName.String()),
 			slog.Any("error", searchErr),
 		)
