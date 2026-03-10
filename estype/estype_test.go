@@ -3,8 +3,7 @@ package estype_test
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/assert"
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
@@ -20,14 +19,14 @@ func TestParseESIndex(t *testing.T) {
 	t.Run("valid index name", func(t *testing.T) {
 		t.Parallel()
 		idx, err := estype.ParseESIndex("my-index")
-		require.NoError(t, err)
+		assert.NilError(t, err)
 		assert.Equal(t, estype.Index("my-index"), idx)
 	})
 
 	t.Run("empty index name returns error", func(t *testing.T) {
 		t.Parallel()
 		_, err := estype.ParseESIndex("")
-		require.Error(t, err)
+		assert.Assert(t, err != nil)
 	})
 }
 
@@ -43,14 +42,14 @@ func TestParseESAlias(t *testing.T) {
 	t.Run("valid alias name", func(t *testing.T) {
 		t.Parallel()
 		alias, err := estype.ParseESAlias("my-alias")
-		require.NoError(t, err)
+		assert.NilError(t, err)
 		assert.Equal(t, estype.Alias("my-alias"), alias)
 	})
 
 	t.Run("empty alias name returns error", func(t *testing.T) {
 		t.Parallel()
 		_, err := estype.ParseESAlias("")
-		require.Error(t, err)
+		assert.Assert(t, err != nil)
 	})
 }
 
@@ -156,10 +155,10 @@ func TestParseRefreshInterval(t *testing.T) {
 			t.Parallel()
 			got, err := estype.ParseRefreshInterval(tt.input)
 			if tt.wantErr {
-				require.Error(t, err)
+				assert.Assert(t, err != nil)
 				return
 			}
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}

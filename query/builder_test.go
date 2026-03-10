@@ -4,21 +4,20 @@ import (
 	"testing"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/assert"
 	"github.com/tomtwinkle/es-typed-go/query"
 )
 
 func TestBuilder_Build_Empty(t *testing.T) {
 	t.Parallel()
 	q := query.New().Build()
-	assert.Equal(t, types.Query{}, q)
+	assert.DeepEqual(t, types.Query{}, q)
 }
 
 func TestBuilder_MatchAll(t *testing.T) {
 	t.Parallel()
 	q := query.New().MatchAll(&types.MatchAllQuery{}).Build()
-	require.NotNil(t, q.MatchAll)
+	assert.Assert(t, q.MatchAll != nil)
 }
 
 func TestBuilder_Bool(t *testing.T) {
@@ -28,22 +27,22 @@ func TestBuilder_Bool(t *testing.T) {
 		Build()
 
 	q := query.New().Bool(bq).Build()
-	require.NotNil(t, q.Bool)
-	assert.Len(t, q.Bool.Must, 1)
+	assert.Assert(t, q.Bool != nil)
+	assert.Assert(t, len(q.Bool.Must) == 1)
 }
 
 func TestBuilder_Term(t *testing.T) {
 	t.Parallel()
 	val := "foo"
 	q := query.New().Term("status", types.TermQuery{Value: val}).Build()
-	require.NotNil(t, q.Term)
+	assert.Assert(t, q.Term != nil)
 	assert.Equal(t, val, q.Term["status"].Value)
 }
 
 func TestBuilder_Match(t *testing.T) {
 	t.Parallel()
 	q := query.New().Match("title", types.MatchQuery{Query: "hello"}).Build()
-	require.NotNil(t, q.Match)
+	assert.Assert(t, q.Match != nil)
 	assert.Equal(t, "hello", q.Match["title"].Query)
 }
 
@@ -53,8 +52,8 @@ func TestBuilder_Range(t *testing.T) {
 	rq := types.NewDateRangeQuery()
 	rq.Gte = &gt
 	q := query.New().Range("created_at", rq).Build()
-	require.NotNil(t, q.Range)
-	assert.NotNil(t, q.Range["created_at"])
+	assert.Assert(t, q.Range != nil)
+	assert.Assert(t, q.Range["created_at"] != nil)
 }
 
 func TestBoolQueryBuilder_ShouldAndFilter(t *testing.T) {
@@ -64,8 +63,8 @@ func TestBoolQueryBuilder_ShouldAndFilter(t *testing.T) {
 		Filter(types.Query{MatchAll: &types.MatchAllQuery{}}).
 		Build()
 
-	assert.Len(t, bq.Should, 1)
-	assert.Len(t, bq.Filter, 1)
+	assert.Assert(t, len(bq.Should) == 1)
+	assert.Assert(t, len(bq.Filter) == 1)
 }
 
 func TestBoolQueryBuilder_MustNot(t *testing.T) {
@@ -74,5 +73,5 @@ func TestBoolQueryBuilder_MustNot(t *testing.T) {
 		MustNot(types.Query{MatchAll: &types.MatchAllQuery{}}).
 		Build()
 
-	assert.Len(t, bq.MustNot, 1)
+	assert.Assert(t, len(bq.MustNot) == 1)
 }

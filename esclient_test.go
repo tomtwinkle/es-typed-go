@@ -3,8 +3,7 @@ package estypedgo
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"gotest.tools/v3/assert"
 )
 
 func Test_taskIDToString(t *testing.T) {
@@ -35,10 +34,10 @@ func Test_taskIDToString(t *testing.T) {
 			t.Parallel()
 			got, err := taskIDToString(tt.taskID)
 			if tt.wantErr {
-				require.Error(t, err)
+				assert.Assert(t, err != nil)
 				return
 			}
-			require.NoError(t, err)
+			assert.NilError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -46,5 +45,5 @@ func Test_taskIDToString(t *testing.T) {
 
 func Test_isElasticsearchError_nil(t *testing.T) {
 	t.Parallel()
-	assert.False(t, isElasticsearchError(nil, nil))
+	assert.Assert(t, !isElasticsearchError(nil, nil))
 }
