@@ -12,6 +12,7 @@ import (
 	"time"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
+	"github.com/google/uuid"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
@@ -47,7 +48,7 @@ func newTestClient(t *testing.T) esv8.ESClient {
 // uniqueIndex returns a test-local index name that is cleaned up after the test.
 func uniqueIndex(t *testing.T, client esv8.ESClient) estype.Index {
 	t.Helper()
-	name := fmt.Sprintf("test-%d", time.Now().UnixNano())
+	name := fmt.Sprintf("test-%s", uuid.New().String())
 	idx, err := estype.ParseESIndex(name)
 	assert.NilError(t, err)
 	t.Cleanup(func() {
@@ -62,7 +63,7 @@ func uniqueIndex(t *testing.T, client esv8.ESClient) estype.Index {
 // uniqueAlias returns an alias name unique to the test.
 func uniqueAlias(t *testing.T) estype.Alias {
 	t.Helper()
-	name := fmt.Sprintf("alias-%d", time.Now().UnixNano())
+	name := fmt.Sprintf("alias-%s", uuid.New().String())
 	alias, err := estype.ParseESAlias(name)
 	assert.NilError(t, err)
 	return alias
@@ -341,7 +342,7 @@ func TestIntegration_AliasRefresh_NoIndices(t *testing.T) {
 	client := newTestClient(t)
 	ctx := context.Background()
 
-	alias, _ := estype.ParseESAlias(fmt.Sprintf("alias-notexist-%d", time.Now().UnixNano()))
+	alias, _ := estype.ParseESAlias(fmt.Sprintf("alias-notexist-%s", uuid.New().String()))
 	_, err := client.AliasRefresh(ctx, alias)
 	assert.Assert(t, err != nil)
 	assert.ErrorContains(t, err, "no indices found")

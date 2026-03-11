@@ -23,6 +23,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/updatebyquery"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
 
 	"github.com/tomtwinkle/es-typed-go/estype"
@@ -51,7 +52,7 @@ func newSpecClient(t *testing.T) esv8.ESClientSpec {
 func uniqueSpecIndex(t *testing.T, client esv8.ESClientSpec) string {
 	t.Helper()
 	ctx := context.Background()
-	name := fmt.Sprintf("spectest-%d", time.Now().UnixNano())
+	name := fmt.Sprintf("spectest-%s", uuid.New().String())
 	_, err := client.IndicesCreate(ctx, name, nil)
 	assert.NilError(t, err)
 	t.Cleanup(func() {
@@ -102,7 +103,7 @@ func TestIntegration_Spec_IndicesCreateDelete(t *testing.T) {
 	t.Parallel()
 	client := newSpecClient(t)
 	ctx := context.Background()
-	name := fmt.Sprintf("spec-idx-%d", time.Now().UnixNano())
+	name := fmt.Sprintf("spec-idx-%s", uuid.New().String())
 	t.Cleanup(func() {
 		cctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()

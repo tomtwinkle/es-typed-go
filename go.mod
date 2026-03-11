@@ -5,6 +5,7 @@ go 1.24.13
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.19.3
 	github.com/elastic/go-elasticsearch/v9 v9.3.1
+	github.com/google/uuid v1.6.0
 	gotest.tools/v3 v3.5.2
 )
 
