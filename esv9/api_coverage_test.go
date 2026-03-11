@@ -612,10 +612,10 @@ var specEndpoints = []struct {
 }
 
 // TestAPICoverage reports which Elasticsearch spec endpoints have a
-// corresponding method on the ESClient interface and which do not.
+// corresponding method on the ESClientSpec interface and which do not.
 // Run with -v to see the full list of uncovered endpoints.
 func TestAPICoverage(t *testing.T) {
-	ifaceType := reflect.TypeOf((*esv9.ESClient)(nil)).Elem()
+	ifaceType := reflect.TypeOf((*esv9.ESClientSpec)(nil)).Elem()
 
 	var covered, missing int
 	for _, ep := range specEndpoints {
@@ -630,5 +630,5 @@ func TestAPICoverage(t *testing.T) {
 
 	total := covered + missing
 	pct := float64(covered) / float64(total) * 100
-	t.Logf("API coverage: %d/%d (%.1f%%) spec endpoints have a matching ESClient method", covered, total, pct)
+	t.Logf("API coverage: %d/%d (%.1f%%) spec endpoints have a matching ESClientSpec method", covered, total, pct)
 }

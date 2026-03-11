@@ -128,5 +128,16 @@ func NewClient(config es8.Config) (ESClient, error) {
 	return newESClient(typedClient), nil
 }
 
+// NewSpecClient constructs an ESClientSpec backed by the Elasticsearch v8 typed client.
+// ESClientSpec is a superset of ESClient that additionally exposes every
+// Elasticsearch spec-named endpoint as a typed Go method.
+func NewSpecClient(config es8.Config) (ESClientSpec, error) {
+	typedClient, err := es8.NewTypedClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create elasticsearch TypedClient: %w", err)
+	}
+	return newESClient(typedClient), nil
+}
+
 // ensure compile-time check that *esClient implements ESClient.
 var _ ESClient = (*esClient)(nil)
