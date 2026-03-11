@@ -1244,7 +1244,7 @@ type ESClientSpec interface {
 	// NodesUsage wraps the Elasticsearch spec endpoint nodes.usage.
 	NodesUsage(ctx context.Context) (*nodes_usage.Response, error)
 	// OpenPointInTime wraps the Elasticsearch spec endpoint open_point_in_time.
-	OpenPointInTime(ctx context.Context, index string, req *core_open_point_in_time.Request) (*core_open_point_in_time.Response, error)
+	OpenPointInTime(ctx context.Context, index string, keepAlive string, req *core_open_point_in_time.Request) (*core_open_point_in_time.Response, error)
 	// Ping wraps the Elasticsearch spec endpoint ping.
 	Ping(ctx context.Context) (bool, error)
 	// ProfilingFlamegraph wraps the Elasticsearch spec endpoint profiling.flamegraph.

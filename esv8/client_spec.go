@@ -1951,8 +1951,8 @@ func (c *esClient) NodesUsage(ctx context.Context) (*nodes_usage.Response, error
 	return c.typedClient.Nodes.Usage().Do(ctx)
 }
 
-func (c *esClient) OpenPointInTime(ctx context.Context, index string, req *core_open_point_in_time.Request) (*core_open_point_in_time.Response, error) {
-	return c.typedClient.OpenPointInTime(index).Request(req).Do(ctx)
+func (c *esClient) OpenPointInTime(ctx context.Context, index string, keepAlive string, req *core_open_point_in_time.Request) (*core_open_point_in_time.Response, error) {
+	return c.typedClient.OpenPointInTime(index).KeepAlive(keepAlive).Request(req).Do(ctx)
 }
 
 func (c *esClient) Ping(ctx context.Context) (bool, error) {
