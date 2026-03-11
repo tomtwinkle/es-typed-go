@@ -479,7 +479,7 @@ assert.Assert(t, res.Found, "document should be found")
 assert.Equal(t, docID, res.Id_)
 }
 
-func TestIntegration_Spec_GetVsGetDocument(t *testing.T) {
+func TestIntegration_Spec_GetMatchesGetDocument(t *testing.T) {
 client := newSpecClient(t)
 ctx := context.Background()
 idx := uniqueSpecIndex(t, client)
