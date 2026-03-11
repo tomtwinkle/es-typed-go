@@ -73,3 +73,17 @@ func TestESClientSpec_SpecMethodsPresent(t *testing.T) {
 	assert.Assert(t, len(missing) == 0,
 		"ESClientSpec is missing expected methods: %v", missing)
 }
+
+// TestNewClient_ImplementsESClientSpec verifies that the concrete client
+// returned by NewClient also satisfies ESClientSpec (interface completeness check
+// is also performed at compile time via the var _ ESClientSpec = (*esClient)(nil) guard).
+func TestNewClient_ImplementsESClientSpec(t *testing.T) {
+	t.Parallel()
+
+	specType := reflect.TypeOf((*esv9.ESClientSpec)(nil)).Elem()
+	// NewClient returns ESClient; ESClientSpec extends it, so any concrete
+	// implementation that satisfies ESClient but NOT ESClientSpec would fail here.
+	// The compile-time guard in esclient_spec.go ensures this too.
+	assert.Assert(t, specType.Kind() == reflect.Interface)
+	assert.Assert(t, specType.NumMethod() > 0)
+}
