@@ -82,6 +82,7 @@ type productDoc struct {
 // ---------------------------------------------------------------------------
 
 func TestIntegration_Info(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 
@@ -94,6 +95,7 @@ func TestIntegration_Info(t *testing.T) {
 }
 
 func TestIntegration_CreateDeleteIndex(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -121,6 +123,7 @@ func TestIntegration_CreateDeleteIndex(t *testing.T) {
 }
 
 func TestIntegration_CreateIndexWithMappings(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -142,6 +145,7 @@ func TestIntegration_CreateIndexWithMappings(t *testing.T) {
 }
 
 func TestIntegration_AliasLifecycle(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -179,6 +183,7 @@ func TestIntegration_AliasLifecycle(t *testing.T) {
 }
 
 func TestIntegration_UpdateAliases(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx1 := uniqueIndex(t, client)
@@ -218,6 +223,7 @@ func TestIntegration_UpdateAliases(t *testing.T) {
 }
 
 func TestIntegration_DocumentCRUD(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -285,6 +291,7 @@ func TestIntegration_DocumentCRUD(t *testing.T) {
 }
 
 func TestIntegration_IndexDocumentCount(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -312,6 +319,7 @@ func TestIntegration_IndexDocumentCount(t *testing.T) {
 }
 
 func TestIntegration_AliasRefresh(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -329,6 +337,7 @@ func TestIntegration_AliasRefresh(t *testing.T) {
 }
 
 func TestIntegration_AliasRefresh_NoIndices(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 
@@ -339,6 +348,7 @@ func TestIntegration_AliasRefresh_NoIndices(t *testing.T) {
 }
 
 func TestIntegration_Search_MatchAll(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -373,6 +383,7 @@ func TestIntegration_Search_MatchAll(t *testing.T) {
 }
 
 func TestIntegration_Search_TermQuery(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -408,6 +419,7 @@ func TestIntegration_Search_TermQuery(t *testing.T) {
 }
 
 func TestIntegration_Search_BoolQuery(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -451,6 +463,7 @@ func TestIntegration_Search_BoolQuery(t *testing.T) {
 }
 
 func TestIntegration_Search_WithAggregations(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -517,6 +530,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 }
 
 func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -570,6 +584,7 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 }
 
 func TestIntegration_RefreshInterval(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -603,6 +618,7 @@ func TestIntegration_RefreshInterval(t *testing.T) {
 }
 
 func TestIntegration_Reindex(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	srcIdx := uniqueIndex(t, client)
@@ -642,6 +658,7 @@ func TestIntegration_Reindex(t *testing.T) {
 }
 
 func TestIntegration_DeltaReindex(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	srcIdx := uniqueIndex(t, client)
@@ -699,6 +716,7 @@ func TestIntegration_DeltaReindex(t *testing.T) {
 }
 
 func TestIntegration_Search_WithSorting(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -747,6 +765,7 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 }
 
 func TestIntegration_Search_WithPagination(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -780,6 +799,7 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 }
 
 func TestIntegration_Search_Request(t *testing.T) {
+	t.Parallel()
 	// Tests the search.Request-based helper (SearchWithRequest) that would be
 	// a lower-level alternative to the high-level Search method.
 	// Here we verify the existing Search method produces the same results
@@ -829,6 +849,7 @@ func TestIntegration_Search_Request(t *testing.T) {
 // TestIntegration_SearchWithRequest demonstrates using the lower-level
 // search.Request struct directly for scenarios not covered by the high-level Search.
 func TestIntegration_SearchWithRequest(t *testing.T) {
+	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
