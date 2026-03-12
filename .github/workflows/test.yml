@@ -1,0 +1,114 @@
+name: Test
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+
+      - name: Run unit tests
+        run: go test -v -count=1 -timeout=60s ./...
+
+  integration-test-v8:
+    name: Integration Tests (v8)
+    runs-on: ubuntu-latest
+
+    services:
+      elasticsearch:
+        image: andpad/elasticsearch_with_kuromoji:8.9.0
+        env:
+          "cluster.name": elasticsearch-test
+          "xpack.security.enabled": "false"
+          "discovery.type": single-node
+          ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -sf http://localhost:9200/_cluster/health"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 30
+          --health-start-period 60s
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+
+      - name: Wait for Elasticsearch to be ready
+        run: |
+          echo "Waiting for Elasticsearch..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9200/_cluster/health; then
+              echo "Elasticsearch is ready"
+              break
+            fi
+            echo "Attempt $i: not ready yet, waiting 5s..."
+            sleep 5
+          done
+          curl -sf http://localhost:9200/_cluster/health || (echo "Elasticsearch failed to start" && exit 1)
+
+      - name: Run v8 integration tests
+        run: go test -v -count=1 -tags=integration -timeout=180s ./estype/... ./esv8/...
+        env:
+          ES_URL: http://localhost:9200
+
+  integration-test-v9:
+    name: Integration Tests (v9)
+    runs-on: ubuntu-latest
+
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:9.0.0
+        env:
+          "cluster.name": elasticsearch-test
+          "xpack.security.enabled": "false"
+          "discovery.type": single-node
+          "cluster.routing.allocation.disk.threshold_enabled": "false"
+          ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd "curl -sf http://localhost:9200/_cluster/health"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 30
+          --health-start-period 60s
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
+        with:
+          go-version-file: go.mod
+
+      - name: Wait for Elasticsearch to be ready
+        run: |
+          echo "Waiting for Elasticsearch..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9200/_cluster/health; then
+              echo "Elasticsearch is ready"
+              break
+            fi
+            echo "Attempt $i: not ready yet, waiting 5s..."
+            sleep 5
+          done
+          curl -sf http://localhost:9200/_cluster/health || (echo "Elasticsearch failed to start" && exit 1)
+
+      - name: Run v9 integration tests
+        run: go test -v -count=1 -tags=integration -timeout=180s ./esv9/...
+        env:
+          ES_URL: http://localhost:9200
