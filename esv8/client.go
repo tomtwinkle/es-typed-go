@@ -1,8 +1,11 @@
 package esv8
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"time"
@@ -485,4 +488,51 @@ func unwrapErr(err error) error {
 		return u.Unwrap()
 	}
 	return nil
+}
+
+// performRaw executes a raw HTTP request against the Elasticsearch cluster and
+// returns the response body as a json.RawMessage.
+// path must be a URL path starting with "/" (e.g. "/_internal/desired_balance").
+// body may be nil for requests without a request body.
+//
+// The URL is constructed as "http://" + path which produces an empty-host URL
+// (e.g. "http:///_internal/desired_balance"). This is the same pattern used
+// internally by the go-elasticsearch TypedAPI: the transport resolves the actual
+// host from its connection pool at request time.
+func (c *esClient) performRaw(ctx context.Context, method, path string, body json.RawMessage) (json.RawMessage, error) {
+	var bodyReader io.Reader
+	if len(body) > 0 {
+		bodyReader = bytes.NewReader(body)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, method, "http://"+path, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("building HTTP request %s %s: %w", method, path, err)
+	}
+	if bodyReader != nil {
+		req.Header.Set("Content-Type", "application/vnd.elasticsearch+json;compatible-with=8")
+	}
+	req.Header.Set("Accept", "application/vnd.elasticsearch+json;compatible-with=8")
+
+	res, err := c.typedClient.Perform(req)
+	if err != nil {
+		return nil, fmt.Errorf("performing %s %s: %w", method, path, err)
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf("reading response body for %s %s: %w", method, path, err)
+	}
+
+	if res.StatusCode >= 400 {
+		const maxErrBodyLen = 512
+		errBody := data
+		if len(errBody) > maxErrBodyLen {
+			errBody = errBody[:maxErrBodyLen]
+		}
+		return nil, fmt.Errorf("unexpected status %d for %s %s: %s", res.StatusCode, method, path, errBody)
+	}
+
+	return json.RawMessage(data), nil
 }
