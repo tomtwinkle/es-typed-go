@@ -5,7 +5,7 @@ package esv9
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"strconv"
 
 	async_search_delete "github.com/elastic/go-elasticsearch/v9/typedapi/asyncsearch/delete"
 	async_search_get "github.com/elastic/go-elasticsearch/v9/typedapi/asyncsearch/get"
@@ -1512,7 +1512,7 @@ func (c *esClient) InferenceDelete(ctx context.Context, inferenceid string) (*in
 }
 
 func (c *esClient) InferenceEmbedding(ctx context.Context, inferenceid string, req *inference_text_embedding.Request) (*inference_text_embedding.Response, error) {
-	return nil, fmt.Errorf("InferenceEmbedding: not yet available in go-elasticsearch v9.3.1")
+	return c.typedClient.Inference.TextEmbedding(inferenceid).Request(req).Do(ctx)
 }
 
 func (c *esClient) InferenceGet(ctx context.Context) (*inference_get.Response, error) {
@@ -1580,7 +1580,7 @@ func (c *esClient) InferencePutElser(ctx context.Context, tasktype string, elser
 }
 
 func (c *esClient) InferencePutFireworksai(ctx context.Context, tasktype string, fireworksaiinferenceid string, req *inference_put.Request) (*inference_put.Response, error) {
-	return nil, fmt.Errorf("InferencePutFireworksai: not yet available in go-elasticsearch v9.3.1")
+	return c.typedClient.Inference.Put(fireworksaiinferenceid).TaskType(tasktype).Request(req).Do(ctx)
 }
 
 func (c *esClient) InferencePutGoogleaistudio(ctx context.Context, tasktype string, googleaistudioinferenceid string, req *inference_put_googleaistudio.Request) (*inference_put_googleaistudio.Response, error) {
@@ -1700,27 +1700,27 @@ func (c *esClient) IngestSimulate(ctx context.Context, req *ingest_simulate.Requ
 }
 
 func (c *esClient) InternalDeleteDesiredBalance(ctx context.Context) (json.RawMessage, error) {
-	return nil, fmt.Errorf("InternalDeleteDesiredBalance: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "DELETE", "/_internal/desired_balance", nil)
 }
 
 func (c *esClient) InternalDeleteDesiredNodes(ctx context.Context) (json.RawMessage, error) {
-	return nil, fmt.Errorf("InternalDeleteDesiredNodes: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "DELETE", "/_internal/desired_nodes", nil)
 }
 
 func (c *esClient) InternalGetDesiredBalance(ctx context.Context) (json.RawMessage, error) {
-	return nil, fmt.Errorf("InternalGetDesiredBalance: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "GET", "/_internal/desired_balance", nil)
 }
 
 func (c *esClient) InternalGetDesiredNodes(ctx context.Context) (json.RawMessage, error) {
-	return nil, fmt.Errorf("InternalGetDesiredNodes: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "GET", "/_internal/desired_nodes", nil)
 }
 
 func (c *esClient) InternalPrevalidateNodeRemoval(ctx context.Context) (json.RawMessage, error) {
-	return nil, fmt.Errorf("InternalPrevalidateNodeRemoval: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "GET", "/_internal/prevalidate_node_removal", nil)
 }
 
 func (c *esClient) InternalUpdateDesiredNodes(ctx context.Context, historyid string, version int64, req json.RawMessage) (json.RawMessage, error) {
-	return nil, fmt.Errorf("InternalUpdateDesiredNodes: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "PUT", "/_internal/desired_nodes/"+historyid+"/"+strconv.FormatInt(version, 10), req)
 }
 
 func (c *esClient) KnnSearch(ctx context.Context, index string, req *core_knn_search.Request) (*core_knn_search.Response, error) {
@@ -2149,23 +2149,23 @@ func (c *esClient) ProfilingTopnFunctions(ctx context.Context, req *profiling_to
 }
 
 func (c *esClient) ProjectCreateManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
-	return nil, fmt.Errorf("ProjectCreateManyRouting: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "POST", "/_project/routing/create", req)
 }
 
 func (c *esClient) ProjectCreateRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
-	return nil, fmt.Errorf("ProjectCreateRouting: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "POST", "/_project/routing", req)
 }
 
 func (c *esClient) ProjectDeleteRouting(ctx context.Context, routingid string) (json.RawMessage, error) {
-	return nil, fmt.Errorf("ProjectDeleteRouting: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "DELETE", "/_project/routing/"+routingid, nil)
 }
 
 func (c *esClient) ProjectGetManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
-	return nil, fmt.Errorf("ProjectGetManyRouting: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "POST", "/_project/routing/get", req)
 }
 
 func (c *esClient) ProjectGetRouting(ctx context.Context, routingid string) (json.RawMessage, error) {
-	return nil, fmt.Errorf("ProjectGetRouting: not yet available in go-elasticsearch v9.3.1")
+	return c.performRaw(ctx, "GET", "/_project/routing/"+routingid, nil)
 }
 
 func (c *esClient) ProjectTags(ctx context.Context) (*project_tags.Response, error) {
