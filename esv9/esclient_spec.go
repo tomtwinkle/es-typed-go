@@ -4,6 +4,7 @@ package esv9
 
 import (
 	"context"
+	"encoding/json"
 
 	async_search_delete "github.com/elastic/go-elasticsearch/v9/typedapi/asyncsearch/delete"
 	async_search_get "github.com/elastic/go-elasticsearch/v9/typedapi/asyncsearch/get"
@@ -1044,6 +1045,8 @@ type ESClientSpec interface {
 	InferenceCompletion(ctx context.Context, inferenceid string, req *inference_completion.Request) (inference_completion.Response, error)
 	// InferenceDelete wraps the Elasticsearch spec endpoint inference.delete.
 	InferenceDelete(ctx context.Context, inferenceid string) (*inference_delete.Response, error)
+	// InferenceEmbedding wraps the Elasticsearch spec endpoint inference.embedding.
+	InferenceEmbedding(ctx context.Context, inferenceid string, req *inference_text_embedding.Request) (*inference_text_embedding.Response, error)
 	// InferenceGet wraps the Elasticsearch spec endpoint inference.get.
 	InferenceGet(ctx context.Context) (*inference_get.Response, error)
 	// InferenceInference wraps the Elasticsearch spec endpoint inference.inference.
@@ -1076,6 +1079,8 @@ type ESClientSpec interface {
 	InferencePutElasticsearch(ctx context.Context, tasktype string, elasticsearchinferenceid string, req *inference_put_elasticsearch.Request) (*inference_put_elasticsearch.Response, error)
 	// InferencePutElser wraps the Elasticsearch spec endpoint inference.put_elser.
 	InferencePutElser(ctx context.Context, tasktype string, elserinferenceid string, req *inference_put_elser.Request) (*inference_put_elser.Response, error)
+	// InferencePutFireworksai wraps the Elasticsearch spec endpoint inference.put_fireworksai.
+	InferencePutFireworksai(ctx context.Context, tasktype string, fireworksaiinferenceid string, req *inference_put.Request) (*inference_put.Response, error)
 	// InferencePutGoogleaistudio wraps the Elasticsearch spec endpoint inference.put_googleaistudio.
 	InferencePutGoogleaistudio(ctx context.Context, tasktype string, googleaistudioinferenceid string, req *inference_put_googleaistudio.Request) (*inference_put_googleaistudio.Response, error)
 	// InferencePutGooglevertexai wraps the Elasticsearch spec endpoint inference.put_googlevertexai.
@@ -1134,6 +1139,18 @@ type ESClientSpec interface {
 	IngestPutPipeline(ctx context.Context, id string, req *ingest_put_pipeline.Request) (*ingest_put_pipeline.Response, error)
 	// IngestSimulate wraps the Elasticsearch spec endpoint ingest.simulate.
 	IngestSimulate(ctx context.Context, req *ingest_simulate.Request) (*ingest_simulate.Response, error)
+	// InternalDeleteDesiredBalance wraps the Elasticsearch spec endpoint _internal.delete_desired_balance.
+	InternalDeleteDesiredBalance(ctx context.Context) (json.RawMessage, error)
+	// InternalDeleteDesiredNodes wraps the Elasticsearch spec endpoint _internal.delete_desired_nodes.
+	InternalDeleteDesiredNodes(ctx context.Context) (json.RawMessage, error)
+	// InternalGetDesiredBalance wraps the Elasticsearch spec endpoint _internal.get_desired_balance.
+	InternalGetDesiredBalance(ctx context.Context) (json.RawMessage, error)
+	// InternalGetDesiredNodes wraps the Elasticsearch spec endpoint _internal.get_desired_nodes.
+	InternalGetDesiredNodes(ctx context.Context) (json.RawMessage, error)
+	// InternalPrevalidateNodeRemoval wraps the Elasticsearch spec endpoint _internal.prevalidate_node_removal.
+	InternalPrevalidateNodeRemoval(ctx context.Context) (json.RawMessage, error)
+	// InternalUpdateDesiredNodes wraps the Elasticsearch spec endpoint _internal.update_desired_nodes.
+	InternalUpdateDesiredNodes(ctx context.Context, historyid string, version int64, req json.RawMessage) (json.RawMessage, error)
 	// KnnSearch wraps the Elasticsearch spec endpoint knn_search.
 	KnnSearch(ctx context.Context, index string, req *core_knn_search.Request) (*core_knn_search.Response, error)
 	// LicenseDelete wraps the Elasticsearch spec endpoint license.delete.
@@ -1344,6 +1361,16 @@ type ESClientSpec interface {
 	ProfilingStatus(ctx context.Context) (*profiling_status.Response, error)
 	// ProfilingTopnFunctions wraps the Elasticsearch spec endpoint profiling.topn_functions.
 	ProfilingTopnFunctions(ctx context.Context, req *profiling_topn_functions.Request) (profiling_topn_functions.Response, error)
+	// ProjectCreateManyRouting wraps the Elasticsearch spec endpoint project.create_many_routing.
+	ProjectCreateManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error)
+	// ProjectCreateRouting wraps the Elasticsearch spec endpoint project.create_routing.
+	ProjectCreateRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error)
+	// ProjectDeleteRouting wraps the Elasticsearch spec endpoint project.delete_routing.
+	ProjectDeleteRouting(ctx context.Context, routingid string) (json.RawMessage, error)
+	// ProjectGetManyRouting wraps the Elasticsearch spec endpoint project.get_many_routing.
+	ProjectGetManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error)
+	// ProjectGetRouting wraps the Elasticsearch spec endpoint project.get_routing.
+	ProjectGetRouting(ctx context.Context, routingid string) (json.RawMessage, error)
 	// ProjectTags wraps the Elasticsearch spec endpoint project.tags.
 	ProjectTags(ctx context.Context) (*project_tags.Response, error)
 	// PutScript wraps the Elasticsearch spec endpoint put_script.
