@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
 
 	es9 "github.com/elastic/go-elasticsearch/v9"
@@ -460,22 +461,37 @@ func unwrapErr(err error) error {
 	return nil
 }
 
+// schemeFromTransport returns "https" when the transport's connection pool is
+// configured with HTTPS addresses, and "http" otherwise. It uses a local
+// interface to avoid importing elastictransport directly.
+func (c *esClient) schemeFromTransport() string {
+	type urlProvider interface {
+		URLs() []*url.URL
+	}
+	if up, ok := c.typedClient.Transport.(urlProvider); ok {
+		if urls := up.URLs(); len(urls) > 0 && urls[0].Scheme == "https" {
+			return "https"
+		}
+	}
+	return "http"
+}
+
 // performRaw executes a raw HTTP request against the Elasticsearch cluster and
 // returns the response body as a json.RawMessage.
 // path must be a URL path starting with "/" (e.g. "/_internal/desired_balance").
 // body may be nil for requests without a request body.
 //
-// The URL is constructed as "http://" + path which produces an empty-host URL
-// (e.g. "http:///_internal/desired_balance"). This is the same pattern used
-// internally by the go-elasticsearch TypedAPI: the transport resolves the actual
-// host from its connection pool at request time.
+// The scheme (http or https) is detected from the transport's connection pool,
+// so both plain HTTP and TLS-secured HTTPS clusters are supported.
+// The host part of the URL is left empty; the transport fills it in from the
+// connection pool at request time, exactly as the go-elasticsearch TypedAPI does.
 func (c *esClient) performRaw(ctx context.Context, method, path string, body json.RawMessage) (json.RawMessage, error) {
 	var bodyReader io.Reader
 	if len(body) > 0 {
 		bodyReader = bytes.NewReader(body)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, "http://"+path, bodyReader)
+	req, err := http.NewRequestWithContext(ctx, method, c.schemeFromTransport()+"://"+path, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("building HTTP request %s %s: %w", method, path, err)
 	}
