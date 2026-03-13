@@ -306,7 +306,9 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	createReq := corecreate.Request(mustMarshal(t, map[string]any{"status": "pending"}))
 	_, err := client.Create(ctx, idx, "ubq-1", &createReq)
 	assert.NilError(t, err)
-	_, _ = client.IndicesRefresh(ctx)
+	// Refresh only the test index, not all indices, to avoid interference from
+	// YELLOW shards of other parallel tests when running against ES 9.
+	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
 	src := "ctx._source.status = 'done'"
