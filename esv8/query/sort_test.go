@@ -245,6 +245,27 @@ func TestSortBuilder_GeoDistance_WithOptions(t *testing.T) {
 	assert.Equal(t, true, *gs.IgnoreUnmapped)
 }
 
+func TestSortBuilder_GeoDistance_WithNested(t *testing.T) {
+	t.Parallel()
+	sorts := query.NewSort().
+		GeoDistance(
+			estype.Field("items.location"),
+			types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0},
+			sortorder.Asc,
+			query.WithGeoDistanceNested(&types.NestedSortValue{Path: "items"}),
+		).
+		Build()
+
+	assert.Assert(t, len(sorts) == 1)
+	so, ok := sorts[0].(types.SortOptions)
+	assert.Assert(t, ok)
+	gs := so.GeoDistance_
+	assert.Assert(t, gs != nil)
+	assert.Equal(t, sortorder.Asc, *gs.Order)
+	assert.Assert(t, gs.Nested != nil)
+	assert.Equal(t, "items", gs.Nested.Path)
+}
+
 func TestSortBuilder_GeoDistanceCustom(t *testing.T) {
 	t.Parallel()
 	order := sortorder.Desc
@@ -307,6 +328,28 @@ func TestSortBuilder_Script_WithOptions(t *testing.T) {
 	assert.Equal(t, sortorder.Asc, *ss.Order)
 	assert.Equal(t, scriptsorttype.Number, *ss.Type)
 	assert.Equal(t, sortmode.Avg, *ss.Mode)
+}
+
+func TestSortBuilder_Script_WithNested(t *testing.T) {
+	t.Parallel()
+	source := "doc['items.price'].value"
+	sorts := query.NewSort().
+		Script(
+			types.Script{Source: &source},
+			scriptsorttype.Number,
+			sortorder.Desc,
+			query.WithScriptSortNested(&types.NestedSortValue{Path: "items"}),
+		).
+		Build()
+
+	assert.Assert(t, len(sorts) == 1)
+	so, ok := sorts[0].(types.SortOptions)
+	assert.Assert(t, ok)
+	ss := so.Script_
+	assert.Assert(t, ss != nil)
+	assert.Equal(t, sortorder.Desc, *ss.Order)
+	assert.Assert(t, ss.Nested != nil)
+	assert.Equal(t, "items", ss.Nested.Path)
 }
 
 func TestSortBuilder_ScriptCustom(t *testing.T) {
