@@ -1716,8 +1716,6 @@ func WithDenseVectorIndex(v bool) DenseVectorPropertyOption {
 	return func(p *types.DenseVectorProperty) { p.Index = &v }
 }
 
-
-
 // ---------------------------------------------------------------------------
 // Sparse Vector
 // ---------------------------------------------------------------------------

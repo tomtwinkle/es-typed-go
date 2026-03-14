@@ -2,6 +2,9 @@ package query
 
 import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/distanceunit"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/geodistancetype"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/scriptsorttype"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortmode"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"github.com/tomtwinkle/es-typed-go/estype"
@@ -108,4 +111,102 @@ func (s *SortBuilder) DocDesc() *SortBuilder {
 // Build returns the constructed sort slice ready for use in a search request.
 func (s *SortBuilder) Build() []types.SortCombinations {
 	return s.sorts
+}
+
+// ---------------------------------------------------------------------------
+// Geo Distance Sort
+// ---------------------------------------------------------------------------
+
+// GeoDistanceSortOption is a functional option for configuring a GeoDistanceSort.
+type GeoDistanceSortOption func(*types.GeoDistanceSort)
+
+// GeoDistance adds a geo distance sort on the given field from a reference location.
+func (s *SortBuilder) GeoDistance(name estype.Field, location types.GeoLocation, order sortorder.SortOrder, opts ...GeoDistanceSortOption) *SortBuilder {
+	gs := &types.GeoDistanceSort{
+		GeoDistanceSort: map[string][]types.GeoLocation{
+			string(name): {location},
+		},
+		Order: &order,
+	}
+	for _, opt := range opts {
+		opt(gs)
+	}
+	s.sorts = append(s.sorts, types.SortOptions{
+		GeoDistance_: gs,
+	})
+	return s
+}
+
+// GeoDistanceCustom adds a geo distance sort with a fully customized GeoDistanceSort.
+func (s *SortBuilder) GeoDistanceCustom(gs types.GeoDistanceSort) *SortBuilder {
+	s.sorts = append(s.sorts, types.SortOptions{
+		GeoDistance_: &gs,
+	})
+	return s
+}
+
+// WithGeoDistanceUnit sets the distance unit for the geo distance sort.
+func WithGeoDistanceUnit(unit distanceunit.DistanceUnit) GeoDistanceSortOption {
+	return func(gs *types.GeoDistanceSort) { gs.Unit = &unit }
+}
+
+// WithGeoDistanceType sets the distance calculation type (arc or plane).
+func WithGeoDistanceType(dt geodistancetype.GeoDistanceType) GeoDistanceSortOption {
+	return func(gs *types.GeoDistanceSort) { gs.DistanceType = &dt }
+}
+
+// WithGeoDistanceMode sets the sort mode for multi-valued geo fields.
+func WithGeoDistanceMode(mode sortmode.SortMode) GeoDistanceSortOption {
+	return func(gs *types.GeoDistanceSort) { gs.Mode = &mode }
+}
+
+// WithGeoDistanceIgnoreUnmapped sets whether to ignore unmapped fields.
+func WithGeoDistanceIgnoreUnmapped(ignore bool) GeoDistanceSortOption {
+	return func(gs *types.GeoDistanceSort) { gs.IgnoreUnmapped = &ignore }
+}
+
+// WithGeoDistanceNested sets the nested sort configuration.
+func WithGeoDistanceNested(nested *types.NestedSortValue) GeoDistanceSortOption {
+	return func(gs *types.GeoDistanceSort) { gs.Nested = nested }
+}
+
+// ---------------------------------------------------------------------------
+// Script Sort
+// ---------------------------------------------------------------------------
+
+// ScriptSortOption is a functional option for configuring a ScriptSort.
+type ScriptSortOption func(*types.ScriptSort)
+
+// Script adds a script-based sort.
+func (s *SortBuilder) Script(script types.Script, sortType scriptsorttype.ScriptSortType, order sortorder.SortOrder, opts ...ScriptSortOption) *SortBuilder {
+	ss := &types.ScriptSort{
+		Script: script,
+		Type:   &sortType,
+		Order:  &order,
+	}
+	for _, opt := range opts {
+		opt(ss)
+	}
+	s.sorts = append(s.sorts, types.SortOptions{
+		Script_: ss,
+	})
+	return s
+}
+
+// ScriptCustom adds a script-based sort with a fully customized ScriptSort.
+func (s *SortBuilder) ScriptCustom(ss types.ScriptSort) *SortBuilder {
+	s.sorts = append(s.sorts, types.SortOptions{
+		Script_: &ss,
+	})
+	return s
+}
+
+// WithScriptSortMode sets the sort mode for multi-valued fields.
+func WithScriptSortMode(mode sortmode.SortMode) ScriptSortOption {
+	return func(ss *types.ScriptSort) { ss.Mode = &mode }
+}
+
+// WithScriptSortNested sets the nested sort configuration.
+func WithScriptSortNested(nested *types.NestedSortValue) ScriptSortOption {
+	return func(ss *types.ScriptSort) { ss.Nested = nested }
 }
