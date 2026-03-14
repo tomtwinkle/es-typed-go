@@ -4,6 +4,7 @@ package esv8
 
 import (
 	"context"
+	"encoding/json"
 
 	async_search_delete "github.com/elastic/go-elasticsearch/v8/typedapi/asyncsearch/delete"
 	async_search_get "github.com/elastic/go-elasticsearch/v8/typedapi/asyncsearch/get"
@@ -559,6 +560,9 @@ type ESClientSpec interface {
 	CatAliases(ctx context.Context) (cat_aliases.Response, error)
 	// CatAllocation wraps the Elasticsearch spec endpoint cat.allocation.
 	CatAllocation(ctx context.Context) (cat_allocation.Response, error)
+	// CatCircuitBreaker returns information about circuit-breaker status across the cluster.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-cat-circuit-breakers
+	CatCircuitBreaker(ctx context.Context) (json.RawMessage, error)
 	// CatComponentTemplates wraps the Elasticsearch spec endpoint cat.component_templates.
 	CatComponentTemplates(ctx context.Context) (cat_component_templates.Response, error)
 	// CatCount wraps the Elasticsearch spec endpoint cat.count.
@@ -685,6 +689,15 @@ type ESClientSpec interface {
 	ConnectorPut(ctx context.Context, req *connector_put.Request) (*connector_put.Response, error)
 	// ConnectorSecretPost wraps the Elasticsearch spec endpoint connector.secret_post.
 	ConnectorSecretPost(ctx context.Context) (bool, error)
+	// ConnectorSecretDelete deletes a connector secret by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-connector-secret-delete
+	ConnectorSecretDelete(ctx context.Context, id string) (json.RawMessage, error)
+	// ConnectorSecretGet retrieves a connector secret by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-connector-secret-get
+	ConnectorSecretGet(ctx context.Context, id string) (json.RawMessage, error)
+	// ConnectorSecretPut creates or updates a connector secret.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-connector-secret-put
+	ConnectorSecretPut(ctx context.Context, id string, req json.RawMessage) (json.RawMessage, error)
 	// ConnectorSyncJobCancel wraps the Elasticsearch spec endpoint connector.sync_job_cancel.
 	ConnectorSyncJobCancel(ctx context.Context, connectorsyncjobid string) (*connector_sync_job_cancel.Response, error)
 	// ConnectorSyncJobCheckIn wraps the Elasticsearch spec endpoint connector.sync_job_check_in.
@@ -777,6 +790,21 @@ type ESClientSpec interface {
 	EsqlAsyncQueryStop(ctx context.Context, id string) (esql_async_query_stop.Response, error)
 	// EsqlQuery wraps the Elasticsearch spec endpoint esql.query.
 	EsqlQuery(ctx context.Context, req *esql_query.Request) (esql_query.Response, error)
+	// EsqlDeleteView deletes an ES|QL view by name.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-esql-delete-view
+	EsqlDeleteView(ctx context.Context, name string) (json.RawMessage, error)
+	// EsqlGetQuery retrieves a running ES|QL query by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-esql-get-query
+	EsqlGetQuery(ctx context.Context, id string) (json.RawMessage, error)
+	// EsqlGetView retrieves ES|QL views (optionally filtered by name).
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-esql-get-view
+	EsqlGetView(ctx context.Context) (json.RawMessage, error)
+	// EsqlListQueries lists all running ES|QL queries on the cluster.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-esql-list-queries
+	EsqlListQueries(ctx context.Context) (json.RawMessage, error)
+	// EsqlPutView creates or updates an ES|QL view.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-esql-put-view
+	EsqlPutView(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error)
 	// Exists wraps the Elasticsearch spec endpoint exists.
 	Exists(ctx context.Context, index string, id string) (bool, error)
 	// ExistsSource wraps the Elasticsearch spec endpoint exists_source.
@@ -795,6 +823,12 @@ type ESClientSpec interface {
 	FleetMsearch(ctx context.Context, req *fleet_msearch.Request) (*fleet_msearch.Response, error)
 	// FleetPostSecret wraps the Elasticsearch spec endpoint fleet.post_secret.
 	FleetPostSecret(ctx context.Context) (bool, error)
+	// FleetDeleteSecret deletes a Fleet secret by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-fleet-delete-secret
+	FleetDeleteSecret(ctx context.Context, id string) (json.RawMessage, error)
+	// FleetGetSecret retrieves a Fleet secret by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-fleet-get-secret
+	FleetGetSecret(ctx context.Context, id string) (json.RawMessage, error)
 	// FleetSearch wraps the Elasticsearch spec endpoint fleet.search.
 	FleetSearch(ctx context.Context, index string, req *fleet_search.Request) (*fleet_search.Response, error)
 	// Get wraps the Elasticsearch spec endpoint get.
@@ -863,6 +897,9 @@ type ESClientSpec interface {
 	IndicesDeleteDataLifecycle(ctx context.Context, name string) (*indices_delete_data_lifecycle.Response, error)
 	// IndicesDeleteDataStream wraps the Elasticsearch spec endpoint indices.delete_data_stream.
 	IndicesDeleteDataStream(ctx context.Context, name string) (*indices_delete_data_stream.Response, error)
+	// IndicesDeleteDataStreamOptions deletes data stream lifecycle options for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-delete-data-stream-options
+	IndicesDeleteDataStreamOptions(ctx context.Context, name string) (json.RawMessage, error)
 	// IndicesDeleteIndexTemplate wraps the Elasticsearch spec endpoint indices.delete_index_template.
 	IndicesDeleteIndexTemplate(ctx context.Context, name string) (*indices_delete_index_template.Response, error)
 	// IndicesDeleteTemplate wraps the Elasticsearch spec endpoint indices.delete_template.
@@ -897,6 +934,15 @@ type ESClientSpec interface {
 	IndicesGetDataLifecycleStats(ctx context.Context) (*indices_get_data_lifecycle_stats.Response, error)
 	// IndicesGetDataStream wraps the Elasticsearch spec endpoint indices.get_data_stream.
 	IndicesGetDataStream(ctx context.Context) (*indices_get_data_stream.Response, error)
+	// IndicesGetDataStreamMappings retrieves the mapping for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-get-data-stream-mappings
+	IndicesGetDataStreamMappings(ctx context.Context, name string) (json.RawMessage, error)
+	// IndicesGetDataStreamOptions retrieves lifecycle options for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-get-data-stream-options
+	IndicesGetDataStreamOptions(ctx context.Context, name string) (json.RawMessage, error)
+	// IndicesGetDataStreamSettings retrieves index settings for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-get-data-stream-settings
+	IndicesGetDataStreamSettings(ctx context.Context, name string) (json.RawMessage, error)
 	// IndicesGetFieldMapping wraps the Elasticsearch spec endpoint indices.get_field_mapping.
 	IndicesGetFieldMapping(ctx context.Context, fields string) (indices_get_field_mapping.Response, error)
 	// IndicesGetIndexTemplate wraps the Elasticsearch spec endpoint indices.get_index_template.
@@ -923,6 +969,15 @@ type ESClientSpec interface {
 	IndicesPutAlias(ctx context.Context, index string, name string, req *indices_put_alias.Request) (*indices_put_alias.Response, error)
 	// IndicesPutDataLifecycle wraps the Elasticsearch spec endpoint indices.put_data_lifecycle.
 	IndicesPutDataLifecycle(ctx context.Context, name string, req *indices_put_data_lifecycle.Request) (*indices_put_data_lifecycle.Response, error)
+	// IndicesPutDataStreamMappings updates the mapping for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-put-data-stream-mappings
+	IndicesPutDataStreamMappings(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error)
+	// IndicesPutDataStreamOptions updates lifecycle options for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-put-data-stream-options
+	IndicesPutDataStreamOptions(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error)
+	// IndicesPutDataStreamSettings updates index settings for the specified data stream.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-put-data-stream-settings
+	IndicesPutDataStreamSettings(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error)
 	// IndicesPutIndexTemplate wraps the Elasticsearch spec endpoint indices.put_index_template.
 	IndicesPutIndexTemplate(ctx context.Context, name string, req *indices_put_index_template.Request) (*indices_put_index_template.Response, error)
 	// IndicesPutMapping wraps the Elasticsearch spec endpoint indices.put_mapping.
@@ -933,6 +988,9 @@ type ESClientSpec interface {
 	IndicesPutTemplate(ctx context.Context, name string, req *indices_put_template.Request) (*indices_put_template.Response, error)
 	// IndicesRecovery wraps the Elasticsearch spec endpoint indices.recovery.
 	IndicesRecovery(ctx context.Context) (indices_recovery.Response, error)
+	// IndicesRemoveBlock removes an index block from the specified index.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-indices-remove-block
+	IndicesRemoveBlock(ctx context.Context, index string, block string) (json.RawMessage, error)
 	// IndicesRefresh wraps the Elasticsearch spec endpoint indices.refresh.
 	IndicesRefresh(ctx context.Context) (*indices_refresh.Response, error)
 	// IndicesReloadSearchAnalyzers wraps the Elasticsearch spec endpoint indices.reload_search_analyzers.
@@ -967,12 +1025,19 @@ type ESClientSpec interface {
 	InferenceCompletion(ctx context.Context, inferenceid string, req *inference_completion.Request) (inference_completion.Response, error)
 	// InferenceDelete wraps the Elasticsearch spec endpoint inference.delete.
 	InferenceDelete(ctx context.Context, inferenceid string) (*inference_delete.Response, error)
+	// InferenceEmbedding performs text-embedding inference on the specified inference endpoint.
+	// This is an alias for InferenceTextEmbedding using the inference.embedding spec endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-inference
+	InferenceEmbedding(ctx context.Context, inferenceid string, req *inference_text_embedding.Request) (*inference_text_embedding.Response, error)
 	// InferenceGet wraps the Elasticsearch spec endpoint inference.get.
 	InferenceGet(ctx context.Context) (*inference_get.Response, error)
 	// InferenceInference wraps the Elasticsearch spec endpoint inference.inference.
 	InferenceInference(ctx context.Context, inferenceid string, req *inference_inference.Request) (*inference_inference.Response, error)
 	// InferencePut wraps the Elasticsearch spec endpoint inference.put.
 	InferencePut(ctx context.Context, inferenceid string, req *inference_put.Request) (*inference_put.Response, error)
+	// InferencePutAi21 creates or updates an AI21 Labs inference endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put-ai21
+	InferencePutAi21(ctx context.Context, tasktype string, ai21inferenceid string, req json.RawMessage) (json.RawMessage, error)
 	// InferencePutAlibabacloud wraps the Elasticsearch spec endpoint inference.put_alibabacloud.
 	InferencePutAlibabacloud(ctx context.Context, tasktype string, alibabacloudinferenceid string, req *inference_put_alibabacloud.Request) (*inference_put_alibabacloud.Response, error)
 	// InferencePutAmazonbedrock wraps the Elasticsearch spec endpoint inference.put_amazonbedrock.
@@ -987,6 +1052,9 @@ type ESClientSpec interface {
 	InferencePutAzureopenai(ctx context.Context, tasktype string, azureopenaiinferenceid string, req *inference_put_azureopenai.Request) (*inference_put_azureopenai.Response, error)
 	// InferencePutCohere wraps the Elasticsearch spec endpoint inference.put_cohere.
 	InferencePutCohere(ctx context.Context, tasktype string, cohereinferenceid string, req *inference_put_cohere.Request) (*inference_put_cohere.Response, error)
+	// InferencePutContextualai creates or updates a Contextual AI inference endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put-contextualai
+	InferencePutContextualai(ctx context.Context, tasktype string, contextualaiinferenceid string, req json.RawMessage) (json.RawMessage, error)
 	// InferencePutCustom wraps the Elasticsearch spec endpoint inference.put_custom.
 	InferencePutCustom(ctx context.Context, tasktype string, custominferenceid string, req *inference_put_custom.Request) (*inference_put_custom.Response, error)
 	// InferencePutDeepseek wraps the Elasticsearch spec endpoint inference.put_deepseek.
@@ -995,18 +1063,34 @@ type ESClientSpec interface {
 	InferencePutElasticsearch(ctx context.Context, tasktype string, elasticsearchinferenceid string, req *inference_put_elasticsearch.Request) (*inference_put_elasticsearch.Response, error)
 	// InferencePutElser wraps the Elasticsearch spec endpoint inference.put_elser.
 	InferencePutElser(ctx context.Context, tasktype string, elserinferenceid string, req *inference_put_elser.Request) (*inference_put_elser.Response, error)
+	// InferencePutFireworksai creates or updates a Fireworks AI inference endpoint.
+	// Uses the generic inference.put endpoint with the given task type.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put
+	InferencePutFireworksai(ctx context.Context, tasktype string, fireworksaiinferenceid string, req *inference_put.Request) (*inference_put.Response, error)
 	// InferencePutGoogleaistudio wraps the Elasticsearch spec endpoint inference.put_googleaistudio.
 	InferencePutGoogleaistudio(ctx context.Context, tasktype string, googleaistudioinferenceid string, req *inference_put_googleaistudio.Request) (*inference_put_googleaistudio.Response, error)
 	// InferencePutGooglevertexai wraps the Elasticsearch spec endpoint inference.put_googlevertexai.
 	InferencePutGooglevertexai(ctx context.Context, tasktype string, googlevertexaiinferenceid string, req *inference_put_googlevertexai.Request) (*inference_put_googlevertexai.Response, error)
+	// InferencePutGroq creates or updates a Groq inference endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put-groq
+	InferencePutGroq(ctx context.Context, tasktype string, groqinferenceid string, req json.RawMessage) (json.RawMessage, error)
 	// InferencePutHuggingFace wraps the Elasticsearch spec endpoint inference.put_hugging_face.
 	InferencePutHuggingFace(ctx context.Context, tasktype string, huggingfaceinferenceid string, req *inference_put_hugging_face.Request) (*inference_put_hugging_face.Response, error)
 	// InferencePutJinaai wraps the Elasticsearch spec endpoint inference.put_jinaai.
 	InferencePutJinaai(ctx context.Context, tasktype string, jinaaiinferenceid string, req *inference_put_jinaai.Request) (*inference_put_jinaai.Response, error)
+	// InferencePutLlama creates or updates a Llama inference endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put-llama
+	InferencePutLlama(ctx context.Context, tasktype string, llamainferenceid string, req json.RawMessage) (json.RawMessage, error)
 	// InferencePutMistral wraps the Elasticsearch spec endpoint inference.put_mistral.
 	InferencePutMistral(ctx context.Context, tasktype string, mistralinferenceid string, req *inference_put_mistral.Request) (*inference_put_mistral.Response, error)
 	// InferencePutOpenai wraps the Elasticsearch spec endpoint inference.put_openai.
 	InferencePutOpenai(ctx context.Context, tasktype string, openaiinferenceid string, req *inference_put_openai.Request) (*inference_put_openai.Response, error)
+	// InferencePutNvidia creates or updates an NVIDIA inference endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put-nvidia
+	InferencePutNvidia(ctx context.Context, tasktype string, nvidiainferenceid string, req json.RawMessage) (json.RawMessage, error)
+	// InferencePutOpenshiftAi creates or updates an OpenShift AI inference endpoint.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-inference-put-openshift-ai
+	InferencePutOpenshiftAi(ctx context.Context, tasktype string, openshiftaiinferenceid string, req json.RawMessage) (json.RawMessage, error)
 	// InferencePutVoyageai wraps the Elasticsearch spec endpoint inference.put_voyageai.
 	InferencePutVoyageai(ctx context.Context, tasktype string, voyageaiinferenceid string, req *inference_put_voyageai.Request) (*inference_put_voyageai.Response, error)
 	// InferencePutWatsonx wraps the Elasticsearch spec endpoint inference.put_watsonx.
@@ -1045,6 +1129,25 @@ type ESClientSpec interface {
 	IngestPutPipeline(ctx context.Context, id string, req *ingest_put_pipeline.Request) (*ingest_put_pipeline.Response, error)
 	// IngestSimulate wraps the Elasticsearch spec endpoint ingest.simulate.
 	IngestSimulate(ctx context.Context, req *ingest_simulate.Request) (*ingest_simulate.Response, error)
+	// InternalDeleteDesiredBalance deletes the desired balance of the cluster (internal endpoint).
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-internal-delete-desired-balance
+	InternalDeleteDesiredBalance(ctx context.Context) (json.RawMessage, error)
+	// InternalDeleteDesiredNodes deletes the current desired nodes of the cluster (internal endpoint).
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-internal-delete-desired-nodes
+	InternalDeleteDesiredNodes(ctx context.Context) (json.RawMessage, error)
+	// InternalGetDesiredBalance retrieves the desired balance of the cluster (internal endpoint).
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-internal-get-desired-balance
+	InternalGetDesiredBalance(ctx context.Context) (json.RawMessage, error)
+	// InternalGetDesiredNodes retrieves the current desired nodes of the cluster (internal endpoint).
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-internal-get-desired-nodes
+	InternalGetDesiredNodes(ctx context.Context) (json.RawMessage, error)
+	// InternalPrevalidateNodeRemoval pre-validates that a set of nodes can be safely removed from the cluster.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-internal-prevalidate-node-removal
+	InternalPrevalidateNodeRemoval(ctx context.Context) (json.RawMessage, error)
+	// InternalUpdateDesiredNodes bootstraps the desired nodes of the cluster (internal endpoint).
+	// historyid is the history ID of the desired nodes, and version is the version number.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-internal-update-desired-nodes
+	InternalUpdateDesiredNodes(ctx context.Context, historyid string, version int64, req json.RawMessage) (json.RawMessage, error)
 	// KnnSearch wraps the Elasticsearch spec endpoint knn_search.
 	KnnSearch(ctx context.Context, index string, req *core_knn_search.Request) (*core_knn_search.Response, error)
 	// LicenseDelete wraps the Elasticsearch spec endpoint license.delete.
@@ -1255,6 +1358,24 @@ type ESClientSpec interface {
 	ProfilingStatus(ctx context.Context) (bool, error)
 	// ProfilingTopnFunctions wraps the Elasticsearch spec endpoint profiling.topn_functions.
 	ProfilingTopnFunctions(ctx context.Context) (bool, error)
+	// ProjectCreateManyRouting creates multiple project routing entries in bulk.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-project-create-many-routing
+	ProjectCreateManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error)
+	// ProjectCreateRouting creates a project routing entry.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-project-create-routing
+	ProjectCreateRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error)
+	// ProjectDeleteRouting deletes a project routing entry by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-project-delete-routing
+	ProjectDeleteRouting(ctx context.Context, routingid string) (json.RawMessage, error)
+	// ProjectGetManyRouting retrieves multiple project routing entries.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-project-get-many-routing
+	ProjectGetManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error)
+	// ProjectGetRouting retrieves a project routing entry by ID.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-project-get-routing
+	ProjectGetRouting(ctx context.Context, routingid string) (json.RawMessage, error)
+	// ProjectTags retrieves the project tags associated with this Elasticsearch cluster.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-project-tags
+	ProjectTags(ctx context.Context) (json.RawMessage, error)
 	// PutScript wraps the Elasticsearch spec endpoint put_script.
 	PutScript(ctx context.Context, id string, req *core_put_script.Request) (*core_put_script.Response, error)
 	// QueryRulesDeleteRule wraps the Elasticsearch spec endpoint query_rules.delete_rule.
@@ -1401,6 +1522,9 @@ type ESClientSpec interface {
 	SecurityGetServiceCredentials(ctx context.Context, namespace string, service string) (*security_get_service_credentials.Response, error)
 	// SecurityGetSettings wraps the Elasticsearch spec endpoint security.get_settings.
 	SecurityGetSettings(ctx context.Context) (*security_get_settings.Response, error)
+	// SecurityGetStats retrieves security statistics for the cluster.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-security-get-stats
+	SecurityGetStats(ctx context.Context) (json.RawMessage, error)
 	// SecurityGetToken wraps the Elasticsearch spec endpoint security.get_token.
 	SecurityGetToken(ctx context.Context, req *security_get_token.Request) (*security_get_token.Response, error)
 	// SecurityGetUser wraps the Elasticsearch spec endpoint security.get_user.
@@ -1581,6 +1705,9 @@ type ESClientSpec interface {
 	TransformResetTransform(ctx context.Context, transformid string) (*transform_reset_transform.Response, error)
 	// TransformScheduleNowTransform wraps the Elasticsearch spec endpoint transform.schedule_now_transform.
 	TransformScheduleNowTransform(ctx context.Context, transformid string) (*transform_schedule_now_transform.Response, error)
+	// TransformSetUpgradeMode sets the upgrade mode for transforms, preventing or allowing them to start.
+	// See https://www.elastic.co/docs/api/doc/elasticsearch/operation/operation-transform-set-upgrade-mode
+	TransformSetUpgradeMode(ctx context.Context) (json.RawMessage, error)
 	// TransformStartTransform wraps the Elasticsearch spec endpoint transform.start_transform.
 	TransformStartTransform(ctx context.Context, transformid string) (*transform_start_transform.Response, error)
 	// TransformStopTransform wraps the Elasticsearch spec endpoint transform.stop_transform.

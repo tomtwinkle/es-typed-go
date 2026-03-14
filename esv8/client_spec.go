@@ -4,6 +4,8 @@ package esv8
 
 import (
 	"context"
+	"encoding/json"
+	"strconv"
 
 	async_search_delete "github.com/elastic/go-elasticsearch/v8/typedapi/asyncsearch/delete"
 	async_search_get "github.com/elastic/go-elasticsearch/v8/typedapi/asyncsearch/get"
@@ -578,6 +580,10 @@ func (c *esClient) CatAllocation(ctx context.Context) (cat_allocation.Response, 
 	return c.typedClient.Cat.Allocation().Do(ctx)
 }
 
+func (c *esClient) CatCircuitBreaker(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_cat/circuit_breaker", nil)
+}
+
 func (c *esClient) CatComponentTemplates(ctx context.Context) (cat_component_templates.Response, error) {
 	return c.typedClient.Cat.ComponentTemplates().Do(ctx)
 }
@@ -830,6 +836,18 @@ func (c *esClient) ConnectorSecretPost(ctx context.Context) (bool, error) {
 	return c.typedClient.Connector.SecretPost().Do(ctx)
 }
 
+func (c *esClient) ConnectorSecretDelete(ctx context.Context, id string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_connector/_secret/"+id, nil)
+}
+
+func (c *esClient) ConnectorSecretGet(ctx context.Context, id string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_connector/_secret/"+id, nil)
+}
+
+func (c *esClient) ConnectorSecretPut(ctx context.Context, id string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_connector/_secret/"+id, req)
+}
+
 func (c *esClient) ConnectorSyncJobCancel(ctx context.Context, connectorsyncjobid string) (*connector_sync_job_cancel.Response, error) {
 	return c.typedClient.Connector.SyncJobCancel(connectorsyncjobid).Do(ctx)
 }
@@ -1014,6 +1032,26 @@ func (c *esClient) EsqlQuery(ctx context.Context, req *esql_query.Request) (esql
 	return c.typedClient.Esql.Query().Request(req).Do(ctx)
 }
 
+func (c *esClient) EsqlDeleteView(ctx context.Context, name string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_query/view/"+name, nil)
+}
+
+func (c *esClient) EsqlGetQuery(ctx context.Context, id string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_query/queries/"+id, nil)
+}
+
+func (c *esClient) EsqlGetView(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_query/view", nil)
+}
+
+func (c *esClient) EsqlListQueries(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_query/queries", nil)
+}
+
+func (c *esClient) EsqlPutView(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_query/view/"+name, req)
+}
+
 func (c *esClient) Exists(ctx context.Context, index string, id string) (bool, error) {
 	return c.typedClient.Exists(index, id).Do(ctx)
 }
@@ -1048,6 +1086,14 @@ func (c *esClient) FleetMsearch(ctx context.Context, req *fleet_msearch.Request)
 
 func (c *esClient) FleetPostSecret(ctx context.Context) (bool, error) {
 	return c.typedClient.Fleet.PostSecret().Do(ctx)
+}
+
+func (c *esClient) FleetDeleteSecret(ctx context.Context, id string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_fleet/secret/"+id, nil)
+}
+
+func (c *esClient) FleetGetSecret(ctx context.Context, id string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_fleet/secret/"+id, nil)
 }
 
 func (c *esClient) FleetSearch(ctx context.Context, index string, req *fleet_search.Request) (*fleet_search.Response, error) {
@@ -1186,6 +1232,10 @@ func (c *esClient) IndicesDeleteDataStream(ctx context.Context, name string) (*i
 	return c.typedClient.Indices.DeleteDataStream(name).Do(ctx)
 }
 
+func (c *esClient) IndicesDeleteDataStreamOptions(ctx context.Context, name string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_data_stream/"+name+"/_options", nil)
+}
+
 func (c *esClient) IndicesDeleteIndexTemplate(ctx context.Context, name string) (*indices_delete_index_template.Response, error) {
 	return c.typedClient.Indices.DeleteIndexTemplate(name).Do(ctx)
 }
@@ -1254,6 +1304,18 @@ func (c *esClient) IndicesGetDataStream(ctx context.Context) (*indices_get_data_
 	return c.typedClient.Indices.GetDataStream().Do(ctx)
 }
 
+func (c *esClient) IndicesGetDataStreamMappings(ctx context.Context, name string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_data_stream/"+name+"/_mappings", nil)
+}
+
+func (c *esClient) IndicesGetDataStreamOptions(ctx context.Context, name string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_data_stream/"+name+"/_options", nil)
+}
+
+func (c *esClient) IndicesGetDataStreamSettings(ctx context.Context, name string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_data_stream/"+name+"/_settings", nil)
+}
+
 func (c *esClient) IndicesGetFieldMapping(ctx context.Context, fields string) (indices_get_field_mapping.Response, error) {
 	return c.typedClient.Indices.GetFieldMapping(fields).Do(ctx)
 }
@@ -1306,6 +1368,18 @@ func (c *esClient) IndicesPutDataLifecycle(ctx context.Context, name string, req
 	return c.typedClient.Indices.PutDataLifecycle(name).Request(req).Do(ctx)
 }
 
+func (c *esClient) IndicesPutDataStreamMappings(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_data_stream/"+name+"/_mappings", req)
+}
+
+func (c *esClient) IndicesPutDataStreamOptions(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_data_stream/"+name+"/_options", req)
+}
+
+func (c *esClient) IndicesPutDataStreamSettings(ctx context.Context, name string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_data_stream/"+name+"/_settings", req)
+}
+
 func (c *esClient) IndicesPutIndexTemplate(ctx context.Context, name string, req *indices_put_index_template.Request) (*indices_put_index_template.Response, error) {
 	return c.typedClient.Indices.PutIndexTemplate(name).Request(req).Do(ctx)
 }
@@ -1324,6 +1398,10 @@ func (c *esClient) IndicesPutTemplate(ctx context.Context, name string, req *ind
 
 func (c *esClient) IndicesRecovery(ctx context.Context) (indices_recovery.Response, error) {
 	return c.typedClient.Indices.Recovery().Do(ctx)
+}
+
+func (c *esClient) IndicesRemoveBlock(ctx context.Context, index string, block string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/"+index+"/_block/"+block, nil)
 }
 
 func (c *esClient) IndicesRefresh(ctx context.Context) (*indices_refresh.Response, error) {
@@ -1394,6 +1472,10 @@ func (c *esClient) InferenceDelete(ctx context.Context, inferenceid string) (*in
 	return c.typedClient.Inference.Delete(inferenceid).Do(ctx)
 }
 
+func (c *esClient) InferenceEmbedding(ctx context.Context, inferenceid string, req *inference_text_embedding.Request) (*inference_text_embedding.Response, error) {
+	return c.typedClient.Inference.TextEmbedding(inferenceid).Request(req).Do(ctx)
+}
+
 func (c *esClient) InferenceGet(ctx context.Context) (*inference_get.Response, error) {
 	return c.typedClient.Inference.Get().Do(ctx)
 }
@@ -1404,6 +1486,10 @@ func (c *esClient) InferenceInference(ctx context.Context, inferenceid string, r
 
 func (c *esClient) InferencePut(ctx context.Context, inferenceid string, req *inference_put.Request) (*inference_put.Response, error) {
 	return c.typedClient.Inference.Put(inferenceid).Request(req).Do(ctx)
+}
+
+func (c *esClient) InferencePutAi21(ctx context.Context, tasktype string, ai21inferenceid string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_inference/"+tasktype+"/"+ai21inferenceid, req)
 }
 
 func (c *esClient) InferencePutAlibabacloud(ctx context.Context, tasktype string, alibabacloudinferenceid string, req *inference_put_alibabacloud.Request) (*inference_put_alibabacloud.Response, error) {
@@ -1434,6 +1520,10 @@ func (c *esClient) InferencePutCohere(ctx context.Context, tasktype string, cohe
 	return c.typedClient.Inference.PutCohere(tasktype, cohereinferenceid).Request(req).Do(ctx)
 }
 
+func (c *esClient) InferencePutContextualai(ctx context.Context, tasktype string, contextualaiinferenceid string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_inference/"+tasktype+"/"+contextualaiinferenceid, req)
+}
+
 func (c *esClient) InferencePutCustom(ctx context.Context, tasktype string, custominferenceid string, req *inference_put_custom.Request) (*inference_put_custom.Response, error) {
 	return c.typedClient.Inference.PutCustom(tasktype, custominferenceid).Request(req).Do(ctx)
 }
@@ -1450,12 +1540,20 @@ func (c *esClient) InferencePutElser(ctx context.Context, tasktype string, elser
 	return c.typedClient.Inference.PutElser(tasktype, elserinferenceid).Request(req).Do(ctx)
 }
 
+func (c *esClient) InferencePutFireworksai(ctx context.Context, tasktype string, fireworksaiinferenceid string, req *inference_put.Request) (*inference_put.Response, error) {
+	return c.typedClient.Inference.Put(fireworksaiinferenceid).TaskType(tasktype).Request(req).Do(ctx)
+}
+
 func (c *esClient) InferencePutGoogleaistudio(ctx context.Context, tasktype string, googleaistudioinferenceid string, req *inference_put_googleaistudio.Request) (*inference_put_googleaistudio.Response, error) {
 	return c.typedClient.Inference.PutGoogleaistudio(tasktype, googleaistudioinferenceid).Request(req).Do(ctx)
 }
 
 func (c *esClient) InferencePutGooglevertexai(ctx context.Context, tasktype string, googlevertexaiinferenceid string, req *inference_put_googlevertexai.Request) (*inference_put_googlevertexai.Response, error) {
 	return c.typedClient.Inference.PutGooglevertexai(tasktype, googlevertexaiinferenceid).Request(req).Do(ctx)
+}
+
+func (c *esClient) InferencePutGroq(ctx context.Context, tasktype string, groqinferenceid string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_inference/"+tasktype+"/"+groqinferenceid, req)
 }
 
 func (c *esClient) InferencePutHuggingFace(ctx context.Context, tasktype string, huggingfaceinferenceid string, req *inference_put_hugging_face.Request) (*inference_put_hugging_face.Response, error) {
@@ -1466,12 +1564,24 @@ func (c *esClient) InferencePutJinaai(ctx context.Context, tasktype string, jina
 	return c.typedClient.Inference.PutJinaai(tasktype, jinaaiinferenceid).Request(req).Do(ctx)
 }
 
+func (c *esClient) InferencePutLlama(ctx context.Context, tasktype string, llamainferenceid string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_inference/"+tasktype+"/"+llamainferenceid, req)
+}
+
 func (c *esClient) InferencePutMistral(ctx context.Context, tasktype string, mistralinferenceid string, req *inference_put_mistral.Request) (*inference_put_mistral.Response, error) {
 	return c.typedClient.Inference.PutMistral(tasktype, mistralinferenceid).Request(req).Do(ctx)
 }
 
+func (c *esClient) InferencePutNvidia(ctx context.Context, tasktype string, nvidiainferenceid string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_inference/"+tasktype+"/"+nvidiainferenceid, req)
+}
+
 func (c *esClient) InferencePutOpenai(ctx context.Context, tasktype string, openaiinferenceid string, req *inference_put_openai.Request) (*inference_put_openai.Response, error) {
 	return c.typedClient.Inference.PutOpenai(tasktype, openaiinferenceid).Request(req).Do(ctx)
+}
+
+func (c *esClient) InferencePutOpenshiftAi(ctx context.Context, tasktype string, openshiftaiinferenceid string, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_inference/"+tasktype+"/"+openshiftaiinferenceid, req)
 }
 
 func (c *esClient) InferencePutVoyageai(ctx context.Context, tasktype string, voyageaiinferenceid string, req *inference_put_voyageai.Request) (*inference_put_voyageai.Response, error) {
@@ -1548,6 +1658,30 @@ func (c *esClient) IngestPutPipeline(ctx context.Context, id string, req *ingest
 
 func (c *esClient) IngestSimulate(ctx context.Context, req *ingest_simulate.Request) (*ingest_simulate.Response, error) {
 	return c.typedClient.Ingest.Simulate().Request(req).Do(ctx)
+}
+
+func (c *esClient) InternalDeleteDesiredBalance(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_internal/desired_balance", nil)
+}
+
+func (c *esClient) InternalDeleteDesiredNodes(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_internal/desired_nodes", nil)
+}
+
+func (c *esClient) InternalGetDesiredBalance(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_internal/desired_balance", nil)
+}
+
+func (c *esClient) InternalGetDesiredNodes(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_internal/desired_nodes", nil)
+}
+
+func (c *esClient) InternalPrevalidateNodeRemoval(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_internal/prevalidate_node_removal", nil)
+}
+
+func (c *esClient) InternalUpdateDesiredNodes(ctx context.Context, historyid string, version int64, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "PUT", "/_internal/desired_nodes/"+historyid+"/"+strconv.FormatInt(version, 10), req)
 }
 
 func (c *esClient) KnnSearch(ctx context.Context, index string, req *core_knn_search.Request) (*core_knn_search.Response, error) {
@@ -1975,6 +2109,30 @@ func (c *esClient) ProfilingTopnFunctions(ctx context.Context) (bool, error) {
 	return c.typedClient.Profiling.TopnFunctions().Do(ctx)
 }
 
+func (c *esClient) ProjectCreateManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "POST", "/_project/routing/create", req)
+}
+
+func (c *esClient) ProjectCreateRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "POST", "/_project/routing", req)
+}
+
+func (c *esClient) ProjectDeleteRouting(ctx context.Context, routingid string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "DELETE", "/_project/routing/"+routingid, nil)
+}
+
+func (c *esClient) ProjectGetManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
+	return c.performRaw(ctx, "POST", "/_project/routing/get", req)
+}
+
+func (c *esClient) ProjectGetRouting(ctx context.Context, routingid string) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_project/routing/"+routingid, nil)
+}
+
+func (c *esClient) ProjectTags(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "POST", "/_project/tags", nil)
+}
+
 func (c *esClient) PutScript(ctx context.Context, id string, req *core_put_script.Request) (*core_put_script.Response, error) {
 	return c.typedClient.PutScript(id).Request(req).Do(ctx)
 }
@@ -2265,6 +2423,10 @@ func (c *esClient) SecurityGetServiceCredentials(ctx context.Context, namespace 
 
 func (c *esClient) SecurityGetSettings(ctx context.Context) (*security_get_settings.Response, error) {
 	return c.typedClient.Security.GetSettings().Do(ctx)
+}
+
+func (c *esClient) SecurityGetStats(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "GET", "/_security/stats", nil)
 }
 
 func (c *esClient) SecurityGetToken(ctx context.Context, req *security_get_token.Request) (*security_get_token.Response, error) {
@@ -2630,6 +2792,10 @@ func (c *esClient) TransformResetTransform(ctx context.Context, transformid stri
 
 func (c *esClient) TransformScheduleNowTransform(ctx context.Context, transformid string) (*transform_schedule_now_transform.Response, error) {
 	return c.typedClient.Transform.ScheduleNowTransform(transformid).Do(ctx)
+}
+
+func (c *esClient) TransformSetUpgradeMode(ctx context.Context) (json.RawMessage, error) {
+	return c.performRaw(ctx, "POST", "/_transform/_set_upgrade_mode", nil)
 }
 
 func (c *esClient) TransformStartTransform(ctx context.Context, transformid string) (*transform_start_transform.Response, error) {
