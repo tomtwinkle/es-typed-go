@@ -3,6 +3,7 @@ package query
 import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
+	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
 // AggregationBuilder constructs Elasticsearch v8 aggregations using method chaining.
@@ -19,35 +20,39 @@ func NewAggregations() *AggregationBuilder {
 }
 
 // Terms adds a terms bucket aggregation on the given field.
-func (b *AggregationBuilder) Terms(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Terms(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewTermsAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Terms: agg}
 	return b
 }
 
 // TermsWithSize adds a terms bucket aggregation with a custom size.
-func (b *AggregationBuilder) TermsWithSize(name, field string, size int) *AggregationBuilder {
+func (b *AggregationBuilder) TermsWithSize(name string, field estype.Field, size int) *AggregationBuilder {
 	agg := types.NewTermsAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	agg.Size = &size
 	b.aggs[name] = types.Aggregations{Terms: agg}
 	return b
 }
 
 // DateHistogram adds a date_histogram bucket aggregation using a calendar interval.
-func (b *AggregationBuilder) DateHistogram(name, field string, interval calendarinterval.CalendarInterval) *AggregationBuilder {
+func (b *AggregationBuilder) DateHistogram(name string, field estype.Field, interval calendarinterval.CalendarInterval) *AggregationBuilder {
 	agg := types.NewDateHistogramAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	agg.CalendarInterval = &interval
 	b.aggs[name] = types.Aggregations{DateHistogram: agg}
 	return b
 }
 
 // DateHistogramWithFormat adds a date_histogram aggregation with a date format.
-func (b *AggregationBuilder) DateHistogramWithFormat(name, field, format string, interval calendarinterval.CalendarInterval) *AggregationBuilder {
+func (b *AggregationBuilder) DateHistogramWithFormat(name string, field estype.Field, format string, interval calendarinterval.CalendarInterval) *AggregationBuilder {
 	agg := types.NewDateHistogramAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	agg.CalendarInterval = &interval
 	agg.Format = &format
 	b.aggs[name] = types.Aggregations{DateHistogram: agg}
@@ -55,9 +60,10 @@ func (b *AggregationBuilder) DateHistogramWithFormat(name, field, format string,
 }
 
 // Histogram adds a histogram bucket aggregation with a numeric interval.
-func (b *AggregationBuilder) Histogram(name, field string, interval float64) *AggregationBuilder {
+func (b *AggregationBuilder) Histogram(name string, field estype.Field, interval float64) *AggregationBuilder {
 	agg := types.NewHistogramAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	iv := types.Float64(interval)
 	agg.Interval = &iv
 	b.aggs[name] = types.Aggregations{Histogram: agg}
@@ -65,65 +71,73 @@ func (b *AggregationBuilder) Histogram(name, field string, interval float64) *Ag
 }
 
 // Avg adds an avg metric aggregation.
-func (b *AggregationBuilder) Avg(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Avg(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewAverageAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Avg: agg}
 	return b
 }
 
 // Max adds a max metric aggregation.
-func (b *AggregationBuilder) Max(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Max(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewMaxAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Max: agg}
 	return b
 }
 
 // Min adds a min metric aggregation.
-func (b *AggregationBuilder) Min(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Min(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewMinAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Min: agg}
 	return b
 }
 
 // Sum adds a sum metric aggregation.
-func (b *AggregationBuilder) Sum(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Sum(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewSumAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Sum: agg}
 	return b
 }
 
 // ValueCount adds a value_count metric aggregation.
-func (b *AggregationBuilder) ValueCount(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) ValueCount(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewValueCountAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{ValueCount: agg}
 	return b
 }
 
 // Cardinality adds a cardinality metric aggregation (approximate distinct count).
-func (b *AggregationBuilder) Cardinality(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Cardinality(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewCardinalityAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Cardinality: agg}
 	return b
 }
 
 // Stats adds a stats metric aggregation (count, min, max, avg, sum in one).
-func (b *AggregationBuilder) Stats(name, field string) *AggregationBuilder {
+func (b *AggregationBuilder) Stats(name string, field estype.Field) *AggregationBuilder {
 	agg := types.NewStatsAggregation()
-	agg.Field = &field
+	f := string(field)
+	agg.Field = &f
 	b.aggs[name] = types.Aggregations{Stats: agg}
 	return b
 }
 
 // Nested adds a nested bucket aggregation with sub-aggregations.
-func (b *AggregationBuilder) Nested(name, path string, sub *AggregationBuilder) *AggregationBuilder {
+func (b *AggregationBuilder) Nested(name string, path estype.Field, sub *AggregationBuilder) *AggregationBuilder {
 	agg := types.NewNestedAggregation()
-	agg.Path = &path
+	p := string(path)
+	agg.Path = &p
 	b.aggs[name] = types.Aggregations{
 		Nested:       agg,
 		Aggregations: sub.Build(),
