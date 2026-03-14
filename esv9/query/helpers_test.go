@@ -111,6 +111,14 @@ func TestNumberRangeQuery_GteOnly(t *testing.T) {
 	assert.Assert(t, q.Range["price"] != nil)
 }
 
+func TestNumberRangeQuery_LteOnly(t *testing.T) {
+	t.Parallel()
+	lte := types.Float64(100.0)
+	q := query.NumberRangeQuery(estype.Field("price"), nil, &lte)
+	assert.Assert(t, q.Range != nil)
+	assert.Assert(t, q.Range["price"] != nil)
+}
+
 func TestBoolMust(t *testing.T) {
 	t.Parallel()
 	q := query.BoolMust(
