@@ -8,6 +8,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"gotest.tools/v3/assert"
 
+	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
@@ -20,13 +21,13 @@ func TestNewSort_Empty(t *testing.T) {
 func TestSortBuilder_Field(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		Field("created_at", sortorder.Desc).
+		Field(estype.Field("date"), sortorder.Desc).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs, ok := so.SortOptions["created_at"]
+	fs, ok := so.SortOptions["date"]
 	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Desc, *fs.Order)
 }
@@ -34,7 +35,7 @@ func TestSortBuilder_Field(t *testing.T) {
 func TestSortBuilder_FieldWithMissing_Last(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldWithMissing("name.keyword", sortorder.Asc, query.MissingLast).
+		FieldWithMissing(estype.Field("name.keyword"), sortorder.Asc, query.MissingLast).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
@@ -48,7 +49,7 @@ func TestSortBuilder_FieldWithMissing_Last(t *testing.T) {
 func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldWithMissing("date", sortorder.Desc, query.MissingFirst).
+		FieldWithMissing(estype.Field("date"), sortorder.Desc, query.MissingFirst).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
@@ -62,7 +63,7 @@ func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 func TestSortBuilder_FieldNested(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldNested("items.date", sortorder.Asc, "items", sortmode.Min).
+		FieldNested(estype.Field("items.date"), sortorder.Asc, estype.Field("items"), sortmode.Min).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
@@ -80,7 +81,7 @@ func TestSortBuilder_FieldCustom(t *testing.T) {
 	mode := sortmode.Max
 	order := sortorder.Desc
 	sorts := query.NewSort().
-		FieldCustom("price", types.FieldSort{
+		FieldCustom(estype.Field("price"), types.FieldSort{
 			Order: &order,
 			Mode:  &mode,
 		}).
@@ -141,8 +142,8 @@ func TestSortBuilder_DocDesc(t *testing.T) {
 func TestSortBuilder_Chaining(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldNested("items.date", sortorder.Asc, "items", sortmode.Min).
-		Field("id", sortorder.Asc).
+		FieldNested(estype.Field("items.date"), sortorder.Asc, estype.Field("items"), sortmode.Min).
+		Field(estype.Field("id"), sortorder.Asc).
 		Build()
 
 	assert.Assert(t, len(sorts) == 2)
@@ -171,8 +172,8 @@ func TestSortBuilder_MissingDirectionPattern(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			sorts := query.NewSort().
-				FieldWithMissing("date", tt.order, tt.missing).
-				Field("id", tt.order).
+				FieldWithMissing(estype.Field("date"), tt.order, tt.missing).
+				Field(estype.Field("id"), tt.order).
 				Build()
 
 			assert.Assert(t, len(sorts) == 2)

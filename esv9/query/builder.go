@@ -4,6 +4,7 @@ package query
 
 import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
+	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
 // Builder constructs an Elasticsearch types.Query using method chaining.
@@ -24,20 +25,20 @@ func (b *Builder) Bool(bq *types.BoolQuery) *Builder {
 }
 
 // Match sets a MatchQuery for the given field.
-func (b *Builder) Match(field string, mq types.MatchQuery) *Builder {
+func (b *Builder) Match(field estype.Field, mq types.MatchQuery) *Builder {
 	if b.query.Match == nil {
 		b.query.Match = make(map[string]types.MatchQuery)
 	}
-	b.query.Match[field] = mq
+	b.query.Match[string(field)] = mq
 	return b
 }
 
 // Term sets a TermQuery for the given field.
-func (b *Builder) Term(field string, tq types.TermQuery) *Builder {
+func (b *Builder) Term(field estype.Field, tq types.TermQuery) *Builder {
 	if b.query.Term == nil {
 		b.query.Term = make(map[string]types.TermQuery)
 	}
-	b.query.Term[field] = tq
+	b.query.Term[string(field)] = tq
 	return b
 }
 
@@ -48,11 +49,11 @@ func (b *Builder) Terms(tq *types.TermsQuery) *Builder {
 }
 
 // Range sets a RangeQuery for the given field.
-func (b *Builder) Range(field string, rq types.RangeQuery) *Builder {
+func (b *Builder) Range(field estype.Field, rq types.RangeQuery) *Builder {
 	if b.query.Range == nil {
 		b.query.Range = make(map[string]types.RangeQuery)
 	}
-	b.query.Range[field] = rq
+	b.query.Range[string(field)] = rq
 	return b
 }
 
@@ -81,20 +82,20 @@ func (b *Builder) Ids(iq *types.IdsQuery) *Builder {
 }
 
 // Prefix sets a PrefixQuery for the given field.
-func (b *Builder) Prefix(field string, pq types.PrefixQuery) *Builder {
+func (b *Builder) Prefix(field estype.Field, pq types.PrefixQuery) *Builder {
 	if b.query.Prefix == nil {
 		b.query.Prefix = make(map[string]types.PrefixQuery)
 	}
-	b.query.Prefix[field] = pq
+	b.query.Prefix[string(field)] = pq
 	return b
 }
 
 // Wildcard sets a WildcardQuery for the given field.
-func (b *Builder) Wildcard(field string, wq types.WildcardQuery) *Builder {
+func (b *Builder) Wildcard(field estype.Field, wq types.WildcardQuery) *Builder {
 	if b.query.Wildcard == nil {
 		b.query.Wildcard = make(map[string]types.WildcardQuery)
 	}
-	b.query.Wildcard[field] = wq
+	b.query.Wildcard[string(field)] = wq
 	return b
 }
 

@@ -4,6 +4,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
 // MissingFirst places documents with missing field values at the beginning of the sort order.
@@ -23,10 +24,10 @@ func NewSort() *SortBuilder {
 }
 
 // Field adds a sort on the given field with the specified order.
-func (s *SortBuilder) Field(name string, order sortorder.SortOrder) *SortBuilder {
+func (s *SortBuilder) Field(name estype.Field, order sortorder.SortOrder) *SortBuilder {
 	s.sorts = append(s.sorts, types.SortOptions{
 		SortOptions: map[string]types.FieldSort{
-			name: {Order: &order},
+			string(name): {Order: &order},
 		},
 	})
 	return s
@@ -34,24 +35,24 @@ func (s *SortBuilder) Field(name string, order sortorder.SortOrder) *SortBuilder
 
 // FieldWithMissing adds a sort on the given field with a missing value position.
 // Use MissingFirst or MissingLast to control where documents with missing field values appear.
-func (s *SortBuilder) FieldWithMissing(name string, order sortorder.SortOrder, missing string) *SortBuilder {
+func (s *SortBuilder) FieldWithMissing(name estype.Field, order sortorder.SortOrder, missing string) *SortBuilder {
 	var m types.Missing = missing
 	s.sorts = append(s.sorts, types.SortOptions{
 		SortOptions: map[string]types.FieldSort{
-			name: {Order: &order, Missing: m},
+			string(name): {Order: &order, Missing: m},
 		},
 	})
 	return s
 }
 
 // FieldNested adds a nested field sort with a sort mode.
-func (s *SortBuilder) FieldNested(name string, order sortorder.SortOrder, path string, mode sortmode.SortMode) *SortBuilder {
+func (s *SortBuilder) FieldNested(name estype.Field, order sortorder.SortOrder, path estype.Field, mode sortmode.SortMode) *SortBuilder {
 	s.sorts = append(s.sorts, types.SortOptions{
 		SortOptions: map[string]types.FieldSort{
-			name: {
+			string(name): {
 				Order:  &order,
 				Mode:   &mode,
-				Nested: &types.NestedSortValue{Path: path},
+				Nested: &types.NestedSortValue{Path: string(path)},
 			},
 		},
 	})
@@ -59,10 +60,10 @@ func (s *SortBuilder) FieldNested(name string, order sortorder.SortOrder, path s
 }
 
 // FieldCustom adds a sort on the given field with a fully customized FieldSort.
-func (s *SortBuilder) FieldCustom(name string, fs types.FieldSort) *SortBuilder {
+func (s *SortBuilder) FieldCustom(name estype.Field, fs types.FieldSort) *SortBuilder {
 	s.sorts = append(s.sorts, types.SortOptions{
 		SortOptions: map[string]types.FieldSort{
-			name: fs,
+			string(name): fs,
 		},
 	})
 	return s

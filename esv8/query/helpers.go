@@ -2,60 +2,61 @@ package query
 
 import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
 // TermValue creates a Query with a single TermQuery for the given field.
-func TermValue(field string, value any) types.Query {
+func TermValue(field estype.Field, value any) types.Query {
 	return types.Query{
 		Term: map[string]types.TermQuery{
-			field: {Value: value},
+			string(field): {Value: value},
 		},
 	}
 }
 
 // TermsValues creates a Query with a TermsQuery for the given field and values.
-func TermsValues(field string, values ...types.FieldValue) types.Query {
+func TermsValues(field estype.Field, values ...types.FieldValue) types.Query {
 	return types.Query{
 		Terms: &types.TermsQuery{
 			TermsQuery: map[string]types.TermsQueryField{
-				field: values,
+				string(field): values,
 			},
 		},
 	}
 }
 
 // MatchPhrase creates a Query with a MatchPhraseQuery for the given field.
-func MatchPhrase(field, query string) types.Query {
+func MatchPhrase(field estype.Field, query string) types.Query {
 	return types.Query{
 		MatchPhrase: map[string]types.MatchPhraseQuery{
-			field: {Query: query},
+			string(field): {Query: query},
 		},
 	}
 }
 
 // ExistsField creates a Query that checks for field existence.
-func ExistsField(field string) types.Query {
+func ExistsField(field estype.Field) types.Query {
 	return types.Query{
-		Exists: &types.ExistsQuery{Field: field},
+		Exists: &types.ExistsQuery{Field: string(field)},
 	}
 }
 
 // NotExists creates a Query that matches documents where the field does not exist.
-func NotExists(field string) types.Query {
+func NotExists(field estype.Field) types.Query {
 	return types.Query{
 		Bool: &types.BoolQuery{
 			MustNot: []types.Query{
-				{Exists: &types.ExistsQuery{Field: field}},
+				{Exists: &types.ExistsQuery{Field: string(field)}},
 			},
 		},
 	}
 }
 
 // NestedFilter creates a nested query wrapping filter clauses.
-func NestedFilter(path string, queries ...types.Query) types.Query {
+func NestedFilter(path estype.Field, queries ...types.Query) types.Query {
 	return types.Query{
 		Nested: &types.NestedQuery{
-			Path: path,
+			Path: string(path),
 			Query: types.Query{
 				Bool: &types.BoolQuery{
 					Filter: queries,
@@ -67,7 +68,7 @@ func NestedFilter(path string, queries ...types.Query) types.Query {
 
 // DateRangeQuery creates a date range query for the given field.
 // Both gte and lte are optional — pass empty string to omit.
-func DateRangeQuery(field string, gte, lte string) types.Query {
+func DateRangeQuery(field estype.Field, gte, lte string) types.Query {
 	rq := types.NewDateRangeQuery()
 	if gte != "" {
 		rq.Gte = &gte
@@ -77,14 +78,14 @@ func DateRangeQuery(field string, gte, lte string) types.Query {
 	}
 	return types.Query{
 		Range: map[string]types.RangeQuery{
-			field: rq,
+			string(field): rq,
 		},
 	}
 }
 
 // NumberRangeQuery creates a number range query for the given field.
 // Pass nil for gte or lte to omit that bound.
-func NumberRangeQuery(field string, gte, lte *types.Float64) types.Query {
+func NumberRangeQuery(field estype.Field, gte, lte *types.Float64) types.Query {
 	rq := types.NewNumberRangeQuery()
 	if gte != nil {
 		rq.Gte = gte
@@ -94,7 +95,7 @@ func NumberRangeQuery(field string, gte, lte *types.Float64) types.Query {
 	}
 	return types.Query{
 		Range: map[string]types.RangeQuery{
-			field: rq,
+			string(field): rq,
 		},
 	}
 }

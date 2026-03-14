@@ -6,6 +6,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"gotest.tools/v3/assert"
 
+	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
@@ -35,14 +36,14 @@ func TestBuilder_Bool(t *testing.T) {
 func TestBuilder_Term(t *testing.T) {
 	t.Parallel()
 	val := "foo"
-	q := query.New().Term("status", types.TermQuery{Value: val}).Build()
+	q := query.New().Term(estype.Field("status"), types.TermQuery{Value: val}).Build()
 	assert.Assert(t, q.Term != nil)
 	assert.Equal(t, val, q.Term["status"].Value)
 }
 
 func TestBuilder_Match(t *testing.T) {
 	t.Parallel()
-	q := query.New().Match("title", types.MatchQuery{Query: "hello"}).Build()
+	q := query.New().Match(estype.Field("title"), types.MatchQuery{Query: "hello"}).Build()
 	assert.Assert(t, q.Match != nil)
 	assert.Equal(t, "hello", q.Match["title"].Query)
 }
@@ -52,9 +53,9 @@ func TestBuilder_Range(t *testing.T) {
 	gt := "2023-01-01"
 	rq := types.NewDateRangeQuery()
 	rq.Gte = &gt
-	q := query.New().Range("created_at", rq).Build()
+	q := query.New().Range(estype.Field("date"), rq).Build()
 	assert.Assert(t, q.Range != nil)
-	assert.Assert(t, q.Range["created_at"] != nil)
+	assert.Assert(t, q.Range["date"] != nil)
 }
 
 func TestBoolQueryBuilder_ShouldAndFilter(t *testing.T) {

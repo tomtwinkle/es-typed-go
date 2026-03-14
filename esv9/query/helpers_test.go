@@ -6,19 +6,20 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"gotest.tools/v3/assert"
 
+	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
 func TestTermValue(t *testing.T) {
 	t.Parallel()
-	q := query.TermValue("status", "active")
+	q := query.TermValue(estype.Field("status"), "active")
 	assert.Assert(t, q.Term != nil)
 	assert.Equal(t, "active", q.Term["status"].Value)
 }
 
 func TestTermsValues(t *testing.T) {
 	t.Parallel()
-	q := query.TermsValues("category",
+	q := query.TermsValues(estype.Field("category"),
 		types.FieldValue("val1"),
 		types.FieldValue("val2"),
 		types.FieldValue("val3"),
@@ -32,21 +33,21 @@ func TestTermsValues(t *testing.T) {
 
 func TestMatchPhrase(t *testing.T) {
 	t.Parallel()
-	q := query.MatchPhrase("title.ngram", "test keyword")
+	q := query.MatchPhrase(estype.Field("title.ngram"), "test keyword")
 	assert.Assert(t, q.MatchPhrase != nil)
 	assert.Equal(t, "test keyword", q.MatchPhrase["title.ngram"].Query)
 }
 
 func TestExistsField(t *testing.T) {
 	t.Parallel()
-	q := query.ExistsField("tags")
+	q := query.ExistsField(estype.Field("tags"))
 	assert.Assert(t, q.Exists != nil)
 	assert.Equal(t, "tags", q.Exists.Field)
 }
 
 func TestNotExists(t *testing.T) {
 	t.Parallel()
-	q := query.NotExists("tags")
+	q := query.NotExists(estype.Field("tags"))
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.MustNot) == 1)
 	assert.Assert(t, q.Bool.MustNot[0].Exists != nil)
@@ -55,8 +56,8 @@ func TestNotExists(t *testing.T) {
 
 func TestNestedFilter(t *testing.T) {
 	t.Parallel()
-	inner := query.TermValue("items.color", "red")
-	q := query.NestedFilter("items", inner)
+	inner := query.TermValue(estype.Field("items.color"), "red")
+	q := query.NestedFilter(estype.Field("items"), inner)
 	assert.Assert(t, q.Nested != nil)
 	assert.Equal(t, "items", q.Nested.Path)
 	assert.Assert(t, q.Nested.Query.Bool != nil)
@@ -65,39 +66,39 @@ func TestNestedFilter(t *testing.T) {
 
 func TestNestedFilter_MultipleQueries(t *testing.T) {
 	t.Parallel()
-	q1 := query.TermValue("items.color", "red")
-	q2 := query.TermValue("items.status", "active")
-	q := query.NestedFilter("items", q1, q2)
+	q1 := query.TermValue(estype.Field("items.color"), "red")
+	q2 := query.TermValue(estype.Field("items.status"), "active")
+	q := query.NestedFilter(estype.Field("items"), q1, q2)
 	assert.Assert(t, q.Nested != nil)
 	assert.Assert(t, len(q.Nested.Query.Bool.Filter) == 2)
 }
 
 func TestDateRangeQuery(t *testing.T) {
 	t.Parallel()
-	q := query.DateRangeQuery("created_at", "2024-01-01", "2024-12-31")
+	q := query.DateRangeQuery(estype.Field("date"), "2024-01-01", "2024-12-31")
 	assert.Assert(t, q.Range != nil)
-	assert.Assert(t, q.Range["created_at"] != nil)
+	assert.Assert(t, q.Range["date"] != nil)
 }
 
 func TestDateRangeQuery_GteOnly(t *testing.T) {
 	t.Parallel()
-	q := query.DateRangeQuery("created_at", "2024-01-01", "")
+	q := query.DateRangeQuery(estype.Field("date"), "2024-01-01", "")
 	assert.Assert(t, q.Range != nil)
-	assert.Assert(t, q.Range["created_at"] != nil)
+	assert.Assert(t, q.Range["date"] != nil)
 }
 
 func TestDateRangeQuery_LteOnly(t *testing.T) {
 	t.Parallel()
-	q := query.DateRangeQuery("created_at", "", "2024-12-31")
+	q := query.DateRangeQuery(estype.Field("date"), "", "2024-12-31")
 	assert.Assert(t, q.Range != nil)
-	assert.Assert(t, q.Range["created_at"] != nil)
+	assert.Assert(t, q.Range["date"] != nil)
 }
 
 func TestNumberRangeQuery(t *testing.T) {
 	t.Parallel()
 	gte := types.Float64(10.0)
 	lte := types.Float64(100.0)
-	q := query.NumberRangeQuery("price", &gte, &lte)
+	q := query.NumberRangeQuery(estype.Field("price"), &gte, &lte)
 	assert.Assert(t, q.Range != nil)
 	assert.Assert(t, q.Range["price"] != nil)
 }
@@ -105,7 +106,7 @@ func TestNumberRangeQuery(t *testing.T) {
 func TestNumberRangeQuery_GteOnly(t *testing.T) {
 	t.Parallel()
 	gte := types.Float64(10.0)
-	q := query.NumberRangeQuery("price", &gte, nil)
+	q := query.NumberRangeQuery(estype.Field("price"), &gte, nil)
 	assert.Assert(t, q.Range != nil)
 	assert.Assert(t, q.Range["price"] != nil)
 }
@@ -113,8 +114,8 @@ func TestNumberRangeQuery_GteOnly(t *testing.T) {
 func TestBoolMust(t *testing.T) {
 	t.Parallel()
 	q := query.BoolMust(
-		query.TermValue("status", "active"),
-		query.TermValue("enabled", true),
+		query.TermValue(estype.Field("status"), "active"),
+		query.TermValue(estype.Field("enabled"), true),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Must) == 2)
@@ -123,8 +124,8 @@ func TestBoolMust(t *testing.T) {
 func TestBoolShould(t *testing.T) {
 	t.Parallel()
 	q := query.BoolShould(
-		query.MatchPhrase("title.ngram", "keyword"),
-		query.MatchPhrase("title.raw", "keyword"),
+		query.MatchPhrase(estype.Field("title.ngram"), "keyword"),
+		query.MatchPhrase(estype.Field("title.raw"), "keyword"),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Should) == 2)
@@ -133,8 +134,8 @@ func TestBoolShould(t *testing.T) {
 func TestBoolFilter(t *testing.T) {
 	t.Parallel()
 	q := query.BoolFilter(
-		query.TermValue("type", "document"),
-		query.TermValue("status", "active"),
+		query.TermValue(estype.Field("type"), "document"),
+		query.TermValue(estype.Field("status"), "active"),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Filter) == 2)
@@ -143,7 +144,7 @@ func TestBoolFilter(t *testing.T) {
 func TestBoolMustNot(t *testing.T) {
 	t.Parallel()
 	q := query.BoolMustNot(
-		query.ExistsField("deleted_at"),
+		query.ExistsField(estype.Field("date")),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.MustNot) == 1)
@@ -173,7 +174,7 @@ func TestFieldValues_Empty(t *testing.T) {
 
 func TestFieldValues_WithTermsValues(t *testing.T) {
 	t.Parallel()
-	q := query.TermsValues("tags", query.FieldValues(int32(1), int32(2), int32(3))...)
+	q := query.TermsValues(estype.Field("tags"), query.FieldValues(int32(1), int32(2), int32(3))...)
 	assert.Assert(t, q.Terms != nil)
 	vals, ok := q.Terms.TermsQuery["tags"].([]types.FieldValue)
 	assert.Assert(t, ok)
@@ -185,13 +186,13 @@ func TestComplexQueryCombination(t *testing.T) {
 	// Demonstrates building a complex query using the helper functions
 	// instead of verbose struct construction.
 	filters := []types.Query{
-		query.TermValue("type", "document"),
-		query.TermsValues("category", query.FieldValues("cat1", "cat2")...),
-		query.TermValue("status", "active"),
-		query.MatchPhrase("title.ngram", "search keyword"),
-		query.NotExists("tags"),
-		query.NestedFilter("items",
-			query.TermsValues("items.ids", query.FieldValues(int32(1), int32(2))...),
+		query.TermValue(estype.Field("type"), "document"),
+		query.TermsValues(estype.Field("category"), query.FieldValues("cat1", "cat2")...),
+		query.TermValue(estype.Field("status"), "active"),
+		query.MatchPhrase(estype.Field("title.ngram"), "search keyword"),
+		query.NotExists(estype.Field("tags")),
+		query.NestedFilter(estype.Field("items"),
+			query.TermsValues(estype.Field("items.ids"), query.FieldValues(int32(1), int32(2))...),
 		),
 	}
 
