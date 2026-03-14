@@ -97,11 +97,11 @@ func TestAggregationBuilder_Min(t *testing.T) {
 
 func TestAggregationBuilder_Sum(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Sum("total_sales", estype.Field("value")).Build()
-	_, ok := aggs["total_sales"]
+	aggs := query.NewAggregations().Sum("sum_value", estype.Field("value")).Build()
+	_, ok := aggs["sum_value"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["total_sales"].Sum != nil)
-	assert.Equal(t, "value", *aggs["total_sales"].Sum.Field)
+	assert.Assert(t, aggs["sum_value"].Sum != nil)
+	assert.Equal(t, "value", *aggs["sum_value"].Sum.Field)
 }
 
 func TestAggregationBuilder_ValueCount(t *testing.T) {
@@ -160,7 +160,7 @@ func TestAggregationBuilder_Filter(t *testing.T) {
 
 func TestAggregationBuilder_SubAggregations(t *testing.T) {
 	t.Parallel()
-	sub := query.NewAggregations().Avg("avg_price", estype.Field("price")).Sum("total_sales", estype.Field("price"))
+	sub := query.NewAggregations().Avg("avg_price", estype.Field("price")).Sum("sum_value", estype.Field("price"))
 	aggs := query.NewAggregations().
 		Terms("by_category", estype.Field("category")).
 		SubAggregations("by_category", sub).
@@ -169,7 +169,7 @@ func TestAggregationBuilder_SubAggregations(t *testing.T) {
 	assert.Assert(t, ok)
 	_, ok = aggs["by_category"].Aggregations["avg_price"]
 	assert.Assert(t, ok)
-	_, ok = aggs["by_category"].Aggregations["total_sales"]
+	_, ok = aggs["by_category"].Aggregations["sum_value"]
 	assert.Assert(t, ok)
 }
 
@@ -191,12 +191,12 @@ func TestAggregationBuilder_Chaining(t *testing.T) {
 		Avg("avg_price", estype.Field("price")).
 		Max("max_price", estype.Field("price")).
 		Min("min_price", estype.Field("price")).
-		Sum("total_revenue", estype.Field("value")).
+		Sum("sum_total", estype.Field("value")).
 		Build()
 	assert.Assert(t, len(aggs) == 5)
 	assert.Assert(t, aggs["by_category"].Terms != nil)
 	assert.Assert(t, aggs["avg_price"].Avg != nil)
 	assert.Assert(t, aggs["max_price"].Max != nil)
 	assert.Assert(t, aggs["min_price"].Min != nil)
-	assert.Assert(t, aggs["total_revenue"].Sum != nil)
+	assert.Assert(t, aggs["sum_total"].Sum != nil)
 }
