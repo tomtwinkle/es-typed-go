@@ -48,13 +48,13 @@ func TestSortBuilder_FieldWithMissing_Last(t *testing.T) {
 func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldWithMissing("first_date", sortorder.Desc, query.MissingFirst).
+		FieldWithMissing("date", sortorder.Desc, query.MissingFirst).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions["first_date"]
+	fs := so.SortOptions["date"]
 	assert.Equal(t, sortorder.Desc, *fs.Order)
 	assert.Equal(t, "_first", fs.Missing.(string))
 }
@@ -62,17 +62,17 @@ func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 func TestSortBuilder_FieldNested(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldNested("construction_items.started_date", sortorder.Asc, "construction_items", sortmode.Min).
+		FieldNested("items.date", sortorder.Asc, "items", sortmode.Min).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions["construction_items.started_date"]
+	fs := so.SortOptions["items.date"]
 	assert.Equal(t, sortorder.Asc, *fs.Order)
 	assert.Equal(t, sortmode.Min, *fs.Mode)
 	assert.Assert(t, fs.Nested != nil)
-	assert.Equal(t, "construction_items", fs.Nested.Path)
+	assert.Equal(t, "items", fs.Nested.Path)
 }
 
 func TestSortBuilder_FieldCustom(t *testing.T) {
@@ -142,7 +142,7 @@ func TestSortBuilder_Chaining(t *testing.T) {
 	t.Parallel()
 	// Test a realistic multi-sort scenario with tiebreaker.
 	sorts := query.NewSort().
-		FieldNested("construction_items.started_date", sortorder.Asc, "construction_items", sortmode.Min).
+		FieldNested("items.date", sortorder.Asc, "items", sortmode.Min).
 		Field("id", sortorder.Asc).
 		Build()
 
@@ -150,7 +150,7 @@ func TestSortBuilder_Chaining(t *testing.T) {
 	// First sort: nested field
 	so1, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs1 := so1.SortOptions["construction_items.started_date"]
+	fs1 := so1.SortOptions["items.date"]
 	assert.Equal(t, sortorder.Asc, *fs1.Order)
 	assert.Assert(t, fs1.Nested != nil)
 	// Second sort: tiebreaker
@@ -175,14 +175,14 @@ func TestSortBuilder_MissingDirectionPattern(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			sorts := query.NewSort().
-				FieldWithMissing("first_date", tt.order, tt.missing).
+				FieldWithMissing("date", tt.order, tt.missing).
 				Field("id", tt.order).
 				Build()
 
 			assert.Assert(t, len(sorts) == 2)
 			so, ok := sorts[0].(types.SortOptions)
 			assert.Assert(t, ok)
-			fs := so.SortOptions["first_date"]
+			fs := so.SortOptions["date"]
 			assert.Equal(t, tt.order, *fs.Order)
 			assert.Equal(t, tt.missing, fs.Missing.(string))
 		})

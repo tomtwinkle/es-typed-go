@@ -11,63 +11,63 @@ import (
 
 func TestTermValue(t *testing.T) {
 	t.Parallel()
-	q := query.TermValue("customer_id", "abc123")
+	q := query.TermValue("status", "active")
 	assert.Assert(t, q.Term != nil)
-	assert.Equal(t, "abc123", q.Term["customer_id"].Value)
+	assert.Equal(t, "active", q.Term["status"].Value)
 }
 
 func TestTermsValues(t *testing.T) {
 	t.Parallel()
-	q := query.TermsValues("integration_id",
-		types.FieldValue("id1"),
-		types.FieldValue("id2"),
-		types.FieldValue("id3"),
+	q := query.TermsValues("category",
+		types.FieldValue("val1"),
+		types.FieldValue("val2"),
+		types.FieldValue("val3"),
 	)
 	assert.Assert(t, q.Terms != nil)
 	assert.Assert(t, q.Terms.TermsQuery != nil)
-	vals, ok := q.Terms.TermsQuery["integration_id"].([]types.FieldValue)
+	vals, ok := q.Terms.TermsQuery["category"].([]types.FieldValue)
 	assert.Assert(t, ok)
 	assert.Assert(t, len(vals) == 3)
 }
 
 func TestMatchPhrase(t *testing.T) {
 	t.Parallel()
-	q := query.MatchPhrase("name.ngram_case_insensitive", "test keyword")
+	q := query.MatchPhrase("title.ngram", "test keyword")
 	assert.Assert(t, q.MatchPhrase != nil)
-	assert.Equal(t, "test keyword", q.MatchPhrase["name.ngram_case_insensitive"].Query)
+	assert.Equal(t, "test keyword", q.MatchPhrase["title.ngram"].Query)
 }
 
 func TestExistsField(t *testing.T) {
 	t.Parallel()
-	q := query.ExistsField("construction_status_ids")
+	q := query.ExistsField("tags")
 	assert.Assert(t, q.Exists != nil)
-	assert.Equal(t, "construction_status_ids", q.Exists.Field)
+	assert.Equal(t, "tags", q.Exists.Field)
 }
 
 func TestNotExists(t *testing.T) {
 	t.Parallel()
-	q := query.NotExists("construction_status_ids")
+	q := query.NotExists("tags")
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.MustNot) == 1)
 	assert.Assert(t, q.Bool.MustNot[0].Exists != nil)
-	assert.Equal(t, "construction_status_ids", q.Bool.MustNot[0].Exists.Field)
+	assert.Equal(t, "tags", q.Bool.MustNot[0].Exists.Field)
 }
 
 func TestNestedFilter(t *testing.T) {
 	t.Parallel()
-	inner := query.TermValue("construction_items.color_id", "red")
-	q := query.NestedFilter("construction_items", inner)
+	inner := query.TermValue("items.color", "red")
+	q := query.NestedFilter("items", inner)
 	assert.Assert(t, q.Nested != nil)
-	assert.Equal(t, "construction_items", q.Nested.Path)
+	assert.Equal(t, "items", q.Nested.Path)
 	assert.Assert(t, q.Nested.Query.Bool != nil)
 	assert.Assert(t, len(q.Nested.Query.Bool.Filter) == 1)
 }
 
 func TestNestedFilter_MultipleQueries(t *testing.T) {
 	t.Parallel()
-	q1 := query.TermValue("construction_items.color_id", "red")
-	q2 := query.TermValue("construction_items.status", "active")
-	q := query.NestedFilter("construction_items", q1, q2)
+	q1 := query.TermValue("items.color", "red")
+	q2 := query.TermValue("items.status", "active")
+	q := query.NestedFilter("items", q1, q2)
 	assert.Assert(t, q.Nested != nil)
 	assert.Assert(t, len(q.Nested.Query.Bool.Filter) == 2)
 }
@@ -114,7 +114,7 @@ func TestBoolMust(t *testing.T) {
 	t.Parallel()
 	q := query.BoolMust(
 		query.TermValue("status", "active"),
-		query.TermValue("draft", false),
+		query.TermValue("enabled", true),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Must) == 2)
@@ -123,8 +123,8 @@ func TestBoolMust(t *testing.T) {
 func TestBoolShould(t *testing.T) {
 	t.Parallel()
 	q := query.BoolShould(
-		query.MatchPhrase("name.ngram_case_insensitive", "keyword"),
-		query.MatchPhrase("name.ngram_exact", "keyword"),
+		query.MatchPhrase("title.ngram", "keyword"),
+		query.MatchPhrase("title.raw", "keyword"),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Should) == 2)
@@ -133,8 +133,8 @@ func TestBoolShould(t *testing.T) {
 func TestBoolFilter(t *testing.T) {
 	t.Parallel()
 	q := query.BoolFilter(
-		query.TermValue("client_id", "c1"),
-		query.TermValue("draft", false),
+		query.TermValue("type", "document"),
+		query.TermValue("status", "active"),
 	)
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Filter) == 2)
@@ -174,25 +174,25 @@ func TestFieldValues_Empty(t *testing.T) {
 func TestFieldValues_WithTermsValues(t *testing.T) {
 	t.Parallel()
 	// Test that FieldValues output is compatible with TermsValues.
-	q := query.TermsValues("tag_ids", query.FieldValues(int32(1), int32(2), int32(3))...)
+	q := query.TermsValues("tags", query.FieldValues(int32(1), int32(2), int32(3))...)
 	assert.Assert(t, q.Terms != nil)
-	vals, ok := q.Terms.TermsQuery["tag_ids"].([]types.FieldValue)
+	vals, ok := q.Terms.TermsQuery["tags"].([]types.FieldValue)
 	assert.Assert(t, ok)
 	assert.Assert(t, len(vals) == 3)
 }
 
 func TestComplexQueryCombination(t *testing.T) {
 	t.Parallel()
-	// Demonstrates building a complex query similar to the problem statement example
-	// using the helper functions instead of verbose struct construction.
+	// Demonstrates building a complex query using the helper functions
+	// instead of verbose struct construction.
 	filters := []types.Query{
-		query.TermValue("client_id", "client1"),
-		query.TermsValues("integration_id", query.FieldValues("id1", "id2")...),
-		query.TermValue("draft", false),
-		query.MatchPhrase("name.ngram_case_insensitive", "search keyword"),
-		query.NotExists("construction_status_ids"),
-		query.NestedFilter("construction_items",
-			query.TermsValues("construction_items.crafts_user_ids", query.FieldValues(int32(1), int32(2))...),
+		query.TermValue("type", "document"),
+		query.TermsValues("category", query.FieldValues("cat1", "cat2")...),
+		query.TermValue("status", "active"),
+		query.MatchPhrase("title.ngram", "search keyword"),
+		query.NotExists("tags"),
+		query.NestedFilter("items",
+			query.TermsValues("items.ids", query.FieldValues(int32(1), int32(2))...),
 		),
 	}
 
