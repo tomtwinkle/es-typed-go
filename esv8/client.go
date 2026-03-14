@@ -30,6 +30,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/conflicts"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/optype"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/refresh"
+	"github.com/tomtwinkle/es-typed-go/eserr"
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
@@ -459,7 +460,7 @@ func taskIDToString(taskID types.TaskId) (string, error) {
 
 // isElasticsearchError checks if err is an *types.ElasticsearchError and sets target.
 func isElasticsearchError(err error, target **types.ElasticsearchError) bool {
-	return estype.FindErrorInChain(err, target)
+	return eserr.FindErrorInChain(err, target)
 }
 
 // schemeFromTransport returns "https" when the transport's connection pool is

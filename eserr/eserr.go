@@ -1,4 +1,6 @@
-package estype
+// Package eserr provides generic error-chain utilities for working with
+// Elasticsearch errors returned by the go-elasticsearch typed client.
+package eserr
 
 // UnwrapErr calls Unwrap on the error if available, returning the wrapped error.
 // Returns nil if err does not implement the Unwrap method.
@@ -22,7 +24,7 @@ func UnwrapErr(err error) error {
 // Example:
 //
 //	var esErr *types.ElasticsearchError
-//	if estype.FindErrorInChain(err, &esErr) {
+//	if eserr.FindErrorInChain(err, &esErr) {
 //	    // esErr is now set
 //	}
 func FindErrorInChain[T any](err error, target *T) bool {
