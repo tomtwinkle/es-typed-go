@@ -459,36 +459,7 @@ func taskIDToString(taskID types.TaskId) (string, error) {
 
 // isElasticsearchError checks if err is an *types.ElasticsearchError and sets target.
 func isElasticsearchError(err error, target **types.ElasticsearchError) bool {
-	if err == nil {
-		return false
-	}
-	var esErr *types.ElasticsearchError
-	ok := false
-	// Walk the error chain.
-	e := err
-	for e != nil {
-		if ee, cast := e.(*types.ElasticsearchError); cast {
-			esErr = ee
-			ok = true
-			break
-		}
-		e = unwrapErr(e)
-	}
-	if ok && target != nil {
-		*target = esErr
-	}
-	return ok
-}
-
-// unwrapErr calls Unwrap on the error if available.
-func unwrapErr(err error) error {
-	type unwrapper interface {
-		Unwrap() error
-	}
-	if u, ok := err.(unwrapper); ok {
-		return u.Unwrap()
-	}
-	return nil
+	return estype.FindErrorInChain(err, target)
 }
 
 // schemeFromTransport returns "https" when the transport's connection pool is
