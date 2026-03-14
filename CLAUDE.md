@@ -131,7 +131,7 @@ sort := query.NewSort().
 | `github.com/elastic/go-elasticsearch/v9` | v9.3.1 | ES v9 typed client |
 | `github.com/google/uuid` | v1.6.0 | UUID generation |
 | `gotest.tools/v3` | v3.5.2 | Test assertions |
-| Go | 1.24.13 | Minimum required version |
+| Go | 1.26 | Minimum required version |
 
 ---
 
