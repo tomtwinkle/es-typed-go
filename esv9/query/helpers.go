@@ -136,6 +136,69 @@ func BoolMustNot(queries ...types.Query) types.Query {
 	}
 }
 
+// MatchValue creates a Query with a MatchQuery for the given field.
+func MatchValue(field estype.Field, query string) types.Query {
+	return types.Query{
+		Match: map[string]types.MatchQuery{
+			string(field): {Query: query},
+		},
+	}
+}
+
+// MatchAll creates a Query that matches all documents.
+func MatchAll() types.Query {
+	return types.Query{MatchAll: &types.MatchAllQuery{}}
+}
+
+// MatchNone creates a Query that matches no documents.
+func MatchNone() types.Query {
+	return types.Query{MatchNone: &types.MatchNoneQuery{}}
+}
+
+// IdsQuery creates a Query that matches documents with the given IDs.
+func IdsQuery(ids ...string) types.Query {
+	return types.Query{Ids: &types.IdsQuery{Values: ids}}
+}
+
+// PrefixValue creates a Query with a PrefixQuery for the given field.
+func PrefixValue(field estype.Field, value string) types.Query {
+	return types.Query{
+		Prefix: map[string]types.PrefixQuery{
+			string(field): {Value: value},
+		},
+	}
+}
+
+// WildcardValue creates a Query with a WildcardQuery for the given field.
+func WildcardValue(field estype.Field, value string) types.Query {
+	v := value
+	return types.Query{
+		Wildcard: map[string]types.WildcardQuery{
+			string(field): {Value: &v},
+		},
+	}
+}
+
+// MultiMatchQuery creates a Query with a MultiMatchQuery for the given query string and fields.
+func MultiMatchQuery(query string, fields ...estype.Field) types.Query {
+	return types.Query{
+		MultiMatch: &types.MultiMatchQuery{
+			Query:  query,
+			Fields: estype.FieldNames(fields...),
+		},
+	}
+}
+
+// FunctionScoreQuery creates a Query with a FunctionScoreQuery.
+func FunctionScoreQuery(fsq *types.FunctionScoreQuery) types.Query {
+	return types.Query{FunctionScore: fsq}
+}
+
+// BoolQuery creates a Query wrapping a BoolQuery.
+func BoolQuery(bq *types.BoolQuery) types.Query {
+	return types.Query{Bool: bq}
+}
+
 // FieldValues converts a slice of values to []types.FieldValue for use in TermsQuery.
 func FieldValues[T any](values ...T) []types.FieldValue {
 	result := make([]types.FieldValue, len(values))

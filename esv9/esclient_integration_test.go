@@ -377,7 +377,7 @@ func TestIntegration_Search_MatchAll(t *testing.T) {
 	_, err = client.IndexRefresh(ctx, idx)
 	assert.NilError(t, err)
 
-	q := query.New().MatchAll(&types.MatchAllQuery{}).Build()
+	q := query.MatchAll()
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(5), res.Hits.Total.Value)
@@ -413,7 +413,7 @@ func TestIntegration_Search_TermQuery(t *testing.T) {
 	_, err = client.IndexRefresh(ctx, idx)
 	assert.NilError(t, err)
 
-	q := query.New().Term("category", types.TermQuery{Value: "electronics"}).Build()
+	q := query.TermValue("category", "electronics")
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(2), res.Hits.Total.Value)
@@ -453,10 +453,10 @@ func TestIntegration_Search_BoolQuery(t *testing.T) {
 	// electronics AND in_stock
 	bq := query.NewBoolQuery().
 		Must(
-			query.New().Term("category", types.TermQuery{Value: "electronics"}).Build(),
-			query.New().Term("in_stock", types.TermQuery{Value: true}).Build(),
+			query.TermValue("category", "electronics"),
+			query.TermValue("in_stock", true),
 		).Build()
-	q := query.New().Bool(bq).Build()
+	q := query.BoolQuery(bq)
 
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
@@ -502,7 +502,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 		SubAggregations("by_category", sub).
 		Build()
 
-	q := query.New().MatchAll(&types.MatchAllQuery{}).Build()
+	q := query.MatchAll()
 	res, err := client.Search(ctx, alias, q, 0, 0, nil, aggs, nil, nil, nil)
 	assert.NilError(t, err)
 
@@ -570,7 +570,7 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 		SubAggregations("by_month", sub).
 		Build()
 
-	q := query.New().MatchAll(&types.MatchAllQuery{}).Build()
+	q := query.MatchAll()
 	res, err := client.Search(ctx, alias, q, 0, 0, nil, aggs, nil, nil, nil)
 	assert.NilError(t, err)
 
@@ -750,7 +750,7 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 			"price": {Order: &sortOrder},
 		},
 	}
-	q := query.New().MatchAll(&types.MatchAllQuery{}).Build()
+	q := query.MatchAll()
 	res, err := client.Search(ctx, alias, q, 10, 0, []types.SortCombinations{sortField}, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Assert(t, len(res.Hits.Hits) == 3)
@@ -785,7 +785,7 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 	_, err = client.IndexRefresh(ctx, idx)
 	assert.NilError(t, err)
 
-	q := query.New().MatchAll(&types.MatchAllQuery{}).Build()
+	q := query.MatchAll()
 
 	// Page 1: first 3
 	res1, err := client.Search(ctx, alias, q, 3, 0, nil, nil, nil, nil, nil)
@@ -830,7 +830,7 @@ func TestIntegration_Search_Request(t *testing.T) {
 
 	// Build a stats aggregation directly via the request
 	aggs := query.NewAggregations().Stats("price_stats", "price").Build()
-	q := query.New().Term("category", types.TermQuery{Value: "cat1"}).Build()
+	q := query.TermValue("category", "cat1")
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, aggs, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(2), res.Hits.Total.Value)

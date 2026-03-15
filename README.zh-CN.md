@@ -197,18 +197,16 @@ const (
 )
 
 func buildQuery() {
-	q := query.New().
-		Bool(query.NewBoolQuery().
-			Must(
-				query.TermValue(FieldStatus, "active"),
-			).
-			Filter(
-				query.TermsValues(FieldCategory, "electronics", "books"),
-				query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-			).
-			Build(),
+	q := query.BoolQuery(query.NewBoolQuery().
+		Must(
+			query.TermValue(FieldStatus, "active"),
 		).
-		Build()
+		Filter(
+			query.TermsValues(FieldCategory, "electronics", "books"),
+			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+		).
+		Build(),
+	)
 
 	_ = q // 用于 ESClient.Search() 或 ESClient.SearchWithRequest()
 }
@@ -267,52 +265,9 @@ client.Search(ctx, index, query, ...)
 
 ### 查询构建器
 
-#### Fluent 查询构建器
-
-`query.New()` 返回一个 `*Builder`，用于构造 `types.Query`。可用方法：`Bool`、`Match`、`Term`、`Terms`、`Range`、`Exists`、`MatchAll`、`MatchNone`、`Ids`、`Prefix`、`Wildcard`、`MultiMatch`、`FunctionScore`。
-
-```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
-
-// 简单的 Term 查询
-q := query.New().
-	Term(FieldStatus, types.TermQuery{Value: "active"}).
-	Build()
-
-// Prefix / Wildcard 查询
-q := query.New().
-	Prefix(FieldTitle, types.PrefixQuery{Value: "go"}).
-	Build()
-
-q := query.New().
-	Wildcard(FieldTitle, types.WildcardQuery{Value: "go*"}).
-	Build()
-
-// 组合 Must、Filter、Should、MustNot 的 Bool 查询
-q := query.New().
-	Bool(query.NewBoolQuery().
-		Must(
-			query.TermValue(FieldStatus, "active"),
-			query.MatchPhrase(FieldTitle, "search keyword"),
-		).
-		Filter(
-			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-		).
-		Should(
-			query.TermValue(FieldCategory, "premium"),
-		).
-		MustNot(
-			query.ExistsField(FieldPrice),
-		).
-		MinimumShouldMatch(1).
-		Build(),
-	).
-	Build()
-```
-
 #### 查询辅助函数
 
-常用模式的便捷函数：
+用于构建 `types.Query` 值的便捷函数：
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
@@ -321,8 +276,21 @@ import "github.com/tomtwinkle/es-typed-go/esv8/query"
 query.TermValue(FieldStatus, "active")
 query.TermsValues(FieldCategory, "electronics", "books")
 
-// 文本查询
-query.MatchPhrase(FieldTitle, "search keyword")
+// Match 查询
+query.MatchValue(FieldTitle, "search keyword")
+query.MatchPhrase(FieldTitle, "exact phrase")
+query.MultiMatchQuery("search text", FieldTitle, FieldName)
+
+// Match all / match none
+query.MatchAll()
+query.MatchNone()
+
+// IDs 查询
+query.IdsQuery("id1", "id2", "id3")
+
+// Prefix / Wildcard 查询
+query.PrefixValue(FieldTitle, "go")
+query.WildcardValue(FieldTitle, "go*")
 
 // 字段存在性检查
 query.ExistsField(FieldStatus)
@@ -343,6 +311,30 @@ query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
+
+// 将 BoolQuery 包装为 Query
+query.BoolQuery(query.NewBoolQuery().
+	Must(
+		query.TermValue(FieldStatus, "active"),
+		query.MatchPhrase(FieldTitle, "search keyword"),
+	).
+	Filter(
+		query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+	).
+	Should(
+		query.TermValue(FieldCategory, "premium"),
+	).
+	MustNot(
+		query.ExistsField(FieldPrice),
+	).
+	MinimumShouldMatch(1).
+	Build(),
+)
+
+// Function score 查询
+query.FunctionScoreQuery(&types.FunctionScoreQuery{
+	Query: &types.Query{MatchAll: &types.MatchAllQuery{}},
+})
 
 // 将类型化切片转换为 []types.FieldValue（用于 TermsQuery）
 ids := query.FieldValues("id1", "id2", "id3")
@@ -456,10 +448,10 @@ resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
 
 ```go
 params := query.NewSearch().
-	Query(query.New().Bool(query.NewBoolQuery().
+	Query(query.BoolQuery(query.NewBoolQuery().
 		Must(query.TermValue(FieldStatus, "active")).
-		Build(),
-	).Build()).
+		Build()),
+	).
 	Limit(20).
 	Build()
 ```

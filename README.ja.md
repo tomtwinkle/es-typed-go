@@ -197,18 +197,16 @@ const (
 )
 
 func buildQuery() {
-	q := query.New().
-		Bool(query.NewBoolQuery().
-			Must(
-				query.TermValue(FieldStatus, "active"),
-			).
-			Filter(
-				query.TermsValues(FieldCategory, "electronics", "books"),
-				query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-			).
-			Build(),
+	q := query.BoolQuery(query.NewBoolQuery().
+		Must(
+			query.TermValue(FieldStatus, "active"),
 		).
-		Build()
+		Filter(
+			query.TermsValues(FieldCategory, "electronics", "books"),
+			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+		).
+		Build(),
+	)
 
 	_ = q // ESClient.Search() や ESClient.SearchWithRequest() で使用
 }
@@ -267,52 +265,9 @@ client.Search(ctx, index, query, ...)
 
 ### クエリビルダー
 
-#### Fluent クエリビルダー
-
-`query.New()` は `*Builder` を返し、`types.Query` を構築します。利用可能なメソッド: `Bool`、`Match`、`Term`、`Terms`、`Range`、`Exists`、`MatchAll`、`MatchNone`、`Ids`、`Prefix`、`Wildcard`、`MultiMatch`、`FunctionScore`。
-
-```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
-
-// シンプルな Term クエリ
-q := query.New().
-	Term(FieldStatus, types.TermQuery{Value: "active"}).
-	Build()
-
-// Prefix / Wildcard クエリ
-q := query.New().
-	Prefix(FieldTitle, types.PrefixQuery{Value: "go"}).
-	Build()
-
-q := query.New().
-	Wildcard(FieldTitle, types.WildcardQuery{Value: "go*"}).
-	Build()
-
-// Must, Filter, Should, MustNot を組み合わせた Bool クエリ
-q := query.New().
-	Bool(query.NewBoolQuery().
-		Must(
-			query.TermValue(FieldStatus, "active"),
-			query.MatchPhrase(FieldTitle, "search keyword"),
-		).
-		Filter(
-			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-		).
-		Should(
-			query.TermValue(FieldCategory, "premium"),
-		).
-		MustNot(
-			query.ExistsField(FieldPrice),
-		).
-		MinimumShouldMatch(1).
-		Build(),
-	).
-	Build()
-```
-
 #### クエリヘルパー関数
 
-よく使われるパターンの便利関数です。
+`types.Query` 値を構築するための便利関数です。
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
@@ -321,8 +276,21 @@ import "github.com/tomtwinkle/es-typed-go/esv8/query"
 query.TermValue(FieldStatus, "active")
 query.TermsValues(FieldCategory, "electronics", "books")
 
-// テキストクエリ
-query.MatchPhrase(FieldTitle, "search keyword")
+// Match クエリ
+query.MatchValue(FieldTitle, "search keyword")
+query.MatchPhrase(FieldTitle, "exact phrase")
+query.MultiMatchQuery("search text", FieldTitle, FieldName)
+
+// Match all / match none
+query.MatchAll()
+query.MatchNone()
+
+// IDs クエリ
+query.IdsQuery("id1", "id2", "id3")
+
+// Prefix / Wildcard クエリ
+query.PrefixValue(FieldTitle, "go")
+query.WildcardValue(FieldTitle, "go*")
 
 // フィールドの存在チェック
 query.ExistsField(FieldStatus)
@@ -343,6 +311,30 @@ query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
+
+// BoolQuery を Query にラップ
+query.BoolQuery(query.NewBoolQuery().
+	Must(
+		query.TermValue(FieldStatus, "active"),
+		query.MatchPhrase(FieldTitle, "search keyword"),
+	).
+	Filter(
+		query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+	).
+	Should(
+		query.TermValue(FieldCategory, "premium"),
+	).
+	MustNot(
+		query.ExistsField(FieldPrice),
+	).
+	MinimumShouldMatch(1).
+	Build(),
+)
+
+// Function score クエリ
+query.FunctionScoreQuery(&types.FunctionScoreQuery{
+	Query: &types.Query{MatchAll: &types.MatchAllQuery{}},
+})
 
 // 型付きスライスを []types.FieldValue に変換（TermsQuery 用）
 ids := query.FieldValues("id1", "id2", "id3")
@@ -456,10 +448,10 @@ resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
 
 ```go
 params := query.NewSearch().
-	Query(query.New().Bool(query.NewBoolQuery().
+	Query(query.BoolQuery(query.NewBoolQuery().
 		Must(query.TermValue(FieldStatus, "active")).
-		Build(),
-	).Build()).
+		Build()),
+	).
 	Limit(20).
 	Build()
 ```

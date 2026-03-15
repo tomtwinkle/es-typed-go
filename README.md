@@ -197,18 +197,16 @@ const (
 )
 
 func buildQuery() {
-	q := query.New().
-		Bool(query.NewBoolQuery().
-			Must(
-				query.TermValue(FieldStatus, "active"),
-			).
-			Filter(
-				query.TermsValues(FieldCategory, "electronics", "books"),
-				query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-			).
-			Build(),
+	q := query.BoolQuery(query.NewBoolQuery().
+		Must(
+			query.TermValue(FieldStatus, "active"),
 		).
-		Build()
+		Filter(
+			query.TermsValues(FieldCategory, "electronics", "books"),
+			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+		).
+		Build(),
+	)
 
 	_ = q // Use with ESClient.Search() or ESClient.SearchWithRequest()
 }
@@ -267,52 +265,9 @@ client.Search(ctx, index, query, ...)
 
 ### Query Builders
 
-#### Fluent Query Builder
-
-`query.New()` returns a `*Builder` that constructs a `types.Query`. Available methods: `Bool`, `Match`, `Term`, `Terms`, `Range`, `Exists`, `MatchAll`, `MatchNone`, `Ids`, `Prefix`, `Wildcard`, `MultiMatch`, `FunctionScore`.
-
-```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
-
-// Simple term query
-q := query.New().
-	Term(FieldStatus, types.TermQuery{Value: "active"}).
-	Build()
-
-// Prefix / wildcard queries
-q := query.New().
-	Prefix(FieldTitle, types.PrefixQuery{Value: "go"}).
-	Build()
-
-q := query.New().
-	Wildcard(FieldTitle, types.WildcardQuery{Value: "go*"}).
-	Build()
-
-// Bool query with Must, Filter, Should, MustNot
-q := query.New().
-	Bool(query.NewBoolQuery().
-		Must(
-			query.TermValue(FieldStatus, "active"),
-			query.MatchPhrase(FieldTitle, "search keyword"),
-		).
-		Filter(
-			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-		).
-		Should(
-			query.TermValue(FieldCategory, "premium"),
-		).
-		MustNot(
-			query.ExistsField(FieldPrice),
-		).
-		MinimumShouldMatch(1).
-		Build(),
-	).
-	Build()
-```
-
 #### Query Helper Functions
 
-Convenience functions for common patterns:
+Convenience functions for constructing `types.Query` values:
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
@@ -321,8 +276,21 @@ import "github.com/tomtwinkle/es-typed-go/esv8/query"
 query.TermValue(FieldStatus, "active")
 query.TermsValues(FieldCategory, "electronics", "books")
 
-// Text queries
-query.MatchPhrase(FieldTitle, "search keyword")
+// Match queries
+query.MatchValue(FieldTitle, "search keyword")
+query.MatchPhrase(FieldTitle, "exact phrase")
+query.MultiMatchQuery("search text", FieldTitle, FieldName)
+
+// Match all / match none
+query.MatchAll()
+query.MatchNone()
+
+// IDs query
+query.IdsQuery("id1", "id2", "id3")
+
+// Prefix / wildcard queries
+query.PrefixValue(FieldTitle, "go")
+query.WildcardValue(FieldTitle, "go*")
 
 // Field existence
 query.ExistsField(FieldStatus)
@@ -343,6 +311,30 @@ query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
+
+// Wrap a BoolQuery in a Query
+query.BoolQuery(query.NewBoolQuery().
+	Must(
+		query.TermValue(FieldStatus, "active"),
+		query.MatchPhrase(FieldTitle, "search keyword"),
+	).
+	Filter(
+		query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+	).
+	Should(
+		query.TermValue(FieldCategory, "premium"),
+	).
+	MustNot(
+		query.ExistsField(FieldPrice),
+	).
+	MinimumShouldMatch(1).
+	Build(),
+)
+
+// Function score query
+query.FunctionScoreQuery(&types.FunctionScoreQuery{
+	Query: &types.Query{MatchAll: &types.MatchAllQuery{}},
+})
 
 // Convert a typed slice to []types.FieldValue for TermsQuery
 ids := query.FieldValues("id1", "id2", "id3")
@@ -456,10 +448,10 @@ You can also set the query directly when you have already built a `types.Query`:
 
 ```go
 params := query.NewSearch().
-	Query(query.New().Bool(query.NewBoolQuery().
+	Query(query.BoolQuery(query.NewBoolQuery().
 		Must(query.TermValue(FieldStatus, "active")).
-		Build(),
-	).Build()).
+		Build()),
+	).
 	Limit(20).
 	Build()
 ```
