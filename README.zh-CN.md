@@ -6,7 +6,7 @@
 
 [English](README.md) | [日本語](README.ja.md) | **中文**
 
-一个面向 [go-elasticsearch](https://github.com/elastic/go-elasticsearch)（v8 和 v9）的**类型安全** Go 封装库，在**编译期**防止字段名拼写错误以及索引/别名混淆。
+一个面向 [go-elasticsearch](https://github.com/elastic/go-elasticsearch)（v8 和 v9）的类型安全 Go 封装库，在编译期防止字段名拼写错误以及索引/别名混淆。
 
 ## 动机
 
@@ -22,9 +22,9 @@
 
 ### es-typed-go 的解决方案
 
-本库通过以下方式引入了**真正的类型安全**：
+本库通过以下方式引入了类型安全：
 
-- **专用类型** — 字段名（`estype.Field`）、索引名（`estype.Index`）和别名（`estype.Alias`）使用各自独立的类型。在期望字段的位置传入索引会导致**编译错误**
+- **专用类型** — 字段名（`estype.Field`）、索引名（`estype.Index`）和别名（`estype.Alias`）使用各自独立的类型。在期望字段的位置传入索引会导致编译错误
 - **代码生成** — `estyped` CLI 从 Elasticsearch 映射 JSON 中读取并生成类型化的字段常量，类似于 [sqlc](https://sqlc.dev/) 从 SQL schema 生成类型化的 Go 代码
 - **类型安全的 Fluent 构建器** — 用于查询、排序和聚合的构建器接受 `estype.Field` 而非裸字符串
 - **Functional-option 构造器** — 支持全部 52 种以上的 Elasticsearch 属性类型，使索引映射定义安全且可读
@@ -131,7 +131,7 @@ const FieldTitle estype.Field = "title"
 const FieldTitleKeyword estype.Field = "title.keyword"
 ```
 
-也可以使用**结构体模式**进行分组访问：
+也可以使用结构体模式进行分组访问：
 
 ```bash
 go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
@@ -526,7 +526,7 @@ func main() {
 
 ## Elasticsearch v8 / v9 支持
 
-es-typed-go 以**完全相同的 API** 同时支持 Elasticsearch v8 和 v9。只需更换导入路径即可切换：
+es-typed-go 以完全相同的 API 同时支持 Elasticsearch v8 和 v9。只需更换导入路径即可切换：
 
 ```go
 // Elasticsearch v8

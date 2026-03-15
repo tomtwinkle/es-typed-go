@@ -6,7 +6,7 @@
 
 [English](README.md) | **日本語** | [中文](README.zh-CN.md)
 
-[go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 / v9) 向けの**型安全**な Go ラッパーです。フィールド名のタイポやインデックス/エイリアスの取り違えを**コンパイル時**に防止します。
+[go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 / v9) 向けの型安全な Go ラッパーです。フィールド名のタイポやインデックス/エイリアスの取り違えをコンパイル時に防止します。
 
 ## モチベーション
 
@@ -22,9 +22,9 @@
 
 ### es-typed-go が解決すること
 
-本ライブラリは以下の手段で**真の型安全性**を導入します。
+本ライブラリは以下の手段で型安全性を導入します。
 
-- **専用の型** — フィールド名（`estype.Field`）、インデックス名（`estype.Index`）、エイリアス名（`estype.Alias`）にそれぞれ固有の型を使用。フィールドが期待される場所にインデックスを渡すと**コンパイルエラー**になります
+- **専用の型** — フィールド名（`estype.Field`）、インデックス名（`estype.Index`）、エイリアス名（`estype.Alias`）にそれぞれ固有の型を使用。フィールドが期待される場所にインデックスを渡すとコンパイルエラーになります
 - **コード生成** — Elasticsearch のマッピング JSON から `estyped` CLI が型付きフィールド定数を生成。[sqlc](https://sqlc.dev/) が SQL スキーマから型付き Go コードを生成するのと同様のアプローチです
 - **型安全な Fluent ビルダー** — クエリ、ソート、アグリゲーション用のビルダーが裸の文字列ではなく `estype.Field` を受け取ります
 - **Functional-option コンストラクタ** — 52 種類以上の Elasticsearch プロパティ型すべてに対応し、インデックスマッピングの定義を安全かつ可読性高く記述できます
@@ -131,7 +131,7 @@ const FieldTitle estype.Field = "title"
 const FieldTitleKeyword estype.Field = "title.keyword"
 ```
 
-**構造体モード**を使用すると、グループ化されたアクセスも可能です。
+構造体モードを使用すると、グループ化されたアクセスも可能です。
 
 ```bash
 go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
@@ -526,7 +526,7 @@ func main() {
 
 ## Elasticsearch v8 / v9 対応
 
-es-typed-go は Elasticsearch v8 と v9 の両方を**同一の API** でサポートしています。インポートパスを変更するだけで切り替えられます。
+es-typed-go は Elasticsearch v8 と v9 の両方を同一の API でサポートしています。インポートパスを変更するだけで切り替えられます。
 
 ```go
 // Elasticsearch v8 の場合

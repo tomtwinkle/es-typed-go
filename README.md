@@ -6,7 +6,7 @@
 
 **English** | [日本語](README.ja.md) | [中文](README.zh-CN.md)
 
-A **type-safe** Go wrapper for [go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 and v9) that prevents field-name typos and index/alias confusion **at compile time**.
+A type-safe Go wrapper for [go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 and v9) that prevents field-name typos and index/alias confusion at compile time.
 
 ## Motivation
 
@@ -22,9 +22,9 @@ The official [go-elasticsearch](https://github.com/elastic/go-elasticsearch) lib
 
 ### What es-typed-go solves
 
-This library introduces **true type safety** through:
+This library introduces type safety through:
 
-- **Distinct types** for field names (`estype.Field`), index names (`estype.Index`), and alias names (`estype.Alias`) — passing an index where a field is expected is a **compile error**
+- **Distinct types** for field names (`estype.Field`), index names (`estype.Index`), and alias names (`estype.Alias`) — passing an index where a field is expected is a compile error
 - **Code generation** from Elasticsearch mappings — the `estyped` CLI reads your mapping JSON and generates typed field constants, similar to how [sqlc](https://sqlc.dev/) generates typed Go code from SQL schemas
 - **Fluent, type-safe builders** for queries, sorts, and aggregations that accept `estype.Field` instead of bare strings
 - **Functional-option constructors** for all 52+ Elasticsearch property types, making index mapping definitions safe and readable
@@ -131,7 +131,7 @@ const FieldTitle estype.Field = "title"
 const FieldTitleKeyword estype.Field = "title.keyword"
 ```
 
-You can also use **struct mode** for grouped access:
+You can also use struct mode for grouped access:
 
 ```bash
 go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
@@ -526,7 +526,7 @@ func main() {
 
 ## Elasticsearch v8 / v9 Support
 
-es-typed-go supports both Elasticsearch v8 and v9 with **identical APIs**. Simply swap the import path:
+es-typed-go supports both Elasticsearch v8 and v9 with identical APIs. Simply swap the import path:
 
 ```go
 // For Elasticsearch v8

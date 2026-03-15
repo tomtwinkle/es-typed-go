@@ -55,3 +55,9 @@ applyTo: "**/*.go"
 
 - Keep `esv8/` and `esv9/` in sync: any change to one usually needs the same change in the other.
 - Import the correct ES typed-client package: `github.com/elastic/go-elasticsearch/v8` or `.../v9`.
+
+## Documentation Style
+
+- Do not use emoji in documentation or comments.
+- Do not use excessive bold for inline emphasis within sentences. Bold is reserved for list-item headings (e.g., `- **Name** — description`) and table headers.
+- Keep a neutral, factual tone in README and doc comments.
