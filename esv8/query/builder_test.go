@@ -6,7 +6,6 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"gotest.tools/v3/assert"
 
-	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
@@ -36,16 +35,16 @@ func TestBuilder_Bool(t *testing.T) {
 func TestBuilder_Term(t *testing.T) {
 	t.Parallel()
 	val := "foo"
-	q := query.New().Term(estype.Field("status"), types.TermQuery{Value: val}).Build()
+	q := query.New().Term(FieldStatus, types.TermQuery{Value: val}).Build()
 	assert.Assert(t, q.Term != nil)
-	assert.Equal(t, val, q.Term["status"].Value)
+	assert.Equal(t, val, q.Term[string(FieldStatus)].Value)
 }
 
 func TestBuilder_Match(t *testing.T) {
 	t.Parallel()
-	q := query.New().Match(estype.Field("title"), types.MatchQuery{Query: "hello"}).Build()
+	q := query.New().Match(FieldTitle, types.MatchQuery{Query: "hello"}).Build()
 	assert.Assert(t, q.Match != nil)
-	assert.Equal(t, "hello", q.Match["title"].Query)
+	assert.Equal(t, "hello", q.Match[string(FieldTitle)].Query)
 }
 
 func TestBuilder_Range(t *testing.T) {
@@ -53,9 +52,9 @@ func TestBuilder_Range(t *testing.T) {
 	gt := "2023-01-01"
 	rq := types.NewDateRangeQuery()
 	rq.Gte = &gt
-	q := query.New().Range(estype.Field("date"), rq).Build()
+	q := query.New().Range(FieldDate, rq).Build()
 	assert.Assert(t, q.Range != nil)
-	assert.Assert(t, q.Range["date"] != nil)
+	assert.Assert(t, q.Range[string(FieldDate)] != nil)
 }
 
 func TestBoolQueryBuilder_ShouldAndFilter(t *testing.T) {
@@ -82,20 +81,20 @@ func TestBuilder_Terms(t *testing.T) {
 	t.Parallel()
 	q := query.New().Terms(&types.TermsQuery{
 		TermsQuery: map[string]types.TermsQueryField{
-			"tags": []types.FieldValue{"a", "b"},
+			string(FieldTags): []types.FieldValue{"a", "b"},
 		},
 	}).Build()
 	assert.Assert(t, q.Terms != nil)
-	vals, ok := q.Terms.TermsQuery["tags"].([]types.FieldValue)
+	vals, ok := q.Terms.TermsQuery[string(FieldTags)].([]types.FieldValue)
 	assert.Assert(t, ok)
 	assert.Assert(t, len(vals) == 2)
 }
 
 func TestBuilder_Exists(t *testing.T) {
 	t.Parallel()
-	q := query.New().Exists(&types.ExistsQuery{Field: "status"}).Build()
+	q := query.New().Exists(&types.ExistsQuery{Field: string(FieldStatus)}).Build()
 	assert.Assert(t, q.Exists != nil)
-	assert.Equal(t, "status", q.Exists.Field)
+	assert.Equal(t, string(FieldStatus), q.Exists.Field)
 }
 
 func TestBuilder_MatchNone(t *testing.T) {
@@ -113,23 +112,23 @@ func TestBuilder_Ids(t *testing.T) {
 
 func TestBuilder_Prefix(t *testing.T) {
 	t.Parallel()
-	q := query.New().Prefix(estype.Field("name"), types.PrefixQuery{Value: "pre"}).Build()
+	q := query.New().Prefix(FieldName, types.PrefixQuery{Value: "pre"}).Build()
 	assert.Assert(t, q.Prefix != nil)
-	assert.Equal(t, "pre", q.Prefix["name"].Value)
+	assert.Equal(t, "pre", q.Prefix[string(FieldName)].Value)
 }
 
 func TestBuilder_Wildcard(t *testing.T) {
 	t.Parallel()
-	q := query.New().Wildcard(estype.Field("name"), types.WildcardQuery{Value: strPtr("val*")}).Build()
+	q := query.New().Wildcard(FieldName, types.WildcardQuery{Value: strPtr("val*")}).Build()
 	assert.Assert(t, q.Wildcard != nil)
-	assert.Equal(t, "val*", *q.Wildcard["name"].Value)
+	assert.Equal(t, "val*", *q.Wildcard[string(FieldName)].Value)
 }
 
 func TestBuilder_MultiMatch(t *testing.T) {
 	t.Parallel()
 	q := query.New().MultiMatch(&types.MultiMatchQuery{
 		Query:  "search text",
-		Fields: []string{"title", "name"},
+		Fields: []string{string(FieldTitle), string(FieldName)},
 	}).Build()
 	assert.Assert(t, q.MultiMatch != nil)
 	assert.Equal(t, "search text", q.MultiMatch.Query)
