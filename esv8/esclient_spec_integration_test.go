@@ -22,6 +22,7 @@ import (
 	coresearch "github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/updatebyquery"
+	indicescreate "github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
@@ -48,12 +49,20 @@ func newSpecClient(t *testing.T) esv8.ESClientSpec {
 	return client
 }
 
-// uniqueSpecIndex creates a fresh test index and registers t.Cleanup to delete it.
+// uniqueSpecIndex creates a fresh test index with no replicas and registers t.Cleanup to delete it.
+// Using number_of_replicas=0 ensures the index is immediately GREEN on a single-node cluster,
+// avoiding shard allocation issues (e.g. UpdateByQuery with scripts failing on yellow indices).
 func uniqueSpecIndex(t *testing.T, client esv8.ESClientSpec) string {
 	t.Helper()
 	ctx := context.Background()
 	name := fmt.Sprintf("spectest-%s", uuid.New().String())
-	_, err := client.IndicesCreate(ctx, name, nil)
+	replicas := "0"
+	req := &indicescreate.Request{
+		Settings: &types.IndexSettings{
+			NumberOfReplicas: &replicas,
+		},
+	}
+	_, err := client.IndicesCreate(ctx, name, req)
 	assert.NilError(t, err)
 	t.Cleanup(func() {
 		cctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -297,7 +306,9 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	createReq := corecreate.Request(mustMarshal(t, map[string]any{"status": "pending"}))
 	_, err := client.Create(ctx, idx, "ubq-1", &createReq)
 	assert.NilError(t, err)
-	_, _ = client.IndicesRefresh(ctx)
+	// Refresh only the test index, not all indices, to avoid interference from
+	// YELLOW shards of other parallel tests.
+	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
 	src := "ctx._source.status = 'done'"
