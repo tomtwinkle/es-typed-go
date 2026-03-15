@@ -11,7 +11,6 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"gotest.tools/v3/assert"
 
-	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
@@ -24,13 +23,13 @@ func TestNewSort_Empty(t *testing.T) {
 func TestSortBuilder_Field(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		Field(estype.Field("date"), sortorder.Desc).
+		Field(FieldDate, sortorder.Desc).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs, ok := so.SortOptions["date"]
+	fs, ok := so.SortOptions[string(FieldDate)]
 	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Desc, *fs.Order)
 }
@@ -38,13 +37,13 @@ func TestSortBuilder_Field(t *testing.T) {
 func TestSortBuilder_FieldWithMissing_Last(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldWithMissing(estype.Field("name.keyword"), sortorder.Asc, query.MissingLast).
+		FieldWithMissing(FieldNameKeyword, sortorder.Asc, query.MissingLast).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions["name.keyword"]
+	fs := so.SortOptions[string(FieldNameKeyword)]
 	assert.Equal(t, sortorder.Asc, *fs.Order)
 	assert.Equal(t, "_last", fs.Missing.(string))
 }
@@ -52,13 +51,13 @@ func TestSortBuilder_FieldWithMissing_Last(t *testing.T) {
 func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldWithMissing(estype.Field("date"), sortorder.Desc, query.MissingFirst).
+		FieldWithMissing(FieldDate, sortorder.Desc, query.MissingFirst).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions["date"]
+	fs := so.SortOptions[string(FieldDate)]
 	assert.Equal(t, sortorder.Desc, *fs.Order)
 	assert.Equal(t, "_first", fs.Missing.(string))
 }
@@ -66,17 +65,17 @@ func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 func TestSortBuilder_FieldNested(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldNested(estype.Field("items.date"), sortorder.Asc, estype.Field("items"), sortmode.Min).
+		FieldNested(FieldItemsDate, sortorder.Asc, FieldItems, sortmode.Min).
 		Build()
 
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions["items.date"]
+	fs := so.SortOptions[string(FieldItemsDate)]
 	assert.Equal(t, sortorder.Asc, *fs.Order)
 	assert.Equal(t, sortmode.Min, *fs.Mode)
 	assert.Assert(t, fs.Nested != nil)
-	assert.Equal(t, "items", fs.Nested.Path)
+	assert.Equal(t, string(FieldItems), fs.Nested.Path)
 }
 
 func TestSortBuilder_FieldCustom(t *testing.T) {
@@ -84,7 +83,7 @@ func TestSortBuilder_FieldCustom(t *testing.T) {
 	mode := sortmode.Max
 	order := sortorder.Desc
 	sorts := query.NewSort().
-		FieldCustom(estype.Field("price"), types.FieldSort{
+		FieldCustom(FieldPrice, types.FieldSort{
 			Order: &order,
 			Mode:  &mode,
 		}).
@@ -93,7 +92,7 @@ func TestSortBuilder_FieldCustom(t *testing.T) {
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions["price"]
+	fs := so.SortOptions[string(FieldPrice)]
 	assert.Equal(t, sortorder.Desc, *fs.Order)
 	assert.Equal(t, sortmode.Max, *fs.Mode)
 }
@@ -145,19 +144,19 @@ func TestSortBuilder_DocDesc(t *testing.T) {
 func TestSortBuilder_Chaining(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		FieldNested(estype.Field("items.date"), sortorder.Asc, estype.Field("items"), sortmode.Min).
-		Field(estype.Field("id"), sortorder.Asc).
+		FieldNested(FieldItemsDate, sortorder.Asc, FieldItems, sortmode.Min).
+		Field(FieldId, sortorder.Asc).
 		Build()
 
 	assert.Assert(t, len(sorts) == 2)
 	so1, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs1 := so1.SortOptions["items.date"]
+	fs1 := so1.SortOptions[string(FieldItemsDate)]
 	assert.Equal(t, sortorder.Asc, *fs1.Order)
 	assert.Assert(t, fs1.Nested != nil)
 	so2, ok := sorts[1].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs2 := so2.SortOptions["id"]
+	fs2 := so2.SortOptions[string(FieldId)]
 	assert.Equal(t, sortorder.Asc, *fs2.Order)
 }
 
@@ -175,14 +174,14 @@ func TestSortBuilder_MissingDirectionPattern(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			sorts := query.NewSort().
-				FieldWithMissing(estype.Field("date"), tt.order, tt.missing).
-				Field(estype.Field("id"), tt.order).
+				FieldWithMissing(FieldDate, tt.order, tt.missing).
+				Field(FieldId, tt.order).
 				Build()
 
 			assert.Assert(t, len(sorts) == 2)
 			so, ok := sorts[0].(types.SortOptions)
 			assert.Assert(t, ok)
-			fs := so.SortOptions["date"]
+			fs := so.SortOptions[string(FieldDate)]
 			assert.Equal(t, tt.order, *fs.Order)
 			assert.Equal(t, tt.missing, fs.Missing.(string))
 		})
@@ -199,7 +198,7 @@ func TestSortBuilder_GeoDistance(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
 		GeoDistance(
-			estype.Field("location"),
+			FieldLocation,
 			types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0},
 			sortorder.Asc,
 		).
@@ -210,7 +209,7 @@ func TestSortBuilder_GeoDistance(t *testing.T) {
 	assert.Assert(t, ok)
 	assert.Assert(t, so.GeoDistance_ != nil)
 	assert.Equal(t, sortorder.Asc, *so.GeoDistance_.Order)
-	locs, ok := so.GeoDistance_.GeoDistanceSort["location"]
+	locs, ok := so.GeoDistance_.GeoDistanceSort[string(FieldLocation)]
 	assert.Assert(t, ok)
 	assert.Assert(t, len(locs) == 1)
 }
@@ -219,7 +218,7 @@ func TestSortBuilder_GeoDistance_WithOptions(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
 		GeoDistance(
-			estype.Field("location"),
+			FieldLocation,
 			types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0},
 			sortorder.Asc,
 			query.WithGeoDistanceUnit(distanceunit.Kilometers),
@@ -245,10 +244,10 @@ func TestSortBuilder_GeoDistance_WithNested(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
 		GeoDistance(
-			estype.Field("items.location"),
+			FieldItemsLocation,
 			types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0},
 			sortorder.Asc,
-			query.WithGeoDistanceNested(&types.NestedSortValue{Path: "items"}),
+			query.WithGeoDistanceNested(&types.NestedSortValue{Path: string(FieldItems)}),
 		).
 		Build()
 
@@ -259,7 +258,7 @@ func TestSortBuilder_GeoDistance_WithNested(t *testing.T) {
 	assert.Assert(t, gs != nil)
 	assert.Equal(t, sortorder.Asc, *gs.Order)
 	assert.Assert(t, gs.Nested != nil)
-	assert.Equal(t, "items", gs.Nested.Path)
+	assert.Equal(t, string(FieldItems), gs.Nested.Path)
 }
 
 func TestSortBuilder_GeoDistanceCustom(t *testing.T) {
@@ -269,7 +268,7 @@ func TestSortBuilder_GeoDistanceCustom(t *testing.T) {
 	sorts := query.NewSort().
 		GeoDistanceCustom(types.GeoDistanceSort{
 			GeoDistanceSort: map[string][]types.GeoLocation{
-				"location": {types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0}},
+				string(FieldLocation): {types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0}},
 			},
 			Order: &order,
 			Unit:  &unit,
@@ -334,7 +333,7 @@ func TestSortBuilder_Script_WithNested(t *testing.T) {
 			types.Script{Source: source},
 			scriptsorttype.Number,
 			sortorder.Desc,
-			query.WithScriptSortNested(&types.NestedSortValue{Path: "items"}),
+			query.WithScriptSortNested(&types.NestedSortValue{Path: string(FieldItems)}),
 		).
 		Build()
 
@@ -345,7 +344,7 @@ func TestSortBuilder_Script_WithNested(t *testing.T) {
 	assert.Assert(t, ss != nil)
 	assert.Equal(t, sortorder.Desc, *ss.Order)
 	assert.Assert(t, ss.Nested != nil)
-	assert.Equal(t, "items", ss.Nested.Path)
+	assert.Equal(t, string(FieldItems), ss.Nested.Path)
 }
 
 func TestSortBuilder_ScriptCustom(t *testing.T) {
@@ -374,8 +373,8 @@ func TestSortBuilder_Chaining_AllSortTypes(t *testing.T) {
 	var source types.ScriptSource = "doc['price'].value"
 	sorts := query.NewSort().
 		ScoreDesc().
-		Field(estype.Field("date"), sortorder.Desc).
-		GeoDistance(estype.Field("location"), types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0}, sortorder.Asc).
+		Field(FieldDate, sortorder.Desc).
+		GeoDistance(FieldLocation, types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0}, sortorder.Asc).
 		Script(types.Script{Source: source}, scriptsorttype.Number, sortorder.Asc).
 		DocAsc().
 		Build()
@@ -388,7 +387,7 @@ func TestSortBuilder_Chaining_AllSortTypes(t *testing.T) {
 	// field
 	so1, ok := sorts[1].(types.SortOptions)
 	assert.Assert(t, ok)
-	_, ok = so1.SortOptions["date"]
+	_, ok = so1.SortOptions[string(FieldDate)]
 	assert.Assert(t, ok)
 	// _geo_distance
 	so2, ok := sorts[2].(types.SortOptions)

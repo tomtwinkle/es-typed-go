@@ -9,3 +9,14 @@ type Field string
 func (f Field) String() string {
 	return string(f)
 }
+
+// FieldNames converts a list of Field values to a []string slice.
+// This is useful when passing typed Field constants to ES query types that
+// accept []string, such as MultiMatchQuery.Fields.
+func FieldNames(fields ...Field) []string {
+	result := make([]string, len(fields))
+	for i, f := range fields {
+		result[i] = string(f)
+	}
+	return result
+}
