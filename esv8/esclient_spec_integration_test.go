@@ -288,7 +288,9 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 	req := bulkOps(idx, docs...)
 	_, err := client.Bulk(ctx, &req)
 	assert.NilError(t, err)
-	_, _ = client.IndicesRefresh(ctx)
+	// Refresh only the test index, not all indices, to avoid interference from
+	// YELLOW shards of other parallel tests.
+	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
 	res, err := client.DeleteByQuery(ctx, idx, &deletebyquery.Request{Query: &matchAll})
