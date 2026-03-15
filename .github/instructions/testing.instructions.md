@@ -12,7 +12,7 @@ applyTo: "**/*_test.go"
 ## Test Structure
 
 - Always call `t.Parallel()` at the start of every test and sub-test.
-- Use table-driven tests (`[]struct{ name, input, want }`) with `t.Run(tc.name, ...)` for multiple cases.
+- Use table-driven tests (`map[string]struct{ input, want }{ "name": {} }`) with `t.Run(name, ...)` for multiple cases.
 - Name unit test functions `TestFunctionName(t *testing.T)`.
 - Name integration test functions `TestIntegration_Feature(t *testing.T)`.
 
