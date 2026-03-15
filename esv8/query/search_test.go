@@ -166,11 +166,11 @@ func TestSearchBuilder_Highlight(t *testing.T) {
 func TestSearchBuilder_Collapse(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Collapse(&types.FieldCollapse{Field: string(FieldCategory)}).
+		Collapse(&types.FieldCollapse{Field: FieldCategory.String()}).
 		Build()
 
 	assert.Assert(t, params.Collapse != nil)
-	assert.Equal(t, string(FieldCategory), params.Collapse.Field)
+	assert.Equal(t, FieldCategory.String(), params.Collapse.Field)
 }
 
 func TestSearchBuilder_ScriptFields(t *testing.T) {

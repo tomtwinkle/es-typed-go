@@ -6,6 +6,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"gotest.tools/v3/assert"
 
+	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
@@ -128,7 +129,7 @@ func TestBuilder_MultiMatch(t *testing.T) {
 	t.Parallel()
 	q := query.New().MultiMatch(&types.MultiMatchQuery{
 		Query:  "search text",
-		Fields: []string{string(FieldTitle), string(FieldName)},
+		Fields: estype.FieldNames(FieldTitle, FieldName),
 	}).Build()
 	assert.Assert(t, q.MultiMatch != nil)
 	assert.Equal(t, "search text", q.MultiMatch.Query)

@@ -53,6 +53,28 @@ func TestParseESAlias(t *testing.T) {
 	})
 }
 
+func TestFieldNames(t *testing.T) {
+	t.Parallel()
+	names := estype.FieldNames(estype.Field("title"), estype.Field("name"), estype.Field("status"))
+	assert.Assert(t, len(names) == 3)
+	assert.Equal(t, "title", names[0])
+	assert.Equal(t, "name", names[1])
+	assert.Equal(t, "status", names[2])
+}
+
+func TestFieldNames_Empty(t *testing.T) {
+	t.Parallel()
+	names := estype.FieldNames()
+	assert.Assert(t, len(names) == 0)
+}
+
+func TestFieldNames_Single(t *testing.T) {
+	t.Parallel()
+	names := estype.FieldNames(estype.Field("status"))
+	assert.Assert(t, len(names) == 1)
+	assert.Equal(t, "status", names[0])
+}
+
 func TestRefreshInterval_String(t *testing.T) {
 	t.Parallel()
 
