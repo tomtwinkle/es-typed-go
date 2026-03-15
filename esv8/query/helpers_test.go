@@ -204,10 +204,79 @@ func TestComplexQueryCombination(t *testing.T) {
 		),
 	}
 
-	q := query.New().Bool(
+	q := query.BoolQuery(
 		query.NewBoolQuery().Filter(filters...).Build(),
-	).Build()
+	)
 
 	assert.Assert(t, q.Bool != nil)
 	assert.Assert(t, len(q.Bool.Filter) == 6)
+}
+
+func TestMatchValue(t *testing.T) {
+	t.Parallel()
+	q := query.MatchValue(FieldTitle, "hello")
+	assert.Assert(t, q.Match != nil)
+	assert.Equal(t, "hello", q.Match[string(FieldTitle)].Query)
+}
+
+func TestMatchAll(t *testing.T) {
+	t.Parallel()
+	q := query.MatchAll()
+	assert.Assert(t, q.MatchAll != nil)
+}
+
+func TestMatchNone(t *testing.T) {
+	t.Parallel()
+	q := query.MatchNone()
+	assert.Assert(t, q.MatchNone != nil)
+}
+
+func TestIdsQuery(t *testing.T) {
+	t.Parallel()
+	q := query.IdsQuery("id1", "id2", "id3")
+	assert.Assert(t, q.Ids != nil)
+	assert.Assert(t, len(q.Ids.Values) == 3)
+	assert.Equal(t, "id1", q.Ids.Values[0])
+}
+
+func TestPrefixValue(t *testing.T) {
+	t.Parallel()
+	q := query.PrefixValue(FieldName, "pre")
+	assert.Assert(t, q.Prefix != nil)
+	assert.Equal(t, "pre", q.Prefix[string(FieldName)].Value)
+}
+
+func TestWildcardValue(t *testing.T) {
+	t.Parallel()
+	q := query.WildcardValue(FieldName, "val*")
+	assert.Assert(t, q.Wildcard != nil)
+	assert.Equal(t, "val*", *q.Wildcard[string(FieldName)].Value)
+}
+
+func TestMultiMatchQuery(t *testing.T) {
+	t.Parallel()
+	q := query.MultiMatchQuery("search text", FieldTitle, FieldName)
+	assert.Assert(t, q.MultiMatch != nil)
+	assert.Equal(t, "search text", q.MultiMatch.Query)
+	assert.Assert(t, len(q.MultiMatch.Fields) == 2)
+}
+
+func TestFunctionScoreQuery(t *testing.T) {
+	t.Parallel()
+	q := query.FunctionScoreQuery(&types.FunctionScoreQuery{
+		Query: &types.Query{MatchAll: &types.MatchAllQuery{}},
+	})
+	assert.Assert(t, q.FunctionScore != nil)
+	assert.Assert(t, q.FunctionScore.Query != nil)
+	assert.Assert(t, q.FunctionScore.Query.MatchAll != nil)
+}
+
+func TestBoolQuery(t *testing.T) {
+	t.Parallel()
+	bq := query.NewBoolQuery().
+		Must(query.TermValue(FieldStatus, "active")).
+		Build()
+	q := query.BoolQuery(bq)
+	assert.Assert(t, q.Bool != nil)
+	assert.Assert(t, len(q.Bool.Must) == 1)
 }

@@ -88,12 +88,12 @@ prop := esv8.NewTextProperty(
 Method chaining is intentionally confined to `esv8/query` and `esv9/query`:
 
 ```go
-q := query.New().Bool(
+q := query.BoolQuery(
     query.NewBoolQuery().
         Must(query.TermValue(FieldStatus, "active")).
         Filter(query.TermsValues(FieldCategory, "a", "b")).
         Build(),
-).Build()
+)
 
 sort := query.NewSort().
     Field(FieldDate, sortorder.Desc).
