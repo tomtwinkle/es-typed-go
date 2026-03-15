@@ -17,9 +17,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: autero1/action-gotestsum@v2.0.0
-        with:
-          gotestsum_version: 1.13.0
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Run unit tests
         run: gotestsum --format short-verbose -- -count=1 -timeout=60s -coverprofile=coverage.out ./...
@@ -55,9 +54,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: autero1/action-gotestsum@v2.0.0
-        with:
-          gotestsum_version: 1.13.0
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Wait for Elasticsearch to be ready
         run: |
@@ -106,9 +104,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: autero1/action-gotestsum@v2.0.0
-        with:
-          gotestsum_version: 1.13.0
+      - name: Install gotestsum
+        run: go install gotest.tools/gotestsum@v1.13.0
 
       - name: Wait for Elasticsearch to be ready
         run: |
