@@ -7,6 +7,44 @@ import (
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
+// IQueryBuilder is a self-referential type constraint for query builders.
+// The type parameter B must itself satisfy IQueryBuilder[B], so every chain
+// method returns the concrete builder type rather than a base type.
+// This pattern is enabled by Go 1.26's lifted restriction on self-referential
+// generic type parameter lists.
+type IQueryBuilder[B IQueryBuilder[B]] interface {
+	Bool(bq *types.BoolQuery) B
+	Match(field estype.Field, mq types.MatchQuery) B
+	Term(field estype.Field, tq types.TermQuery) B
+	Terms(tq *types.TermsQuery) B
+	Range(field estype.Field, rq types.RangeQuery) B
+	Exists(eq *types.ExistsQuery) B
+	MatchAll(maq *types.MatchAllQuery) B
+	MatchNone(mnq *types.MatchNoneQuery) B
+	Ids(iq *types.IdsQuery) B
+	Prefix(field estype.Field, pq types.PrefixQuery) B
+	Wildcard(field estype.Field, wq types.WildcardQuery) B
+	MultiMatch(mmq *types.MultiMatchQuery) B
+	FunctionScore(fsq *types.FunctionScoreQuery) B
+	Build() types.Query
+}
+
+// IBoolQueryBuilder is a self-referential type constraint for bool query builders.
+// The type parameter B must itself satisfy IBoolQueryBuilder[B], so every chain
+// method returns the concrete builder type rather than a base type.
+type IBoolQueryBuilder[B IBoolQueryBuilder[B]] interface {
+	Must(queries ...types.Query) B
+	MustNot(queries ...types.Query) B
+	Should(queries ...types.Query) B
+	Filter(queries ...types.Query) B
+	MinimumShouldMatch(v types.MinimumShouldMatch) B
+	Build() *types.BoolQuery
+}
+
+// Compile-time assertions that the concrete types satisfy the interfaces.
+var _ IQueryBuilder[*Builder] = (*Builder)(nil)
+var _ IBoolQueryBuilder[*BoolQueryBuilder] = (*BoolQueryBuilder)(nil)
+
 // Builder constructs an Elasticsearch types.Query using method chaining.
 // This is the only place in the codebase where method chaining is used.
 type Builder struct {

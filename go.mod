@@ -1,6 +1,6 @@
 module github.com/tomtwinkle/es-typed-go
 
-go 1.24.13
+go 1.26
 
 require (
 	github.com/elastic/go-elasticsearch/v8 v8.19.3

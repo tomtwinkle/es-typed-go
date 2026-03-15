@@ -6,6 +6,33 @@ import (
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
+// IAggregationBuilder is a self-referential type constraint for aggregation builders.
+// The type parameter B must itself satisfy IAggregationBuilder[B], so every chain
+// method returns the concrete builder type rather than a base type.
+// This pattern is enabled by Go 1.26's lifted restriction on self-referential
+// generic type parameter lists.
+type IAggregationBuilder[B IAggregationBuilder[B]] interface {
+	Terms(name string, field estype.Field) B
+	TermsWithSize(name string, field estype.Field, size int) B
+	DateHistogram(name string, field estype.Field, interval calendarinterval.CalendarInterval) B
+	DateHistogramWithFormat(name string, field estype.Field, format string, interval calendarinterval.CalendarInterval) B
+	Histogram(name string, field estype.Field, interval float64) B
+	Avg(name string, field estype.Field) B
+	Max(name string, field estype.Field) B
+	Min(name string, field estype.Field) B
+	Sum(name string, field estype.Field) B
+	ValueCount(name string, field estype.Field) B
+	Cardinality(name string, field estype.Field) B
+	Stats(name string, field estype.Field) B
+	Nested(name string, path estype.Field, sub B) B
+	Filter(name string, filter types.Query, sub B) B
+	SubAggregations(name string, sub B) B
+	Build() map[string]types.Aggregations
+}
+
+// Compile-time assertion that the concrete type satisfies the interface.
+var _ IAggregationBuilder[*AggregationBuilder] = (*AggregationBuilder)(nil)
+
 // AggregationBuilder constructs Elasticsearch v9 aggregations using method chaining.
 // Method chaining is intentionally allowed only in this package (query).
 type AggregationBuilder struct {

@@ -16,6 +16,30 @@ const MissingFirst = "_first"
 // MissingLast places documents with missing field values at the end of the sort order.
 const MissingLast = "_last"
 
+// ISortBuilder is a self-referential type constraint for sort builders.
+// The type parameter B must itself satisfy ISortBuilder[B], so every chain
+// method returns the concrete builder type rather than a base type.
+// This pattern is enabled by Go 1.26's lifted restriction on self-referential
+// generic type parameter lists.
+type ISortBuilder[B ISortBuilder[B]] interface {
+	Field(name estype.Field, order sortorder.SortOrder) B
+	FieldWithMissing(name estype.Field, order sortorder.SortOrder, missing string) B
+	FieldNested(name estype.Field, order sortorder.SortOrder, path estype.Field, mode sortmode.SortMode) B
+	FieldCustom(name estype.Field, fs types.FieldSort) B
+	ScoreDesc() B
+	ScoreAsc() B
+	DocAsc() B
+	DocDesc() B
+	GeoDistance(name estype.Field, location types.GeoLocation, order sortorder.SortOrder, opts ...GeoDistanceSortOption) B
+	GeoDistanceCustom(gs types.GeoDistanceSort) B
+	Script(script types.Script, sortType scriptsorttype.ScriptSortType, order sortorder.SortOrder, opts ...ScriptSortOption) B
+	ScriptCustom(ss types.ScriptSort) B
+	Build() []types.SortCombinations
+}
+
+// Compile-time assertion that the concrete type satisfies the interface.
+var _ ISortBuilder[*SortBuilder] = (*SortBuilder)(nil)
+
 // SortBuilder constructs Elasticsearch sort specifications using method chaining.
 type SortBuilder struct {
 	sorts []types.SortCombinations
