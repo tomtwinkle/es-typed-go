@@ -17,8 +17,15 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: autero1/action-gotestsum@v2.0.0
+        with:
+          gotestsum_version: 1.13.0
+
       - name: Run unit tests
-        run: go test -v -count=1 -timeout=60s ./...
+        run: gotestsum --format short-verbose -- -count=1 -timeout=60s -coverprofile=coverage.out ./...
+
+      - name: Show coverage summary
+        run: go tool cover -func=coverage.out
 
   integration-test-v8:
     name: Integration Tests (v8)
@@ -48,6 +55,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: autero1/action-gotestsum@v2.0.0
+        with:
+          gotestsum_version: 1.13.0
+
       - name: Wait for Elasticsearch to be ready
         run: |
           echo "Waiting for Elasticsearch..."
@@ -62,7 +73,7 @@ jobs:
           curl -sf http://localhost:9200/_cluster/health || (echo "Elasticsearch failed to start" && exit 1)
 
       - name: Run v8 integration tests
-        run: go test -v -count=1 -tags=integration -timeout=180s ./estype/... ./esv8/...
+        run: gotestsum --format short-verbose -- -count=1 -tags=integration -timeout=180s ./estype/... ./esv8/...
         env:
           ES_URL: http://localhost:9200
 
@@ -95,6 +106,10 @@ jobs:
         with:
           go-version-file: go.mod
 
+      - uses: autero1/action-gotestsum@v2.0.0
+        with:
+          gotestsum_version: 1.13.0
+
       - name: Wait for Elasticsearch to be ready
         run: |
           echo "Waiting for Elasticsearch..."
@@ -109,6 +124,6 @@ jobs:
           curl -sf http://localhost:9200/_cluster/health || (echo "Elasticsearch failed to start" && exit 1)
 
       - name: Run v9 integration tests
-        run: go test -v -count=1 -tags=integration -timeout=180s ./esv9/...
+        run: gotestsum --format short-verbose -- -count=1 -tags=integration -timeout=180s ./esv9/...
         env:
           ES_URL: http://localhost:9200
