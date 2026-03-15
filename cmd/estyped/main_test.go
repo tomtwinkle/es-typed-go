@@ -28,6 +28,9 @@ func TestToPascalCase(t *testing.T) {
 		{"underscore", "field_name", "FieldName"},
 		{"deep_nested", "items.color.value", "ItemsColorValue"},
 		{"underscore_and_dot", "field_name.sub_field", "FieldNameSubField"},
+		{"double_underscore", "field__name", "FieldName"},
+		{"leading_underscore", "_field", "Field"},
+		{"trailing_underscore", "field_", "Field"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -51,6 +54,9 @@ func TestToStructFieldName(t *testing.T) {
 		{"underscore", "field_name", "FieldName"},
 		{"deep_nested", "items.color.value", "Items_Color_Value"},
 		{"underscore_and_dot", "field_name.sub_field", "FieldName_SubField"},
+		{"double_underscore", "field__name", "FieldName"},
+		{"leading_underscore", "_field", "Field"},
+		{"trailing_underscore", "field_", "Field"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

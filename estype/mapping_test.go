@@ -93,6 +93,15 @@ func TestParseMappingInvalidJSON(t *testing.T) {
 	assert.Assert(t, err != nil)
 }
 
+func TestParseMappingInvalidPropertiesType(t *testing.T) {
+	t.Parallel()
+	// "properties" is a number rather than an object — the first unmarshal into
+	// mappingRoot succeeds (it has no "mappings" key) but the second unmarshal
+	// into mappingBody fails because the type is incompatible.
+	_, err := estype.ParseMapping([]byte(`{"properties": 123}`))
+	assert.ErrorContains(t, err, "failed to parse mapping JSON")
+}
+
 func TestParseMappingFieldsSorted(t *testing.T) {
 	t.Parallel()
 	data := []byte(`{
