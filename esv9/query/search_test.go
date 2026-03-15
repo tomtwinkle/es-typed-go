@@ -151,7 +151,7 @@ func TestSearchBuilder_Highlight(t *testing.T) {
 	t.Parallel()
 	h := &types.Highlight{
 		Fields: []map[string]types.HighlightField{
-			{string(FieldTitle): {}},
+			{FieldTitle.String(): {}},
 		},
 	}
 	params := query.NewSearch().
@@ -177,12 +177,12 @@ func TestSearchBuilder_ScriptFields(t *testing.T) {
 	source := "doc['price'].value * 2"
 	params := query.NewSearch().
 		ScriptFields(map[string]types.ScriptField{
-			string(FieldValue): {Script: types.Script{Source: source}},
+			FieldValue.String(): {Script: types.Script{Source: source}},
 		}).
 		Build()
 
 	assert.Assert(t, params.ScriptFields != nil)
-	sf, ok := params.ScriptFields[string(FieldValue)]
+	sf, ok := params.ScriptFields[FieldValue.String()]
 	assert.Assert(t, ok)
 	assert.Equal(t, source, sf.Script.Source)
 }
@@ -226,7 +226,7 @@ func TestSearchBuilder_FullChaining(t *testing.T) {
 		Offset(0).
 		Aggregation(aggs).
 		Highlight(&types.Highlight{
-			Fields: []map[string]types.HighlightField{{string(FieldTitle): {}}},
+			Fields: []map[string]types.HighlightField{{FieldTitle.String(): {}}},
 		}).
 		Build()
 
