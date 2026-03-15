@@ -28,7 +28,6 @@ applyTo: "**/*_test.go"
 
 - Use only generic Elasticsearch field names for test fixtures: `status`, `title`, `category`, `tags`, `items`, `date`, `price`, `id`, `name`, `type`, `enabled`, `value`.
 - Always wrap field name literals in `estype.Field(...)`.
-- Do **not** use domain-specific names such as `customer_id`, `order_id`, `start_date`.
 
 ## Resource Cleanup
 
