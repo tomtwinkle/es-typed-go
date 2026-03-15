@@ -8,7 +8,6 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"gotest.tools/v3/assert"
 
-	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
@@ -28,20 +27,20 @@ func TestNewSearch_Empty(t *testing.T) {
 func TestSearchBuilder_Where(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Where(query.TermValue(estype.Field("status"), "active")).
+		Where(query.TermValue(FieldStatus, "active")).
 		Build()
 
 	assert.Assert(t, params.Query.Bool != nil)
 	assert.Assert(t, len(params.Query.Bool.Filter) == 1)
 	assert.Assert(t, params.Query.Bool.Filter[0].Term != nil)
-	assert.Equal(t, "active", params.Query.Bool.Filter[0].Term["status"].Value)
+	assert.Equal(t, "active", params.Query.Bool.Filter[0].Term[string(FieldStatus)].Value)
 }
 
 func TestSearchBuilder_Where_Multiple(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Where(query.TermValue(estype.Field("status"), "active")).
-		Where(query.TermValue(estype.Field("type"), "document")).
+		Where(query.TermValue(FieldStatus, "active")).
+		Where(query.TermValue(FieldType, "document")).
 		Build()
 
 	assert.Assert(t, params.Query.Bool != nil)
@@ -51,7 +50,7 @@ func TestSearchBuilder_Where_Multiple(t *testing.T) {
 func TestSearchBuilder_Must(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Must(query.TermValue(estype.Field("status"), "active")).
+		Must(query.TermValue(FieldStatus, "active")).
 		Build()
 
 	assert.Assert(t, params.Query.Bool != nil)
@@ -62,8 +61,8 @@ func TestSearchBuilder_Should(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
 		Should(
-			query.MatchPhrase(estype.Field("title"), "keyword"),
-			query.MatchPhrase(estype.Field("name"), "keyword"),
+			query.MatchPhrase(FieldTitle, "keyword"),
+			query.MatchPhrase(FieldName, "keyword"),
 		).
 		Build()
 
@@ -74,7 +73,7 @@ func TestSearchBuilder_Should(t *testing.T) {
 func TestSearchBuilder_MustNot(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		MustNot(query.ExistsField(estype.Field("tags"))).
+		MustNot(query.ExistsField(FieldTags)).
 		Build()
 
 	assert.Assert(t, params.Query.Bool != nil)
@@ -85,8 +84,8 @@ func TestSearchBuilder_MinimumShouldMatch(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
 		Should(
-			query.MatchPhrase(estype.Field("title"), "keyword"),
-			query.MatchPhrase(estype.Field("name"), "keyword"),
+			query.MatchPhrase(FieldTitle, "keyword"),
+			query.MatchPhrase(FieldName, "keyword"),
 		).
 		MinimumShouldMatch(1).
 		Build()
@@ -99,7 +98,7 @@ func TestSearchBuilder_MinimumShouldMatch(t *testing.T) {
 func TestSearchBuilder_QueryOverridesBoolClauses(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Where(query.TermValue(estype.Field("status"), "active")).
+		Where(query.TermValue(FieldStatus, "active")).
 		Query(types.Query{MatchAll: &types.MatchAllQuery{}}).
 		Build()
 
@@ -111,11 +110,11 @@ func TestSearchBuilder_QueryOverridesBoolClauses(t *testing.T) {
 func TestSearchBuilder_Sort(t *testing.T) {
 	t.Parallel()
 	sorts := query.NewSort().
-		Field(estype.Field("date"), sortorder.Desc).
+		Field(FieldDate, sortorder.Desc).
 		Build()
 
 	params := query.NewSearch().
-		Where(query.TermValue(estype.Field("status"), "active")).
+		Where(query.TermValue(FieldStatus, "active")).
 		Sort(sorts...).
 		Build()
 
@@ -136,7 +135,7 @@ func TestSearchBuilder_LimitAndOffset(t *testing.T) {
 func TestSearchBuilder_Aggregation(t *testing.T) {
 	t.Parallel()
 	aggs := query.NewAggregations().
-		Terms("by_category", estype.Field("category")).
+		Terms("by_category", FieldCategory).
 		Build()
 
 	params := query.NewSearch().
@@ -152,7 +151,7 @@ func TestSearchBuilder_Highlight(t *testing.T) {
 	t.Parallel()
 	h := &types.Highlight{
 		Fields: []map[string]types.HighlightField{
-			{"title": {}},
+			{string(FieldTitle): {}},
 		},
 	}
 	params := query.NewSearch().
@@ -166,11 +165,11 @@ func TestSearchBuilder_Highlight(t *testing.T) {
 func TestSearchBuilder_Collapse(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Collapse(&types.FieldCollapse{Field: "category"}).
+		Collapse(&types.FieldCollapse{Field: string(FieldCategory)}).
 		Build()
 
 	assert.Assert(t, params.Collapse != nil)
-	assert.Equal(t, "category", params.Collapse.Field)
+	assert.Equal(t, string(FieldCategory), params.Collapse.Field)
 }
 
 func TestSearchBuilder_ScriptFields(t *testing.T) {
@@ -178,12 +177,12 @@ func TestSearchBuilder_ScriptFields(t *testing.T) {
 	source := "doc['price'].value * 2"
 	params := query.NewSearch().
 		ScriptFields(map[string]types.ScriptField{
-			"value": {Script: types.Script{Source: source}},
+			string(FieldValue): {Script: types.Script{Source: source}},
 		}).
 		Build()
 
 	assert.Assert(t, params.ScriptFields != nil)
-	sf, ok := params.ScriptFields["value"]
+	sf, ok := params.ScriptFields[string(FieldValue)]
 	assert.Assert(t, ok)
 	assert.Equal(t, source, sf.Script.Source)
 }
@@ -191,10 +190,10 @@ func TestSearchBuilder_ScriptFields(t *testing.T) {
 func TestSearchBuilder_CombinedBoolClauses(t *testing.T) {
 	t.Parallel()
 	params := query.NewSearch().
-		Where(query.TermValue(estype.Field("status"), "active")).
-		Must(query.MatchPhrase(estype.Field("title"), "keyword")).
-		Should(query.TermValue(estype.Field("category"), "a")).
-		MustNot(query.ExistsField(estype.Field("tags"))).
+		Where(query.TermValue(FieldStatus, "active")).
+		Must(query.MatchPhrase(FieldTitle, "keyword")).
+		Should(query.TermValue(FieldCategory, "a")).
+		MustNot(query.ExistsField(FieldTags)).
 		Build()
 
 	assert.Assert(t, params.Query.Bool != nil)
@@ -208,26 +207,26 @@ func TestSearchBuilder_FullChaining(t *testing.T) {
 	t.Parallel()
 	// Demonstrates the ActiveRecord-style fluent API.
 	aggs := query.NewAggregations().
-		DateHistogram("by_month", estype.Field("date"), calendarinterval.Month).
+		DateHistogram("by_month", FieldDate, calendarinterval.Month).
 		Build()
 
 	sorts := query.NewSort().
-		Field(estype.Field("date"), sortorder.Desc).
-		Field(estype.Field("id"), sortorder.Asc).
+		Field(FieldDate, sortorder.Desc).
+		Field(FieldId, sortorder.Asc).
 		Build()
 
 	params := query.NewSearch().
 		Where(
-			query.TermValue(estype.Field("status"), "active"),
-			query.TermsValues(estype.Field("category"), query.FieldValues("a", "b")...),
+			query.TermValue(FieldStatus, "active"),
+			query.TermsValues(FieldCategory, query.FieldValues("a", "b")...),
 		).
-		MustNot(query.NotExists(estype.Field("tags"))).
+		MustNot(query.NotExists(FieldTags)).
 		Sort(sorts...).
 		Limit(10).
 		Offset(0).
 		Aggregation(aggs).
 		Highlight(&types.Highlight{
-			Fields: []map[string]types.HighlightField{{"title": {}}},
+			Fields: []map[string]types.HighlightField{{string(FieldTitle): {}}},
 		}).
 		Build()
 
