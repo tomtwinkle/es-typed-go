@@ -35,9 +35,10 @@ Invalid usage is caught by the compiler, not by Elasticsearch at runtime.
 
 - **Compile-time safety** — Distinct types (`Field`, `Index`, `Alias`) prevent mix-ups
 - **Code generation** — Generate typed field constants from Elasticsearch mappings
-- **Fluent query builders** — Type-safe Bool, Term, Match, Range, Nested queries and more
-- **Aggregation builders** — Terms, DateHistogram, Avg, Max, Min, Sum, Nested, Filter
-- **Sort builders** — Field, Score, Doc, GeoDistance, Script sorting
+- **SearchBuilder** — High-level ActiveRecord-style builder combining query, sort, aggregations, and pagination into a single `SearchParams`
+- **Fluent query builders** — Type-safe Bool, Term, Match, Range, Nested, Prefix, Wildcard, MultiMatch, FunctionScore queries and more
+- **Aggregation builders** — Terms, DateHistogram, Histogram, Avg, Max, Min, Sum, ValueCount, Cardinality, Stats, Nested, Filter
+- **Sort builders** — Field, Score, Doc, GeoDistance, Script sorting with functional options
 - **Property builders** — Functional-option constructors for all ES property types
 - **Date format constants** — 80+ built-in Elasticsearch date format constants
 - **Dual version support** — Elasticsearch v8 and v9 with identical APIs
@@ -268,12 +269,23 @@ client.Search(ctx, index, query, ...)
 
 #### Fluent Query Builder
 
+`query.New()` returns a `*Builder` that constructs a `types.Query`. Available methods: `Bool`, `Match`, `Term`, `Terms`, `Range`, `Exists`, `MatchAll`, `MatchNone`, `Ids`, `Prefix`, `Wildcard`, `MultiMatch`, `FunctionScore`.
+
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 // Simple term query
 q := query.New().
 	Term(FieldStatus, types.TermQuery{Value: "active"}).
+	Build()
+
+// Prefix / wildcard queries
+q := query.New().
+	Prefix(FieldTitle, types.PrefixQuery{Value: "go"}).
+	Build()
+
+q := query.New().
+	Wildcard(FieldTitle, types.WildcardQuery{Value: "go*"}).
 	Build()
 
 // Bool query with Must, Filter, Should, MustNot
@@ -331,6 +343,10 @@ query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
+
+// Convert a typed slice to []types.FieldValue for TermsQuery
+ids := query.FieldValues("id1", "id2", "id3")
+query.TermsValues(FieldStatus, ids...)
 ```
 
 ### Sort Builder
@@ -339,6 +355,9 @@ query.BoolMustNot(q1)
 import (
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/scriptsorttype"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/distanceunit"
 )
 
 sorts := query.NewSort().
@@ -346,7 +365,18 @@ sorts := query.NewSort().
 	Field(FieldPrice, sortorder.Asc).                      // Then by price ascending
 	FieldWithMissing(FieldCategory, sortorder.Asc,
 		query.MissingLast).                                // Missing values last
-	ScoreDesc().                                           // Then by relevance score
+	FieldNested(FieldItems, sortorder.Asc,
+		FieldItems, sortmode.Min).                         // Nested field sort
+	ScoreDesc().                                           // By relevance score descending
+	ScoreAsc().                                            // By relevance score ascending
+	DocAsc().                                              // By index order ascending
+	DocDesc().                                             // By index order descending
+	GeoDistance(FieldLocation, types.GeoLocation{...},
+		sortorder.Asc,
+		query.WithGeoDistanceUnit(distanceunit.Kilometers),
+		query.WithGeoDistanceIgnoreUnmapped(true)).        // Geo distance sort with options
+	Script(script, scriptsorttype.Number,
+		sortorder.Asc).                                    // Script-based sort
 	Build()
 ```
 
@@ -356,17 +386,81 @@ sorts := query.NewSort().
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                   // Bucket by category
-	TermsWithSize("top_tags", FieldTags, 20).                             // Top 20 tags
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).        // Monthly histogram
-	Avg("avg_price", FieldPrice).                                         // Average price
-	Max("max_price", FieldPrice).                                         // Maximum price
-	Nested("nested_items", FieldItems, query.NewAggregations().           // Nested aggregation
+	Terms("by_category", FieldCategory).                                         // Bucket by category
+	TermsWithSize("top_tags", FieldTags, 20).                                    // Top 20 tags
+	DateHistogram("over_time", FieldDate, calendarinterval.Month).               // Monthly histogram
+	DateHistogramWithFormat("over_time_fmt", FieldDate, "yyyy-MM",
+		calendarinterval.Month).                                                 // With date format
+	Histogram("price_dist", FieldPrice, 50.0).                                   // Numeric histogram
+	Avg("avg_price", FieldPrice).                                                // Average price
+	Max("max_price", FieldPrice).                                                // Maximum price
+	Min("min_price", FieldPrice).                                                // Minimum price
+	Sum("total_price", FieldPrice).                                              // Sum
+	ValueCount("count_status", FieldStatus).                                     // Value count
+	Cardinality("unique_categories", FieldCategory).                             // Distinct count
+	Stats("price_stats", FieldPrice).                                            // Count/min/max/avg/sum
+	Nested("nested_items", FieldItems, query.NewAggregations().                  // Nested aggregation
 		Terms("item_names", estype.Field("items.name")),
 	).
-	SubAggregations("by_category", query.NewAggregations().               // Sub-aggregation
+	Filter("active_only", query.TermValue(FieldStatus, "active"),
+		query.NewAggregations().Avg("avg_price", FieldPrice)).                   // Filter aggregation
+	SubAggregations("by_category", query.NewAggregations().                      // Sub-aggregation
 		Avg("avg_price", FieldPrice),
 	).
+	Build()
+```
+
+### SearchBuilder
+
+`query.NewSearch()` provides an ActiveRecord-style builder that combines query, sort, aggregations, and pagination into a single `SearchParams` value. Use it instead of assembling search parameters manually.
+
+```go
+import (
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+)
+
+params := query.NewSearch().
+	Where(
+		query.TermValue(FieldStatus, "active"),              // filter clauses
+		query.DateRangeQuery(FieldDate, "2024-01-01", ""),
+	).
+	Must(
+		query.MatchPhrase(FieldTitle, "search keyword"),     // must clauses
+	).
+	Should(
+		query.TermValue(FieldCategory, "premium"),           // should clauses
+	).
+	MustNot(
+		query.ExistsField(FieldPrice),                       // must_not clauses
+	).
+	Sort(query.NewSort().
+		Field(FieldDate, sortorder.Desc).
+		ScoreDesc().
+		Build()...,
+	).
+	Aggregation(query.NewAggregations().
+		Terms("by_category", FieldCategory).
+		Build(),
+	).
+	Limit(10).
+	Offset(0).
+	Build()
+
+// params.Query, params.Sort, params.Aggregations, params.Size, params.From, etc.
+resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
+	params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+```
+
+You can also set the query directly when you have already built a `types.Query`:
+
+```go
+params := query.NewSearch().
+	Query(query.New().Bool(query.NewBoolQuery().
+		Must(query.TermValue(FieldStatus, "active")).
+		Build(),
+	).Build()).
+	Limit(20).
 	Build()
 ```
 
@@ -452,6 +546,44 @@ client, _ := esv8.NewClientWithLogger(config, logger)
 specClient, _ := esv8.NewSpecClient(config)
 ```
 
+### ESClient Operations
+
+`ESClient` groups its methods into four categories:
+
+**Cluster**
+- `Info(ctx)` — cluster information
+
+**Index management**
+- `CreateIndex(ctx, index, settings, mappings)` — create an index
+- `DeleteIndex(ctx, index)` — delete an index
+- `IndexExists(ctx, index) bool` — check existence
+- `IndexRefresh(ctx, index)` — force a refresh
+- `IndexDocumentCount(ctx, index)` — document count
+
+**Alias management**
+- `CreateAlias(ctx, index, alias, isWriteIndex)` — create an alias
+- `UpdateAliases(ctx, actions)` — atomic add/remove alias actions
+- `AliasExists(ctx, alias) bool` — check existence
+- `AliasRefresh(ctx, alias)` — force a refresh
+- `GetIndicesForAlias(ctx, alias) []Index` — list backing indices
+- `GetRefreshInterval(ctx, alias)` — read refresh interval
+- `UpdateRefreshInterval(ctx, alias, interval)` — update refresh interval
+
+**Documents**
+- `CreateDocument(ctx, alias, id, doc)` — index a document (waits for refresh)
+- `GetDocument(ctx, alias, id)` — retrieve a document by ID
+- `DeleteDocument(ctx, index, id)` — delete a document
+- `UpdateDocument(ctx, index, id, req)` — partial update
+
+**Search**
+- `Search(ctx, alias, query, limit, offset, sort, aggs, highlight, collapse, scriptFields)` — execute a search
+- `SearchWithRequest(ctx, alias, req)` — execute a raw `search.Request`
+
+**Reindex**
+- `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — full reindex
+- `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — incremental reindex
+- `WaitForTaskCompletion(ctx, taskID, timeout)` — poll until a task finishes
+
 ### Complete Search Example
 
 ```go
@@ -488,34 +620,32 @@ func main() {
 		panic(err)
 	}
 
-	// Build query
-	q := query.New().
-		Bool(query.NewBoolQuery().
-			Must(query.TermValue(FieldStatus, "active")).
-			Filter(
-				query.TermsValues(FieldCategory, "electronics", "books"),
-				query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-			).
+	// Build search parameters with SearchBuilder
+	params := query.NewSearch().
+		Where(query.TermValue(FieldStatus, "active")).
+		Where(
+			query.TermsValues(FieldCategory, "electronics", "books"),
+			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+		).
+		Sort(query.NewSort().
+			Field(FieldDate, sortorder.Desc).
+			ScoreDesc().
+			Build()...,
+		).
+		Aggregation(query.NewAggregations().
+			Terms("by_category", FieldCategory).
+			Avg("avg_price", FieldPrice).
 			Build(),
 		).
-		Build()
-
-	// Build sort
-	sorts := query.NewSort().
-		Field(FieldDate, sortorder.Desc).
-		ScoreDesc().
-		Build()
-
-	// Build aggregations
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Avg("avg_price", FieldPrice).
+		Limit(10).
+		Offset(0).
 		Build()
 
 	// Execute search
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
-	resp, err := client.Search(ctx, alias, q, 10, 0, sorts, aggs, nil, nil, nil)
+	resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
+		params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
 	if err != nil {
 		panic(err)
 	}

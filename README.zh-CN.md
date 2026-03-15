@@ -35,9 +35,10 @@
 
 - **编译时安全** — 专用类型（`Field`、`Index`、`Alias`）防止混淆
 - **代码生成** — 从 Elasticsearch 映射生成类型化字段常量
-- **Fluent 查询构建器** — 类型安全的 Bool、Term、Match、Range、Nested 查询等
-- **聚合构建器** — Terms、DateHistogram、Avg、Max、Min、Sum、Nested、Filter
-- **排序构建器** — Field、Score、Doc、GeoDistance、Script 排序
+- **SearchBuilder** — ActiveRecord 风格的构建器，将查询、排序、聚合和分页合并为单一的 `SearchParams`
+- **Fluent 查询构建器** — 类型安全的 Bool、Term、Match、Range、Nested、Prefix、Wildcard、MultiMatch、FunctionScore 查询等
+- **聚合构建器** — Terms、DateHistogram、Histogram、Avg、Max、Min、Sum、ValueCount、Cardinality、Stats、Nested、Filter
+- **排序构建器** — Field、Score、Doc、GeoDistance、Script 排序（支持 Functional option）
 - **属性构建器** — 面向所有 ES 属性类型的 Functional-option 构造器
 - **日期格式常量** — 80 多个内置 Elasticsearch 日期格式常量
 - **双版本支持** — 以相同的 API 支持 Elasticsearch v8 和 v9
@@ -268,12 +269,23 @@ client.Search(ctx, index, query, ...)
 
 #### Fluent 查询构建器
 
+`query.New()` 返回一个 `*Builder`，用于构造 `types.Query`。可用方法：`Bool`、`Match`、`Term`、`Terms`、`Range`、`Exists`、`MatchAll`、`MatchNone`、`Ids`、`Prefix`、`Wildcard`、`MultiMatch`、`FunctionScore`。
+
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 // 简单的 Term 查询
 q := query.New().
 	Term(FieldStatus, types.TermQuery{Value: "active"}).
+	Build()
+
+// Prefix / Wildcard 查询
+q := query.New().
+	Prefix(FieldTitle, types.PrefixQuery{Value: "go"}).
+	Build()
+
+q := query.New().
+	Wildcard(FieldTitle, types.WildcardQuery{Value: "go*"}).
 	Build()
 
 // 组合 Must、Filter、Should、MustNot 的 Bool 查询
@@ -331,6 +343,10 @@ query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
+
+// 将类型化切片转换为 []types.FieldValue（用于 TermsQuery）
+ids := query.FieldValues("id1", "id2", "id3")
+query.TermsValues(FieldStatus, ids...)
 ```
 
 ### 排序构建器
@@ -339,6 +355,9 @@ query.BoolMustNot(q1)
 import (
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/scriptsorttype"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/distanceunit"
 )
 
 sorts := query.NewSort().
@@ -346,7 +365,18 @@ sorts := query.NewSort().
 	Field(FieldPrice, sortorder.Asc).                      // 然后按价格升序
 	FieldWithMissing(FieldCategory, sortorder.Asc,
 		query.MissingLast).                                // 缺失值排在最后
-	ScoreDesc().                                           // 然后按相关性得分降序
+	FieldNested(FieldItems, sortorder.Asc,
+		FieldItems, sortmode.Min).                         // 嵌套字段排序
+	ScoreDesc().                                           // 相关性得分降序
+	ScoreAsc().                                            // 相关性得分升序
+	DocAsc().                                              // 索引顺序升序
+	DocDesc().                                             // 索引顺序降序
+	GeoDistance(FieldLocation, types.GeoLocation{...},
+		sortorder.Asc,
+		query.WithGeoDistanceUnit(distanceunit.Kilometers),
+		query.WithGeoDistanceIgnoreUnmapped(true)).        // 地理距离排序（带选项）
+	Script(script, scriptsorttype.Number,
+		sortorder.Asc).                                    // 脚本排序
 	Build()
 ```
 
@@ -356,17 +386,81 @@ sorts := query.NewSort().
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                   // 按类别分桶
-	TermsWithSize("top_tags", FieldTags, 20).                             // 前 20 个标签
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).        // 按月直方图
-	Avg("avg_price", FieldPrice).                                         // 平均价格
-	Max("max_price", FieldPrice).                                         // 最高价格
-	Nested("nested_items", FieldItems, query.NewAggregations().           // Nested 聚合
+	Terms("by_category", FieldCategory).                                         // 按类别分桶
+	TermsWithSize("top_tags", FieldTags, 20).                                    // 前 20 个标签
+	DateHistogram("over_time", FieldDate, calendarinterval.Month).               // 按月直方图
+	DateHistogramWithFormat("over_time_fmt", FieldDate, "yyyy-MM",
+		calendarinterval.Month).                                                 // 带日期格式
+	Histogram("price_dist", FieldPrice, 50.0).                                   // 数值直方图
+	Avg("avg_price", FieldPrice).                                                // 平均价格
+	Max("max_price", FieldPrice).                                                // 最高价格
+	Min("min_price", FieldPrice).                                                // 最低价格
+	Sum("total_price", FieldPrice).                                              // 总和
+	ValueCount("count_status", FieldStatus).                                     // 值计数
+	Cardinality("unique_categories", FieldCategory).                             // 近似唯一计数
+	Stats("price_stats", FieldPrice).                                            // 计数/最小/最大/平均/总和
+	Nested("nested_items", FieldItems, query.NewAggregations().                  // Nested 聚合
 		Terms("item_names", estype.Field("items.name")),
 	).
-	SubAggregations("by_category", query.NewAggregations().               // 子聚合
+	Filter("active_only", query.TermValue(FieldStatus, "active"),
+		query.NewAggregations().Avg("avg_price", FieldPrice)).                   // 过滤聚合
+	SubAggregations("by_category", query.NewAggregations().                      // 子聚合
 		Avg("avg_price", FieldPrice),
 	).
+	Build()
+```
+
+### SearchBuilder
+
+`query.NewSearch()` 提供 ActiveRecord 风格的构建器，将查询、排序、聚合和分页合并为单一的 `SearchParams` 值。使用它来代替手动组装搜索参数。
+
+```go
+import (
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+)
+
+params := query.NewSearch().
+	Where(
+		query.TermValue(FieldStatus, "active"),              // filter 子句
+		query.DateRangeQuery(FieldDate, "2024-01-01", ""),
+	).
+	Must(
+		query.MatchPhrase(FieldTitle, "search keyword"),     // must 子句
+	).
+	Should(
+		query.TermValue(FieldCategory, "premium"),           // should 子句
+	).
+	MustNot(
+		query.ExistsField(FieldPrice),                       // must_not 子句
+	).
+	Sort(query.NewSort().
+		Field(FieldDate, sortorder.Desc).
+		ScoreDesc().
+		Build()...,
+	).
+	Aggregation(query.NewAggregations().
+		Terms("by_category", FieldCategory).
+		Build(),
+	).
+	Limit(10).
+	Offset(0).
+	Build()
+
+// params.Query, params.Sort, params.Aggregations, params.Size, params.From 等
+resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
+	params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+```
+
+如果已经构建好 `types.Query`，也可以直接设置：
+
+```go
+params := query.NewSearch().
+	Query(query.New().Bool(query.NewBoolQuery().
+		Must(query.TermValue(FieldStatus, "active")).
+		Build(),
+	).Build()).
+	Limit(20).
 	Build()
 ```
 
@@ -452,6 +546,44 @@ client, _ := esv8.NewClientWithLogger(config, logger)
 specClient, _ := esv8.NewSpecClient(config)
 ```
 
+### ESClient 操作一览
+
+`ESClient` 的方法分为四个类别：
+
+**集群**
+- `Info(ctx)` — 获取集群信息
+
+**索引管理**
+- `CreateIndex(ctx, index, settings, mappings)` — 创建索引
+- `DeleteIndex(ctx, index)` — 删除索引
+- `IndexExists(ctx, index) bool` — 检查是否存在
+- `IndexRefresh(ctx, index)` — 强制刷新
+- `IndexDocumentCount(ctx, index)` — 获取文档数量
+
+**别名管理**
+- `CreateAlias(ctx, index, alias, isWriteIndex)` — 创建别名
+- `UpdateAliases(ctx, actions)` — 原子性地添加/删除别名
+- `AliasExists(ctx, alias) bool` — 检查是否存在
+- `AliasRefresh(ctx, alias)` — 强制刷新
+- `GetIndicesForAlias(ctx, alias) []Index` — 列出关联索引
+- `GetRefreshInterval(ctx, alias)` — 读取刷新间隔
+- `UpdateRefreshInterval(ctx, alias, interval)` — 更新刷新间隔
+
+**文档**
+- `CreateDocument(ctx, alias, id, doc)` — 索引文档（等待刷新）
+- `GetDocument(ctx, alias, id)` — 按 ID 检索文档
+- `DeleteDocument(ctx, index, id)` — 删除文档
+- `UpdateDocument(ctx, index, id, req)` — 部分更新
+
+**搜索**
+- `Search(ctx, alias, query, limit, offset, sort, aggs, highlight, collapse, scriptFields)` — 执行搜索
+- `SearchWithRequest(ctx, alias, req)` — 执行原始 `search.Request`
+
+**重建索引**
+- `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — 全量重建
+- `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — 增量重建
+- `WaitForTaskCompletion(ctx, taskID, timeout)` — 轮询直到任务完成
+
 ### 完整的搜索示例
 
 ```go
@@ -488,34 +620,32 @@ func main() {
 		panic(err)
 	}
 
-	// 构建查询
-	q := query.New().
-		Bool(query.NewBoolQuery().
-			Must(query.TermValue(FieldStatus, "active")).
-			Filter(
-				query.TermsValues(FieldCategory, "electronics", "books"),
-				query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-			).
+	// 使用 SearchBuilder 构建搜索参数
+	params := query.NewSearch().
+		Where(query.TermValue(FieldStatus, "active")).
+		Where(
+			query.TermsValues(FieldCategory, "electronics", "books"),
+			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+		).
+		Sort(query.NewSort().
+			Field(FieldDate, sortorder.Desc).
+			ScoreDesc().
+			Build()...,
+		).
+		Aggregation(query.NewAggregations().
+			Terms("by_category", FieldCategory).
+			Avg("avg_price", FieldPrice).
 			Build(),
 		).
-		Build()
-
-	// 构建排序
-	sorts := query.NewSort().
-		Field(FieldDate, sortorder.Desc).
-		ScoreDesc().
-		Build()
-
-	// 构建聚合
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Avg("avg_price", FieldPrice).
+		Limit(10).
+		Offset(0).
 		Build()
 
 	// 执行搜索
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
-	resp, err := client.Search(ctx, alias, q, 10, 0, sorts, aggs, nil, nil, nil)
+	resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
+		params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
 	if err != nil {
 		panic(err)
 	}
