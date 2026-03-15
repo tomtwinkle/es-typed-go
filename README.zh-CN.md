@@ -4,57 +4,57 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/tomtwinkle/es-typed-go.svg)](https://pkg.go.dev/github.com/tomtwinkle/es-typed-go)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**English** | [日本語](README.ja.md) | [中文](README.zh-CN.md)
+[English](README.md) | [日本語](README.ja.md) | **中文**
 
-A **type-safe** Go wrapper for [go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 and v9) that prevents field-name typos and index/alias confusion **at compile time**.
+一个面向 [go-elasticsearch](https://github.com/elastic/go-elasticsearch)（v8 和 v9）的**类型安全** Go 封装库，在**编译期**防止字段名拼写错误以及索引/别名混淆。
 
-## Motivation
+## 动机
 
-### Problems with the existing elasticsearch-go Typed Client
+### 现有 elasticsearch-go Typed Client 的问题
 
-The official [go-elasticsearch](https://github.com/elastic/go-elasticsearch) library provides a "typed" client, but despite the name, it is auto-generated from a TypeScript specification and has several practical problems:
+官方 [go-elasticsearch](https://github.com/elastic/go-elasticsearch) 库提供了一个"typed"客户端，但尽管名称如此，它实际上是从 TypeScript 规范自动生成的，存在以下实际问题：
 
-1. **Unintuitive API** — Because the typed client is mechanically generated from TypeScript definitions, function signatures are often confusing and hard to understand without constantly consulting documentation.
+1. **API 不直观** — 由于 typed client 是从 TypeScript 定义机械地生成的，函数签名通常令人困惑，不持续查阅文档就难以理解。
 
-2. **Pervasive use of `any` types** — When building search queries, most parameters (such as `FieldValue`, `SortCombinations`, `Missing`, and `TermsQueryField`) are typed as `any`. This means you can pass completely invalid parameters without any compiler error — you only discover the mistake when Elasticsearch rejects the query at runtime.
+2. **大量使用 `any` 类型** — 在构建搜索查询时，大多数参数（如 `FieldValue`、`SortCombinations`、`Missing` 和 `TermsQueryField`）都被定义为 `any` 类型。这意味着传入完全无效的参数也不会产生编译错误——只有当 Elasticsearch 在运行时拒绝查询时才能发现错误。
 
-3. **Trial-and-error workflow** — Because of the lack of compile-time safety, developers are forced into a trial-and-error cycle: write code → send query → read the error → fix → repeat. In many cases, writing raw JSON is actually easier and faster than using the typed client.
+3. **反复试错的工作流** — 由于缺乏编译时安全性，开发者不得不陷入试错循环：编写代码 → 发送查询 → 阅读错误 → 修复 → 重复。在许多情况下，直接编写原始 JSON 反而比使用 typed client 更简单快捷。
 
-### What es-typed-go solves
+### es-typed-go 的解决方案
 
-This library introduces **true type safety** through:
+本库通过以下方式引入了**真正的类型安全**：
 
-- **Distinct types** for field names (`estype.Field`), index names (`estype.Index`), and alias names (`estype.Alias`) — passing an index where a field is expected is a **compile error**
-- **Code generation** from Elasticsearch mappings — the `estyped` CLI reads your mapping JSON and generates typed field constants, similar to how [sqlc](https://sqlc.dev/) generates typed Go code from SQL schemas
-- **Fluent, type-safe builders** for queries, sorts, and aggregations that accept `estype.Field` instead of bare strings
-- **Functional-option constructors** for all 52+ Elasticsearch property types, making index mapping definitions safe and readable
+- **专用类型** — 字段名（`estype.Field`）、索引名（`estype.Index`）和别名（`estype.Alias`）使用各自独立的类型。在期望字段的位置传入索引会导致**编译错误**
+- **代码生成** — `estyped` CLI 从 Elasticsearch 映射 JSON 中读取并生成类型化的字段常量，类似于 [sqlc](https://sqlc.dev/) 从 SQL schema 生成类型化的 Go 代码
+- **类型安全的 Fluent 构建器** — 用于查询、排序和聚合的构建器接受 `estype.Field` 而非裸字符串
+- **Functional-option 构造器** — 支持全部 52 种以上的 Elasticsearch 属性类型，使索引映射定义安全且可读
 
-Invalid usage is caught by the compiler, not by Elasticsearch at runtime.
+无效的使用将被编译器捕获，而非在 Elasticsearch 运行时才发现。
 
-## Features
+## 功能特性
 
-- **Compile-time safety** — Distinct types (`Field`, `Index`, `Alias`) prevent mix-ups
-- **Code generation** — Generate typed field constants from Elasticsearch mappings
-- **Fluent query builders** — Type-safe Bool, Term, Match, Range, Nested queries and more
-- **Aggregation builders** — Terms, DateHistogram, Avg, Max, Min, Sum, Nested, Filter
-- **Sort builders** — Field, Score, Doc, GeoDistance, Script sorting
-- **Property builders** — Functional-option constructors for all ES property types
-- **Date format constants** — 80+ built-in Elasticsearch date format constants
-- **Dual version support** — Elasticsearch v8 and v9 with identical APIs
+- **编译时安全** — 专用类型（`Field`、`Index`、`Alias`）防止混淆
+- **代码生成** — 从 Elasticsearch 映射生成类型化字段常量
+- **Fluent 查询构建器** — 类型安全的 Bool、Term、Match、Range、Nested 查询等
+- **聚合构建器** — Terms、DateHistogram、Avg、Max、Min、Sum、Nested、Filter
+- **排序构建器** — Field、Score、Doc、GeoDistance、Script 排序
+- **属性构建器** — 面向所有 ES 属性类型的 Functional-option 构造器
+- **日期格式常量** — 80 多个内置 Elasticsearch 日期格式常量
+- **双版本支持** — 以相同的 API 支持 Elasticsearch v8 和 v9
 
-## Installation
+## 安装
 
 ```bash
 go get github.com/tomtwinkle/es-typed-go
 ```
 
-This installs the core `estype` package and both `esv8` and `esv9` wrappers.
+这将安装核心 `estype` 包以及 `esv8` / `esv9` 封装。
 
-## Quick Start
+## 快速开始
 
-### 1. Define your mapping and generate field constants
+### 1. 定义映射并生成字段常量
 
-Create your Elasticsearch mapping file:
+创建 Elasticsearch 映射文件：
 
 ```json
 {
@@ -83,7 +83,7 @@ Create your Elasticsearch mapping file:
 }
 ```
 
-Generate typed field constants:
+生成类型化的字段常量：
 
 ```bash
 go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
@@ -92,7 +92,7 @@ go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
   -package esmodel
 ```
 
-This generates:
+将生成如下代码：
 
 ```go
 // Code generated by estyped; DO NOT EDIT.
@@ -131,7 +131,7 @@ const FieldTitle estype.Field = "title"
 const FieldTitleKeyword estype.Field = "title.keyword"
 ```
 
-You can also use **struct mode** for grouped access:
+也可以使用**结构体模式**进行分组访问：
 
 ```bash
 go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
@@ -141,7 +141,7 @@ go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
   -name Product
 ```
 
-This generates:
+将生成如下代码：
 
 ```go
 // Code generated by estyped; DO NOT EDIT.
@@ -174,10 +174,10 @@ var Product = struct {
 	Title_Keyword: "title.keyword",
 }
 
-// Usage: esmodel.Product.Status, esmodel.Product.Items_Name, etc.
+// 使用示例: esmodel.Product.Status, esmodel.Product.Items_Name, etc.
 ```
 
-### 2. Build type-safe queries
+### 2. 构建类型安全的查询
 
 ```go
 package main
@@ -187,7 +187,7 @@ import (
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
-// Using generated field constants
+// 使用生成的字段常量
 const (
 	FieldStatus   estype.Field = "status"
 	FieldCategory estype.Field = "category"
@@ -209,11 +209,11 @@ func buildQuery() {
 		).
 		Build()
 
-	_ = q // Use with ESClient.Search() or ESClient.SearchWithRequest()
+	_ = q // 用于 ESClient.Search() 或 ESClient.SearchWithRequest()
 }
 ```
 
-### 3. Create an Elasticsearch client
+### 3. 创建 Elasticsearch 客户端
 
 ```go
 package main
@@ -235,48 +235,48 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_ = client // Use for search, indexing, etc.
+	_ = client // 用于搜索、索引操作等
 }
 ```
 
-## Usage Guide
+## 使用指南
 
-### Core Types
+### 核心类型
 
-The foundation of es-typed-go is three distinct string types that prevent mix-ups at compile time:
+es-typed-go 的基础是三个独立的字符串类型，它们在编译时防止混淆：
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/estype"
 
-// These are distinct types — you cannot accidentally pass one where another is expected
-var field estype.Field = "status"       // Elasticsearch field name
-var index estype.Index = "my-index"     // Elasticsearch index name
-var alias estype.Alias = "my-alias"     // Elasticsearch alias name
+// 这些是独立的类型——不能将一种类型误传到期望另一种类型的地方
+var field estype.Field = "status"       // Elasticsearch 字段名
+var index estype.Index = "my-index"     // Elasticsearch 索引名
+var alias estype.Alias = "my-alias"     // Elasticsearch 别名
 
-// OK — correct usage
+// OK — 正确用法
 client.Search(ctx, alias, query, ...)
 client.DeleteIndex(ctx, index)
 
-// Compile error — passing Field where Alias is expected
+// 编译错误 — 在期望 Alias 的位置传入了 Field
 client.Search(ctx, field, query, ...)
 
-// Compile error — passing Index where Alias is expected
+// 编译错误 — 在期望 Alias 的位置传入了 Index
 client.Search(ctx, index, query, ...)
 ```
 
-### Query Builders
+### 查询构建器
 
-#### Fluent Query Builder
+#### Fluent 查询构建器
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
-// Simple term query
+// 简单的 Term 查询
 q := query.New().
 	Term(FieldStatus, types.TermQuery{Value: "active"}).
 	Build()
 
-// Bool query with Must, Filter, Should, MustNot
+// 组合 Must、Filter、Should、MustNot 的 Bool 查询
 q := query.New().
 	Bool(query.NewBoolQuery().
 		Must(
@@ -298,42 +298,42 @@ q := query.New().
 	Build()
 ```
 
-#### Query Helper Functions
+#### 查询辅助函数
 
-Convenience functions for common patterns:
+常用模式的便捷函数：
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
-// Term queries
+// Term 查询
 query.TermValue(FieldStatus, "active")
 query.TermsValues(FieldCategory, "electronics", "books")
 
-// Text queries
+// 文本查询
 query.MatchPhrase(FieldTitle, "search keyword")
 
-// Field existence
+// 字段存在性检查
 query.ExistsField(FieldStatus)
 query.NotExists(FieldPrice)
 
-// Nested queries
+// Nested 查询
 query.NestedFilter(FieldItems,
 	query.TermValue(estype.Field("items.name"), "widget"),
 )
 
-// Range queries
+// Range 查询
 query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31")
 gte, lte := types.Float64(100), types.Float64(500)
 query.NumberRangeQuery(FieldPrice, &gte, &lte)
 
-// Bool shorthand helpers
+// Bool 快捷辅助函数
 query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
 ```
 
-### Sort Builder
+### 排序构建器
 
 ```go
 import (
@@ -342,37 +342,37 @@ import (
 )
 
 sorts := query.NewSort().
-	Field(FieldDate, sortorder.Desc).                      // Sort by date descending
-	Field(FieldPrice, sortorder.Asc).                      // Then by price ascending
+	Field(FieldDate, sortorder.Desc).                      // 按日期降序排序
+	Field(FieldPrice, sortorder.Asc).                      // 然后按价格升序
 	FieldWithMissing(FieldCategory, sortorder.Asc,
-		query.MissingLast).                                // Missing values last
-	ScoreDesc().                                           // Then by relevance score
+		query.MissingLast).                                // 缺失值排在最后
+	ScoreDesc().                                           // 然后按相关性得分降序
 	Build()
 ```
 
-### Aggregation Builder
+### 聚合构建器
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                   // Bucket by category
-	TermsWithSize("top_tags", FieldTags, 20).                             // Top 20 tags
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).        // Monthly histogram
-	Avg("avg_price", FieldPrice).                                         // Average price
-	Max("max_price", FieldPrice).                                         // Maximum price
-	Nested("nested_items", FieldItems, query.NewAggregations().           // Nested aggregation
+	Terms("by_category", FieldCategory).                                   // 按类别分桶
+	TermsWithSize("top_tags", FieldTags, 20).                             // 前 20 个标签
+	DateHistogram("over_time", FieldDate, calendarinterval.Month).        // 按月直方图
+	Avg("avg_price", FieldPrice).                                         // 平均价格
+	Max("max_price", FieldPrice).                                         // 最高价格
+	Nested("nested_items", FieldItems, query.NewAggregations().           // Nested 聚合
 		Terms("item_names", estype.Field("items.name")),
 	).
-	SubAggregations("by_category", query.NewAggregations().               // Sub-aggregation
+	SubAggregations("by_category", query.NewAggregations().               // 子聚合
 		Avg("avg_price", FieldPrice),
 	).
 	Build()
 ```
 
-### Property Builders (Index Mappings)
+### 属性构建器（索引映射）
 
-Define index mappings with type-safe functional-option constructors:
+使用类型安全的 Functional-option 构造器定义索引映射：
 
 ```go
 import (
@@ -385,7 +385,7 @@ mappings := &types.TypeMapping{
 	Properties: map[string]types.Property{
 		"title": esv8.NewTextProperty(
 			esv8.WithTextAnalyzer("standard"),
-			esv8.WithTextRawKeyword(256),  // Adds a .keyword sub-field
+			esv8.WithTextRawKeyword(256),  // 添加 .keyword 子字段
 		),
 		"status": esv8.NewKeywordProperty(),
 		"price": esv8.NewIntegerNumberProperty(
@@ -414,45 +414,45 @@ mappings := &types.TypeMapping{
 }
 ```
 
-### Date Format Constants
+### 日期格式常量
 
-80+ built-in Elasticsearch date format constants:
+80 多个内置 Elasticsearch 日期格式常量：
 
 ```go
 import "github.com/tomtwinkle/es-typed-go/estype"
 
-// Use predefined constants
+// 使用预定义常量
 estype.DateFormatEpochMillis       // "epoch_millis"
 estype.DateFormatStrictDate        // "strict_date" (yyyy-MM-dd)
 estype.DateFormatStrictDateTime    // "strict_date_time" (yyyy-MM-dd'T'HH:mm:ss.SSSZ)
 estype.DateFormatBasicDate         // "basic_date" (yyyyMMdd)
 
-// Combine multiple formats with JoinDateFormats
+// 使用 JoinDateFormats 组合多个格式
 format := estype.JoinDateFormats(
 	estype.DateFormatEpochMillis,
 	estype.DateFormatStrictDate,
 )
-// Result: "epoch_millis||strict_date"
+// 结果: "epoch_millis||strict_date"
 ```
 
-### ESClient vs ESClientSpec
+### ESClient 与 ESClientSpec
 
-Two client interfaces are available:
+提供两种客户端接口：
 
-| Interface | Use Case |
+| 接口 | 用途 |
 |-----------|----------|
-| `ESClient` | Curated set of common operations (search, index, alias management). Preferred for application code. |
-| `ESClientSpec` | Full Elasticsearch API coverage (auto-generated from spec). Use when `ESClient` lacks a needed endpoint. |
+| `ESClient` | 精选的常用操作集（搜索、索引、别名管理）。推荐在应用代码中使用。 |
+| `ESClientSpec` | 完整的 Elasticsearch API 覆盖（从规范自动生成）。当 `ESClient` 缺少所需端点时使用。 |
 
 ```go
-// ESClient — curated, easy to use
+// ESClient — 精选且易用
 client, _ := esv8.NewClientWithLogger(config, logger)
 
-// ESClientSpec — full API coverage
+// ESClientSpec — 完整 API 覆盖
 specClient, _ := esv8.NewSpecClient(config)
 ```
 
-### Complete Search Example
+### 完整的搜索示例
 
 ```go
 package main
@@ -470,7 +470,7 @@ import (
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
-// Generated field constants (from estyped CLI)
+// 由 estyped CLI 生成的字段常量
 const (
 	FieldStatus   estype.Field = "status"
 	FieldCategory estype.Field = "category"
@@ -479,7 +479,7 @@ const (
 )
 
 func main() {
-	// Create client
+	// 创建客户端
 	client, err := esv8.NewClientWithLogger(
 		es8.Config{Addresses: []string{"http://localhost:9200"}},
 		slog.Default(),
@@ -488,7 +488,7 @@ func main() {
 		panic(err)
 	}
 
-	// Build query
+	// 构建查询
 	q := query.New().
 		Bool(query.NewBoolQuery().
 			Must(query.TermValue(FieldStatus, "active")).
@@ -500,19 +500,19 @@ func main() {
 		).
 		Build()
 
-	// Build sort
+	// 构建排序
 	sorts := query.NewSort().
 		Field(FieldDate, sortorder.Desc).
 		ScoreDesc().
 		Build()
 
-	// Build aggregations
+	// 构建聚合
 	aggs := query.NewAggregations().
 		Terms("by_category", FieldCategory).
 		Avg("avg_price", FieldPrice).
 		Build()
 
-	// Execute search
+	// 执行搜索
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
 	resp, err := client.Search(ctx, alias, q, 10, 0, sorts, aggs, nil, nil, nil)
@@ -524,44 +524,44 @@ func main() {
 }
 ```
 
-## Elasticsearch v8 / v9 Support
+## Elasticsearch v8 / v9 支持
 
-es-typed-go supports both Elasticsearch v8 and v9 with **identical APIs**. Simply swap the import path:
+es-typed-go 以**完全相同的 API** 同时支持 Elasticsearch v8 和 v9。只需更换导入路径即可切换：
 
 ```go
-// For Elasticsearch v8
+// Elasticsearch v8
 import (
 	"github.com/tomtwinkle/es-typed-go/esv8"
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
-// For Elasticsearch v9
+// Elasticsearch v9
 import (
 	"github.com/tomtwinkle/es-typed-go/esv9"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 ```
 
-All builders, helpers, and property constructors have the same signatures across both versions. Changes to `esv8/` are always mirrored in `esv9/`.
+所有构建器、辅助函数和属性构造器在两个版本中具有相同的签名。对 `esv8/` 的变更始终会同步到 `esv9/`。
 
-## Repository Structure
+## 仓库结构
 
 ```
-estype/            Core shared types (Field, Index, Alias, DateFormat, mapping parser)
-esv8/              Elasticsearch v8 wrapper
-  query/           Query, sort, and aggregation builders for v8
-  generator/       Code generator for v8 API coverage tests
-esv9/              Elasticsearch v9 wrapper (mirrors esv8)
-  query/           Query, sort, and aggregation builders for v9
-  generator/       Code generator for v9 API coverage tests
-cmd/estyped/       CLI tool: generates typed Field constants from ES mappings
+estype/            核心共享类型（Field, Index, Alias, DateFormat, 映射解析器）
+esv8/              Elasticsearch v8 封装
+  query/           v8 查询、排序、聚合构建器
+  generator/       v8 API 覆盖测试代码生成器
+esv9/              Elasticsearch v9 封装（与 esv8 镜像）
+  query/           v9 查询、排序、聚合构建器
+  generator/       v9 API 覆盖测试代码生成器
+cmd/estyped/       CLI 工具：从 ES 映射生成类型化 Field 常量
 ```
 
-## Requirements
+## 环境要求
 
-- Go 1.26 or later
-- Elasticsearch v8.x or v9.x
+- Go 1.26 或更高版本
+- Elasticsearch v8.x 或 v9.x
 
-## License
+## 许可证
 
 [MIT](LICENSE)
