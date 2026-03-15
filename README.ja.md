@@ -35,9 +35,10 @@
 
 - **コンパイル時の安全性** — 専用の型（`Field`、`Index`、`Alias`）が取り違えを防止
 - **コード生成** — Elasticsearch マッピングから型付きフィールド定数を生成
-- **Fluent クエリビルダー** — 型安全な Bool、Term、Match、Range、Nested クエリなど
-- **アグリゲーションビルダー** — Terms、DateHistogram、Avg、Max、Min、Sum、Nested、Filter
-- **ソートビルダー** — Field、Score、Doc、GeoDistance、Script ソート
+- **SearchBuilder** — クエリ・ソート・アグリゲーション・ページネーションをひとつの `SearchParams` にまとめる ActiveRecord スタイルのビルダー
+- **Fluent クエリビルダー** — 型安全な Bool、Term、Match、Range、Nested、Prefix、Wildcard、MultiMatch、FunctionScore クエリなど
+- **アグリゲーションビルダー** — Terms、DateHistogram、Histogram、Avg、Max、Min、Sum、ValueCount、Cardinality、Stats、Nested、Filter
+- **ソートビルダー** — Field、Score、Doc、GeoDistance、Script ソート（Functional option 対応）
 - **プロパティビルダー** — 全 ES プロパティ型に対応した Functional-option コンストラクタ
 - **日付フォーマット定数** — 80 以上の Elasticsearch 組み込み日付フォーマット定数
 - **デュアルバージョン対応** — Elasticsearch v8 と v9 を同一 API で利用可能
@@ -268,12 +269,23 @@ client.Search(ctx, index, query, ...)
 
 #### Fluent クエリビルダー
 
+`query.New()` は `*Builder` を返し、`types.Query` を構築します。利用可能なメソッド: `Bool`、`Match`、`Term`、`Terms`、`Range`、`Exists`、`MatchAll`、`MatchNone`、`Ids`、`Prefix`、`Wildcard`、`MultiMatch`、`FunctionScore`。
+
 ```go
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 // シンプルな Term クエリ
 q := query.New().
 	Term(FieldStatus, types.TermQuery{Value: "active"}).
+	Build()
+
+// Prefix / Wildcard クエリ
+q := query.New().
+	Prefix(FieldTitle, types.PrefixQuery{Value: "go"}).
+	Build()
+
+q := query.New().
+	Wildcard(FieldTitle, types.WildcardQuery{Value: "go*"}).
 	Build()
 
 // Must, Filter, Should, MustNot を組み合わせた Bool クエリ
@@ -331,6 +343,10 @@ query.BoolMust(q1, q2)
 query.BoolFilter(q1, q2)
 query.BoolShould(q1, q2)
 query.BoolMustNot(q1)
+
+// 型付きスライスを []types.FieldValue に変換（TermsQuery 用）
+ids := query.FieldValues("id1", "id2", "id3")
+query.TermsValues(FieldStatus, ids...)
 ```
 
 ### ソートビルダー
@@ -339,6 +355,9 @@ query.BoolMustNot(q1)
 import (
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/scriptsorttype"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/distanceunit"
 )
 
 sorts := query.NewSort().
@@ -346,7 +365,18 @@ sorts := query.NewSort().
 	Field(FieldPrice, sortorder.Asc).                      // 次に価格の昇順
 	FieldWithMissing(FieldCategory, sortorder.Asc,
 		query.MissingLast).                                // 値なしは最後に配置
-	ScoreDesc().                                           // 次にスコアの降順
+	FieldNested(FieldItems, sortorder.Asc,
+		FieldItems, sortmode.Min).                         // Nested フィールドソート
+	ScoreDesc().                                           // スコアの降順
+	ScoreAsc().                                            // スコアの昇順
+	DocAsc().                                              // インデックス順の昇順
+	DocDesc().                                             // インデックス順の降順
+	GeoDistance(FieldLocation, types.GeoLocation{...},
+		sortorder.Asc,
+		query.WithGeoDistanceUnit(distanceunit.Kilometers),
+		query.WithGeoDistanceIgnoreUnmapped(true)).        // 地理距離ソート（オプション付き）
+	Script(script, scriptsorttype.Number,
+		sortorder.Asc).                                    // スクリプトベースのソート
 	Build()
 ```
 
@@ -356,17 +386,81 @@ sorts := query.NewSort().
 import "github.com/tomtwinkle/es-typed-go/esv8/query"
 
 aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                   // カテゴリ別バケット
-	TermsWithSize("top_tags", FieldTags, 20).                             // 上位 20 タグ
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).        // 月別ヒストグラム
-	Avg("avg_price", FieldPrice).                                         // 平均価格
-	Max("max_price", FieldPrice).                                         // 最大価格
-	Nested("nested_items", FieldItems, query.NewAggregations().           // Nested アグリゲーション
+	Terms("by_category", FieldCategory).                                         // カテゴリ別バケット
+	TermsWithSize("top_tags", FieldTags, 20).                                    // 上位 20 タグ
+	DateHistogram("over_time", FieldDate, calendarinterval.Month).               // 月別ヒストグラム
+	DateHistogramWithFormat("over_time_fmt", FieldDate, "yyyy-MM",
+		calendarinterval.Month).                                                 // 日付フォーマット付き
+	Histogram("price_dist", FieldPrice, 50.0).                                   // 数値ヒストグラム
+	Avg("avg_price", FieldPrice).                                                // 平均価格
+	Max("max_price", FieldPrice).                                                // 最大価格
+	Min("min_price", FieldPrice).                                                // 最小価格
+	Sum("total_price", FieldPrice).                                              // 合計
+	ValueCount("count_status", FieldStatus).                                     // 値の件数
+	Cardinality("unique_categories", FieldCategory).                             // 近似ユニーク件数
+	Stats("price_stats", FieldPrice).                                            // 件数/最小/最大/平均/合計
+	Nested("nested_items", FieldItems, query.NewAggregations().                  // Nested アグリゲーション
 		Terms("item_names", estype.Field("items.name")),
 	).
-	SubAggregations("by_category", query.NewAggregations().               // サブアグリゲーション
+	Filter("active_only", query.TermValue(FieldStatus, "active"),
+		query.NewAggregations().Avg("avg_price", FieldPrice)).                   // フィルターアグリゲーション
+	SubAggregations("by_category", query.NewAggregations().                      // サブアグリゲーション
 		Avg("avg_price", FieldPrice),
 	).
+	Build()
+```
+
+### SearchBuilder
+
+`query.NewSearch()` は、クエリ・ソート・アグリゲーション・ページネーションをひとつの `SearchParams` にまとめる ActiveRecord スタイルのビルダーです。パラメータを手動で組み立てる代わりに使用します。
+
+```go
+import (
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+)
+
+params := query.NewSearch().
+	Where(
+		query.TermValue(FieldStatus, "active"),              // filter 句
+		query.DateRangeQuery(FieldDate, "2024-01-01", ""),
+	).
+	Must(
+		query.MatchPhrase(FieldTitle, "search keyword"),     // must 句
+	).
+	Should(
+		query.TermValue(FieldCategory, "premium"),           // should 句
+	).
+	MustNot(
+		query.ExistsField(FieldPrice),                       // must_not 句
+	).
+	Sort(query.NewSort().
+		Field(FieldDate, sortorder.Desc).
+		ScoreDesc().
+		Build()...,
+	).
+	Aggregation(query.NewAggregations().
+		Terms("by_category", FieldCategory).
+		Build(),
+	).
+	Limit(10).
+	Offset(0).
+	Build()
+
+// params.Query, params.Sort, params.Aggregations, params.Size, params.From など
+resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
+	params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+```
+
+すでに `types.Query` を構築済みの場合は直接セットすることもできます。
+
+```go
+params := query.NewSearch().
+	Query(query.New().Bool(query.NewBoolQuery().
+		Must(query.TermValue(FieldStatus, "active")).
+		Build(),
+	).Build()).
+	Limit(20).
 	Build()
 ```
 
@@ -452,6 +546,44 @@ client, _ := esv8.NewClientWithLogger(config, logger)
 specClient, _ := esv8.NewSpecClient(config)
 ```
 
+### ESClient の操作一覧
+
+`ESClient` のメソッドは 4 つのカテゴリに分類されます。
+
+**クラスター**
+- `Info(ctx)` — クラスター情報の取得
+
+**インデックス管理**
+- `CreateIndex(ctx, index, settings, mappings)` — インデックスの作成
+- `DeleteIndex(ctx, index)` — インデックスの削除
+- `IndexExists(ctx, index) bool` — 存在確認
+- `IndexRefresh(ctx, index)` — 強制リフレッシュ
+- `IndexDocumentCount(ctx, index)` — ドキュメント件数の取得
+
+**エイリアス管理**
+- `CreateAlias(ctx, index, alias, isWriteIndex)` — エイリアスの作成
+- `UpdateAliases(ctx, actions)` — エイリアスのアトミックな追加/削除
+- `AliasExists(ctx, alias) bool` — 存在確認
+- `AliasRefresh(ctx, alias)` — 強制リフレッシュ
+- `GetIndicesForAlias(ctx, alias) []Index` — 紐付けられたインデックスの一覧
+- `GetRefreshInterval(ctx, alias)` — リフレッシュ間隔の取得
+- `UpdateRefreshInterval(ctx, alias, interval)` — リフレッシュ間隔の更新
+
+**ドキュメント**
+- `CreateDocument(ctx, alias, id, doc)` — ドキュメントのインデックス（リフレッシュ待ち）
+- `GetDocument(ctx, alias, id)` — ID によるドキュメントの取得
+- `DeleteDocument(ctx, index, id)` — ドキュメントの削除
+- `UpdateDocument(ctx, index, id, req)` — 部分更新
+
+**検索**
+- `Search(ctx, alias, query, limit, offset, sort, aggs, highlight, collapse, scriptFields)` — 検索の実行
+- `SearchWithRequest(ctx, alias, req)` — 生の `search.Request` による検索
+
+**再インデックス**
+- `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — 全件再インデックス
+- `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — 差分再インデックス
+- `WaitForTaskCompletion(ctx, taskID, timeout)` — タスク完了まで待機
+
 ### 検索の完全な実行例
 
 ```go
@@ -488,34 +620,32 @@ func main() {
 		panic(err)
 	}
 
-	// クエリの構築
-	q := query.New().
-		Bool(query.NewBoolQuery().
-			Must(query.TermValue(FieldStatus, "active")).
-			Filter(
-				query.TermsValues(FieldCategory, "electronics", "books"),
-				query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-			).
+	// SearchBuilder で検索パラメータを構築
+	params := query.NewSearch().
+		Where(query.TermValue(FieldStatus, "active")).
+		Where(
+			query.TermsValues(FieldCategory, "electronics", "books"),
+			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
+		).
+		Sort(query.NewSort().
+			Field(FieldDate, sortorder.Desc).
+			ScoreDesc().
+			Build()...,
+		).
+		Aggregation(query.NewAggregations().
+			Terms("by_category", FieldCategory).
+			Avg("avg_price", FieldPrice).
 			Build(),
 		).
-		Build()
-
-	// ソートの構築
-	sorts := query.NewSort().
-		Field(FieldDate, sortorder.Desc).
-		ScoreDesc().
-		Build()
-
-	// アグリゲーションの構築
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Avg("avg_price", FieldPrice).
+		Limit(10).
+		Offset(0).
 		Build()
 
 	// 検索の実行
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
-	resp, err := client.Search(ctx, alias, q, 10, 0, sorts, aggs, nil, nil, nil)
+	resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
+		params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
 	if err != nil {
 		panic(err)
 	}
