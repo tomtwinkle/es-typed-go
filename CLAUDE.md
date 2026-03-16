@@ -23,10 +23,10 @@ go test -tags=integration -v ./esv9/...                # v9
 # Regenerate generated files (property wrappers, API coverage tests)
 go generate ./...
 
-# Build the estyped CLI and generate field constants from a mapping
-go run ./cmd/estyped -mapping mapping.json -out model.go -package model
+# Generate field constants from a mapping (go tool)
+go tool estyped -mapping mapping.json -out model.go -package model
 # Struct mode (grouped access via model.Sample.FieldName)
-go run ./cmd/estyped -mapping mapping.json -out model.go -package model -name Sample
+go tool estyped -mapping mapping.json -out model.go -package model -name Sample
 ```
 
 ---
@@ -142,7 +142,7 @@ sort := query.NewSort().
 
 ```bash
 # mapping.json can be the full Get Mapping API response or just {"properties":{...}}
-go run ./cmd/estyped -mapping mapping.json -out esmodel/fields.go -package esmodel
+go tool estyped -mapping mapping.json -out esmodel/fields.go -package esmodel
 ```
 
 ```go

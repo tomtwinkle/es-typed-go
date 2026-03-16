@@ -51,6 +51,18 @@ go get github.com/tomtwinkle/es-typed-go
 
 这将安装核心 `estype` 包以及 `esv8` / `esv9` 封装。
 
+要使用 `estyped` 代码生成 CLI，请将其作为 Go 工具安装：
+
+```bash
+go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
+```
+
+这会在 `go.mod` 中添加一条记录，之后可通过 `go tool estyped` 调用该工具。也可以全局安装，使 `estyped` 直接在 PATH 中可用：
+
+```bash
+go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
+```
+
 ## 快速开始
 
 ### 1. 定义映射并生成字段常量
@@ -87,10 +99,22 @@ go get github.com/tomtwinkle/es-typed-go
 生成类型化的字段常量：
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel
+```
+
+要自动化重新生成，在包内任意 `.go` 文件中添加 `//go:generate` 指令：
+
+```go
+//go:generate go tool estyped -mapping mapping.json -out fields.go -package esmodel
+```
+
+执行 `go generate ./...` 即可重新生成。若已通过 `go install` 全局安装，也可使用简短形式：
+
+```go
+//go:generate estyped -mapping mapping.json -out fields.go -package esmodel
 ```
 
 将生成如下代码：
@@ -135,7 +159,7 @@ const FieldTitleKeyword estype.Field = "title.keyword"
 也可以使用结构体模式进行分组访问：
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel \

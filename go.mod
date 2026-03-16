@@ -35,4 +35,7 @@ require (
 	gotest.tools/gotestsum v1.13.0 // indirect
 )
 
-tool gotest.tools/gotestsum
+tool (
+	github.com/tomtwinkle/es-typed-go/cmd/estyped
+	gotest.tools/gotestsum
+)

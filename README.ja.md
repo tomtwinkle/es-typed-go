@@ -51,6 +51,18 @@ go get github.com/tomtwinkle/es-typed-go
 
 コアの `estype` パッケージと `esv8` / `esv9` ラッパーがインストールされます。
 
+`estyped` コード生成 CLI を使用するには、Go ツールとしてインストールします。
+
+```bash
+go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
+```
+
+これにより `go.mod` にエントリが追加され、`go tool estyped` でツールを呼び出せます。PATH 上で直接 `estyped` を使えるようにするには、グローバルインストールも可能です。
+
+```bash
+go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
+```
+
 ## クイックスタート
 
 ### 1. マッピングを定義してフィールド定数を生成する
@@ -87,10 +99,22 @@ Elasticsearch のマッピングファイルを作成します。
 型付きフィールド定数を生成します。
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel
+```
+
+再生成を自動化するには、パッケージ内の任意の `.go` ファイルに `//go:generate` ディレクティブを追加します。
+
+```go
+//go:generate go tool estyped -mapping mapping.json -out fields.go -package esmodel
+```
+
+`go generate ./...` を実行すると再生成されます。`go install` でグローバルインストール済みの場合は短い形式も使用できます。
+
+```go
+//go:generate estyped -mapping mapping.json -out fields.go -package esmodel
 ```
 
 以下のようなコードが生成されます。
@@ -135,7 +159,7 @@ const FieldTitleKeyword estype.Field = "title.keyword"
 構造体モードを使用すると、グループ化されたアクセスも可能です。
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel \

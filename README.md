@@ -51,6 +51,18 @@ go get github.com/tomtwinkle/es-typed-go
 
 This installs the core `estype` package and both `esv8` and `esv9` wrappers.
 
+To use the `estyped` code-generation CLI, install it as a Go tool:
+
+```bash
+go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
+```
+
+This adds an entry to your `go.mod` and lets you invoke the tool with `go tool estyped`. You can also install it globally so that `estyped` is available directly on your PATH:
+
+```bash
+go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
+```
+
 ## Quick Start
 
 ### 1. Define your mapping and generate field constants
@@ -87,10 +99,22 @@ Create your Elasticsearch mapping file:
 Generate typed field constants:
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel
+```
+
+To automate regeneration, add a `//go:generate` directive in any `.go` file in your package:
+
+```go
+//go:generate go tool estyped -mapping mapping.json -out fields.go -package esmodel
+```
+
+Then run `go generate ./...` to regenerate. If you installed `estyped` globally with `go install`, you can use the shorter form:
+
+```go
+//go:generate estyped -mapping mapping.json -out fields.go -package esmodel
 ```
 
 This generates:
@@ -135,7 +159,7 @@ const FieldTitleKeyword estype.Field = "title.keyword"
 You can also use struct mode for grouped access:
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel \
