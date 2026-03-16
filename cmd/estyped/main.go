@@ -5,6 +5,22 @@
 // This is similar to how sqlc generates Go code from SQL schemas — typos in field
 // names become compile errors instead of silent runtime bugs.
 //
+// There are two input modes:
+//
+// Mapping mode (default): reads an Elasticsearch mapping JSON file.
+//
+//	estyped -mapping mapping.json -out model.go -package model
+//
+// Struct mode: reads JSON struct tags from a Go type definition.
+//
+//	estyped -struct Product -out model.go
+//
+// In struct mode the tool parses all .go files in the current directory (or the
+// directory of -file), finds the named type, and recursively extracts field paths
+// from json struct tags.  This is the recommended usage with go:generate:
+//
+//	//go:generate go tool estyped -struct Product -out product_fields.go
+//
 // There are two output modes:
 //
 // Constant mode (default): generates individual constants.
@@ -28,9 +44,14 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"go/ast"
 	"go/format"
+	"go/parser"
+	"go/token"
 	"log"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -83,35 +104,68 @@ var {{ .Name }} = struct {
 `))
 
 func main() {
-	mappingPath := flag.String("mapping", "", "path to Elasticsearch mapping JSON file (required)")
+	mappingPath := flag.String("mapping", "", "path to Elasticsearch mapping JSON file")
+	structType := flag.String("struct", "", "Go type name to read JSON struct tags from (alternative to -mapping)")
+	filePath := flag.String("file", "", "Go source file for struct lookup (used with -struct; defaults to current directory)")
 	outPath := flag.String("out", "", "output Go file path (required)")
-	pkgName := flag.String("package", "", "Go package name for the generated file (required)")
+	pkgName := flag.String("package", "", "Go package name for the generated file (defaults to $GOPACKAGE)")
 	structName := flag.String("name", "", "struct variable name for grouped field access (optional; omit for constant mode)")
 	flag.Parse()
 
-	if *mappingPath == "" || *outPath == "" || *pkgName == "" {
+	// When invoked via go:generate, $GOPACKAGE is set automatically.
+	if *pkgName == "" {
+		*pkgName = os.Getenv("GOPACKAGE")
+	}
+
+	if *outPath == "" || *pkgName == "" {
+		flag.Usage()
+		os.Exit(1)
+	}
+	if *mappingPath == "" && *structType == "" {
+		fmt.Fprintln(os.Stderr, "error: either -mapping or -struct is required")
+		flag.Usage()
+		os.Exit(1)
+	}
+	if *mappingPath != "" && *structType != "" {
+		fmt.Fprintln(os.Stderr, "error: -mapping and -struct are mutually exclusive")
 		flag.Usage()
 		os.Exit(1)
 	}
 
-	data, err := os.ReadFile(*mappingPath)
-	if err != nil {
-		log.Fatalf("failed to read mapping file %s: %v", *mappingPath, err)
-	}
+	var entries []fieldEntry
 
-	mapping, err := estype.ParseMapping(data)
-	if err != nil {
-		log.Fatalf("failed to parse mapping: %v", err)
-	}
+	if *structType != "" {
+		// Struct-based parsing: extract field paths from JSON struct tags.
+		srcDir := "."
+		if *filePath != "" {
+			srcDir = filepath.Dir(*filePath)
+		}
+		var err error
+		entries, err = parseGoStruct(srcDir, *structType)
+		if err != nil {
+			log.Fatalf("failed to parse struct %s: %v", *structType, err)
+		}
+	} else {
+		// Mapping-based parsing: existing behaviour.
+		data, err := os.ReadFile(*mappingPath)
+		if err != nil {
+			log.Fatalf("failed to read mapping file %s: %v", *mappingPath, err)
+		}
 
-	entries := make([]fieldEntry, 0, len(mapping.Fields))
-	for _, f := range mapping.Fields {
-		entries = append(entries, fieldEntry{
-			ConstName: toPascalCase(f.Path),
-			FieldName: toStructFieldName(f.Path),
-			Path:      f.Path,
-			Type:      fieldType(f.Type),
-		})
+		mapping, err := estype.ParseMapping(data)
+		if err != nil {
+			log.Fatalf("failed to parse mapping: %v", err)
+		}
+
+		entries = make([]fieldEntry, 0, len(mapping.Fields))
+		for _, f := range mapping.Fields {
+			entries = append(entries, fieldEntry{
+				ConstName: toPascalCase(f.Path),
+				FieldName: toStructFieldName(f.Path),
+				Path:      f.Path,
+				Type:      fieldType(f.Type),
+			})
+		}
 	}
 
 	var buf bytes.Buffer
@@ -196,4 +250,169 @@ func fieldType(t string) string {
 		return "object"
 	}
 	return t
+}
+
+// parseGoStruct extracts fieldEntry values from a named Go struct type by reading
+// JSON struct tags from all .go files found in srcDir.
+func parseGoStruct(srcDir, typeName string) ([]fieldEntry, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, srcDir, nil, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse Go source in %s: %w", srcDir, err)
+	}
+
+	// Build a map from type name to struct AST node across all packages/files.
+	typeMap := make(map[string]*ast.StructType)
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			collectStructTypes(file, typeMap)
+		}
+	}
+
+	if _, ok := typeMap[typeName]; !ok {
+		return nil, fmt.Errorf("type %q not found in %s", typeName, srcDir)
+	}
+
+	var entries []fieldEntry
+	extractGoStructEntries(typeName, "", typeMap, &entries)
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Path < entries[j].Path
+	})
+	return entries, nil
+}
+
+// collectStructTypes adds every struct type declaration found in f to typeMap.
+func collectStructTypes(f *ast.File, typeMap map[string]*ast.StructType) {
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			ts, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			st, ok := ts.Type.(*ast.StructType)
+			if !ok {
+				continue
+			}
+			typeMap[ts.Name.Name] = st
+		}
+	}
+}
+
+// extractGoStructEntries recursively walks the named struct and appends fieldEntry
+// values for every JSON-visible field.
+func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.StructType, entries *[]fieldEntry) {
+	st, ok := typeMap[typeName]
+	if !ok {
+		return
+	}
+	for _, field := range st.Fields.List {
+		// Anonymous embedded field: inline its fields at the same nesting level.
+		if len(field.Names) == 0 {
+			if name := derefTypeName(field.Type); name != "" {
+				extractGoStructEntries(name, prefix, typeMap, entries)
+			}
+			continue
+		}
+
+		jsonName := goFieldJSONName(field)
+		if jsonName == "-" {
+			continue
+		}
+
+		path := jsonName
+		if prefix != "" {
+			path = prefix + "." + jsonName
+		}
+
+		// When the element type is a known struct, recurse into it.
+		elemName := derefTypeName(field.Type)
+		if _, isStruct := typeMap[elemName]; isStruct {
+			esType := "object"
+			if isSliceExpr(field.Type) {
+				esType = "nested"
+			}
+			*entries = append(*entries, fieldEntry{
+				ConstName: toPascalCase(path),
+				FieldName: toStructFieldName(path),
+				Path:      path,
+				Type:      esType,
+			})
+			extractGoStructEntries(elemName, path, typeMap, entries)
+			continue
+		}
+
+		// Leaf field — ES type cannot be determined from Go type alone.
+		*entries = append(*entries, fieldEntry{
+			ConstName: toPascalCase(path),
+			FieldName: toStructFieldName(path),
+			Path:      path,
+			Type:      "unknown",
+		})
+	}
+}
+
+// goFieldJSONName returns the JSON key name for a struct field.
+// It reads the json struct tag when present; otherwise it falls back to the Go
+// field name.  It returns "-" when the field is explicitly excluded with json:"-".
+func goFieldJSONName(field *ast.Field) string {
+	if field.Tag != nil {
+		name := jsonTagKey(strings.Trim(field.Tag.Value, "`"))
+		if name != "" {
+			return name
+		}
+	}
+	if len(field.Names) > 0 {
+		return field.Names[0].Name
+	}
+	return ""
+}
+
+// jsonTagKey parses a raw struct tag string (with backticks already stripped) and
+// returns the JSON key name.  It returns "-" to signal the field must be skipped,
+// and "" when no json tag is present or when the tag name is empty (e.g. ",omitempty").
+func jsonTagKey(raw string) string {
+	const prefix = `json:"`
+	idx := strings.Index(raw, prefix)
+	if idx < 0 {
+		return ""
+	}
+	rest := raw[idx+len(prefix):]
+	end := strings.IndexByte(rest, '"')
+	if end < 0 {
+		return ""
+	}
+	name, _, _ := strings.Cut(rest[:end], ",")
+	return name
+}
+
+// derefTypeName unwraps pointer, slice, and array wrappers and returns the base
+// type identifier name.  It returns "" for qualified (selector) expressions such
+// as time.Time.
+func derefTypeName(expr ast.Expr) string {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return t.Name
+	case *ast.StarExpr:
+		return derefTypeName(t.X)
+	case *ast.ArrayType:
+		return derefTypeName(t.Elt)
+	}
+	return ""
+}
+
+// isSliceExpr returns true when the outermost non-pointer type is a slice
+// (variable-length, i.e. ArrayType with Len == nil).  Fixed-length arrays
+// and non-array types return false.
+func isSliceExpr(expr ast.Expr) bool {
+	switch t := expr.(type) {
+	case *ast.StarExpr:
+		return isSliceExpr(t.X)
+	case *ast.ArrayType:
+		return t.Len == nil
+	}
+	return false
 }

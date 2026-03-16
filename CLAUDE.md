@@ -23,10 +23,12 @@ go test -tags=integration -v ./esv9/...                # v9
 # Regenerate generated files (property wrappers, API coverage tests)
 go generate ./...
 
-# Generate field constants from a mapping (go tool)
+# Generate field constants from a mapping file
 go tool estyped -mapping mapping.json -out model.go -package model
 # Struct mode (grouped access via model.Sample.FieldName)
 go tool estyped -mapping mapping.json -out model.go -package model -name Sample
+# Generate field constants from a Go struct with JSON tags
+go tool estyped -struct MyType -out model.go -package model
 ```
 
 ---
@@ -144,6 +146,26 @@ sort := query.NewSort().
 # mapping.json can be the full Get Mapping API response or just {"properties":{...}}
 go tool estyped -mapping mapping.json -out esmodel/fields.go -package esmodel
 ```
+
+### Generating field constants from a Go struct with JSON tags
+
+Place the `//go:generate` directive in the file that defines the struct:
+
+```go
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+    Status string `json:"status"`
+    Items  []Item `json:"items"`
+}
+
+type Item struct {
+    Name string `json:"name"`
+}
+```
+
+The `-package` flag defaults to `$GOPACKAGE` when using `-struct`, so it can be omitted
+inside a `go generate` run.
 
 ```go
 // Generated output (constant mode)

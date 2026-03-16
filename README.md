@@ -96,7 +96,7 @@ Create your Elasticsearch mapping file:
 }
 ```
 
-Generate typed field constants:
+Generate typed field constants from an Elasticsearch mapping file:
 
 ```bash
 go tool estyped \
@@ -105,16 +105,28 @@ go tool estyped \
   -package esmodel
 ```
 
-To automate regeneration, add a `//go:generate` directive in any `.go` file in your package:
+Alternatively, if you already have a Go struct with JSON tags that represents your document model, you can generate directly from it by adding a `//go:generate` directive to the struct file:
 
 ```go
-//go:generate go tool estyped -mapping mapping.json -out fields.go -package esmodel
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+    Status   string   `json:"status"`
+    Title    string   `json:"title"`
+    Category string   `json:"category"`
+    Items    []Item   `json:"items"`
+}
+
+type Item struct {
+    Name  string `json:"name"`
+    Price int    `json:"price"`
+}
 ```
 
-Then run `go generate ./...` to regenerate. If you installed `estyped` globally with `go install`, you can use the shorter form:
+When using `-struct`, the `-package` flag defaults to `$GOPACKAGE` (set automatically by `go generate`). Run `go generate ./...` to regenerate. If you installed `estyped` globally with `go install`, you can also use the shorter form:
 
 ```go
-//go:generate estyped -mapping mapping.json -out fields.go -package esmodel
+//go:generate estyped -struct Product -out product_fields.go
 ```
 
 This generates:

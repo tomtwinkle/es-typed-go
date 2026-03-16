@@ -96,7 +96,7 @@ go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
 }
 ```
 
-生成类型化的字段常量：
+从 Elasticsearch 映射文件生成类型化的字段常量：
 
 ```bash
 go tool estyped \
@@ -105,16 +105,28 @@ go tool estyped \
   -package esmodel
 ```
 
-要自动化重新生成，在包内任意 `.go` 文件中添加 `//go:generate` 指令：
+如果您已有一个带 JSON struct tag 的 Go struct 来表示文档模型，也可以在 struct 所在文件中添加 `//go:generate` 指令，直接从 struct 生成：
 
 ```go
-//go:generate go tool estyped -mapping mapping.json -out fields.go -package esmodel
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+    Status   string   `json:"status"`
+    Title    string   `json:"title"`
+    Category string   `json:"category"`
+    Items    []Item   `json:"items"`
+}
+
+type Item struct {
+    Name  string `json:"name"`
+    Price int    `json:"price"`
+}
 ```
 
-执行 `go generate ./...` 即可重新生成。若已通过 `go install` 全局安装，也可使用简短形式：
+使用 `-struct` 时，`-package` 标志默认使用 `go generate` 自动设置的 `$GOPACKAGE`。执行 `go generate ./...` 即可重新生成。若已通过 `go install` 全局安装，也可使用简短形式：
 
 ```go
-//go:generate estyped -mapping mapping.json -out fields.go -package esmodel
+//go:generate estyped -struct Product -out product_fields.go
 ```
 
 将生成如下代码：

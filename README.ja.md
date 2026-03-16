@@ -96,7 +96,7 @@ Elasticsearch のマッピングファイルを作成します。
 }
 ```
 
-型付きフィールド定数を生成します。
+Elasticsearch マッピングファイルから型付きフィールド定数を生成します。
 
 ```bash
 go tool estyped \
@@ -105,16 +105,28 @@ go tool estyped \
   -package esmodel
 ```
 
-再生成を自動化するには、パッケージ内の任意の `.go` ファイルに `//go:generate` ディレクティブを追加します。
+あるいは、ドキュメントモデルを表す JSON struct tag 付きの Go struct がすでにある場合は、struct ファイルに `//go:generate` ディレクティブを追加することで、その struct から直接生成できます。
 
 ```go
-//go:generate go tool estyped -mapping mapping.json -out fields.go -package esmodel
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+    Status   string   `json:"status"`
+    Title    string   `json:"title"`
+    Category string   `json:"category"`
+    Items    []Item   `json:"items"`
+}
+
+type Item struct {
+    Name  string `json:"name"`
+    Price int    `json:"price"`
+}
 ```
 
-`go generate ./...` を実行すると再生成されます。`go install` でグローバルインストール済みの場合は短い形式も使用できます。
+`-struct` を使用する場合、`-package` フラグは `go generate` が自動的に設定する `$GOPACKAGE` がデフォルトになります。`go generate ./...` を実行すると再生成されます。`go install` でグローバルインストール済みの場合は短い形式も使用できます。
 
 ```go
-//go:generate estyped -mapping mapping.json -out fields.go -package esmodel
+//go:generate estyped -struct Product -out product_fields.go
 ```
 
 以下のようなコードが生成されます。
