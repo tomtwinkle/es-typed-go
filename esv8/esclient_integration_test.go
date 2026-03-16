@@ -69,6 +69,14 @@ func uniqueAlias(t *testing.T) estype.Alias {
 	return alias
 }
 
+// noReplicaSettings returns index settings with zero replicas to keep the cluster
+// GREEN on a single-node CI cluster and avoid interfering with parallel tests
+// that use UpdateByQuery with scripts.
+func noReplicaSettings() *types.IndexSettings {
+	replicas := "0"
+	return &types.IndexSettings{NumberOfReplicas: &replicas}
+}
+
 // productDoc is a sample document used across integration tests.
 type productDoc struct {
 	Name      string    `json:"name"`
@@ -102,7 +110,7 @@ func TestIntegration_CreateDeleteIndex(t *testing.T) {
 	idx := uniqueIndex(t, client)
 
 	// Create
-	createRes, err := client.CreateIndex(ctx, idx, nil, nil)
+	createRes, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	assert.Assert(t, createRes.Acknowledged)
 	assert.Equal(t, idx.String(), createRes.Index)
@@ -140,7 +148,7 @@ func TestIntegration_CreateIndexWithMappings(t *testing.T) {
 		},
 	}
 
-	res, err := client.CreateIndex(ctx, idx, nil, mappings)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	assert.Assert(t, res.Acknowledged)
 }
@@ -153,7 +161,7 @@ func TestIntegration_AliasLifecycle(t *testing.T) {
 	alias := uniqueAlias(t)
 
 	// Create index first
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 
 	// Alias should not exist yet
@@ -193,7 +201,7 @@ func TestIntegration_UpdateAliases(t *testing.T) {
 
 	// Create two indices
 	for _, idx := range []estype.Index{idx1, idx2} {
-		_, err := client.CreateIndex(ctx, idx, nil, nil)
+		_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 		assert.NilError(t, err)
 	}
 
@@ -231,7 +239,7 @@ func TestIntegration_DocumentCRUD(t *testing.T) {
 	alias := uniqueAlias(t)
 
 	// Setup: create index and alias
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -298,7 +306,7 @@ func TestIntegration_IndexDocumentCount(t *testing.T) {
 	idx := uniqueIndex(t, client)
 	alias := uniqueAlias(t)
 
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -326,7 +334,7 @@ func TestIntegration_AliasRefresh(t *testing.T) {
 	idx := uniqueIndex(t, client)
 	alias := uniqueAlias(t)
 
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -355,7 +363,7 @@ func TestIntegration_Search_MatchAll(t *testing.T) {
 	idx := uniqueIndex(t, client)
 	alias := uniqueAlias(t)
 
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -397,7 +405,7 @@ func TestIntegration_Search_TermQuery(t *testing.T) {
 			"price":    types.NewDoubleNumberProperty(),
 		},
 	}
-	_, err := client.CreateIndex(ctx, idx, nil, mappings)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -433,7 +441,7 @@ func TestIntegration_Search_BoolQuery(t *testing.T) {
 			"price":    types.NewDoubleNumberProperty(),
 		},
 	}
-	_, err := client.CreateIndex(ctx, idx, nil, mappings)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -476,7 +484,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 			"price":    types.NewDoubleNumberProperty(),
 		},
 	}
-	_, err := client.CreateIndex(ctx, idx, nil, mappings)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -545,7 +553,7 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 			"price": types.NewDoubleNumberProperty(),
 		},
 	}
-	_, err := client.CreateIndex(ctx, idx, nil, mappings)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -591,7 +599,7 @@ func TestIntegration_RefreshInterval(t *testing.T) {
 	idx := uniqueIndex(t, client)
 	alias := uniqueAlias(t)
 
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -627,7 +635,7 @@ func TestIntegration_Reindex(t *testing.T) {
 	alias := uniqueAlias(t)
 
 	// Create source with documents
-	_, err := client.CreateIndex(ctx, srcIdx, nil, nil)
+	_, err := client.CreateIndex(ctx, srcIdx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, srcIdx, alias, true)
 	assert.NilError(t, err)
@@ -641,7 +649,7 @@ func TestIntegration_Reindex(t *testing.T) {
 	assert.NilError(t, err)
 
 	// Create destination index
-	_, err = client.CreateIndex(ctx, dstIdx, nil, nil)
+	_, err = client.CreateIndex(ctx, dstIdx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 
 	// Reindex synchronously
@@ -673,9 +681,9 @@ func TestIntegration_DeltaReindex(t *testing.T) {
 			},
 		},
 	}
-	_, err := client.CreateIndex(ctx, srcIdx, nil, mappings)
+	_, err := client.CreateIndex(ctx, srcIdx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateIndex(ctx, dstIdx, nil, mappings)
+	_, err = client.CreateIndex(ctx, dstIdx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, srcIdx, alias, true)
 	assert.NilError(t, err)
@@ -728,7 +736,7 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 			"price": types.NewDoubleNumberProperty(),
 		},
 	}
-	_, err := client.CreateIndex(ctx, idx, nil, mappings)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -772,7 +780,7 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 	idx := uniqueIndex(t, client)
 	alias := uniqueAlias(t)
 
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -816,7 +824,7 @@ func TestIntegration_Search_Request(t *testing.T) {
 			"price":    types.NewDoubleNumberProperty(),
 		},
 	}
-	_, err := client.CreateIndex(ctx, idx, nil, mappings)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
@@ -856,7 +864,7 @@ func TestIntegration_SearchWithRequest(t *testing.T) {
 	idx := uniqueIndex(t, client)
 	alias := uniqueAlias(t)
 
-	_, err := client.CreateIndex(ctx, idx, nil, nil)
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
 	_, err = client.CreateAlias(ctx, idx, alias, true)
 	assert.NilError(t, err)
