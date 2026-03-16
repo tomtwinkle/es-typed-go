@@ -112,6 +112,7 @@ var specEndpoints = []struct {
 // corresponding method on the ESClient interface and which do not.
 // Run with -v to see the full list of uncovered endpoints.
 func TestAPICoverage(t *testing.T) {
+	t.Parallel()
 	ifaceType := reflect.TypeOf((*esv8.ESClient)(nil)).Elem()
 
 	var covered, missing int

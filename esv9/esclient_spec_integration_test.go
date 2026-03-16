@@ -119,8 +119,14 @@ func TestIntegration_Spec_IndicesCreateDelete(t *testing.T) {
 		_, _ = client.IndicesDelete(cctx, name)
 	})
 
-	// Create
-	createRes, err := client.IndicesCreate(ctx, name, nil)
+	// Create with number_of_replicas=0 to keep the cluster GREEN on a single-node
+	// cluster and avoid interference with parallel tests that use UpdateByQuery.
+	zeroReplicas := "0"
+	createRes, err := client.IndicesCreate(ctx, name, &indicescreate.Request{
+		Settings: &types.IndexSettings{
+			NumberOfReplicas: &zeroReplicas,
+		},
+	})
 	assert.NilError(t, err)
 	assert.Assert(t, createRes != nil)
 
@@ -288,7 +294,9 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 	req := bulkOps(idx, docs...)
 	_, err := client.Bulk(ctx, &req)
 	assert.NilError(t, err)
-	_, _ = client.IndicesRefresh(ctx)
+	// Refresh only the test index, not all indices, to avoid interference from
+	// YELLOW shards of other parallel tests.
+	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
 	res, err := client.DeleteByQuery(ctx, idx, &deletebyquery.Request{Query: &matchAll})
