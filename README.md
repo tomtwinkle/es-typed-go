@@ -33,7 +33,7 @@ Invalid usage is caught by the compiler, not by Elasticsearch at runtime.
 
 ## Features
 
-- **Compile-time safety** — Distinct types (`Field`, `Index`, `Alias`) prevent mix-ups
+- **Compile-time safety** — Distinct types (`Field`, `Index`, `Alias`) prevent mix-ups; `MappingProperty` interface eliminates `any` from field mapping definitions
 - **Code generation** — Generate typed field constants from Elasticsearch mappings
 - **SearchBuilder** — High-level ActiveRecord-style builder combining query, sort, aggregations, and pagination into a single `SearchParams`
 - **Fluent query builders** — Type-safe Bool, Term, Match, Range, Nested, Prefix, Wildcard, MultiMatch, FunctionScore queries and more
@@ -122,6 +122,8 @@ type Item struct {
     Price int    `json:"price"`
 }
 ```
+
+To give the generator accurate ES type names for each field, implement `estype.ESMappingProvider` on the struct. Without it, all field types fall back to `"unknown"` in generated comments. See [ESMappingProvider](#esmappingprovider) for details.
 
 When using `-struct`, the `-package` flag defaults to `$GOPACKAGE` (set automatically by `go generate`). Run `go generate ./...` to regenerate. If you installed `estyped` globally with `go install`, you can also use the shorter form:
 
@@ -533,6 +535,55 @@ mappings := &types.TypeMapping{
 			},
 		),
 	},
+}
+```
+
+### ESMappingProvider
+
+When using `estyped -struct`, implement `estype.ESMappingProvider` on your struct to tell the generator the Elasticsearch type name of each field. Without this method, every field type falls back to `"unknown"` in generated comments.
+
+`MappingField.Property` accepts any value that implements `estype.MappingProperty` (the `ESTypeName() string` interface):
+
+| Property value | When to use |
+|---|---|
+| `estype.FieldType("integer")` | Plain ES type name: `keyword`, `text`, `integer`, `long`, `float`, `double`, `boolean`, `date`, `object`, `nested`, `geo_point`, `dense_vector`, … |
+| `estype.NewTextProperty(...)` | Text field with analyzer or multi-field sub-properties |
+| `estype.NewKeywordProperty(...)` | Keyword field with `ignore_above` or similar options |
+
+`Path` accepts bare string literals because `estype.Field` is a named string type that allows direct assignment from untyped string constants.
+
+```go
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+	Status string   `json:"status"`
+	Title  string   `json:"title"`
+	Price  int      `json:"price"`
+	Tags   []string `json:"tags"`
+	Items  []Item   `json:"items"`
+}
+
+type Item struct {
+	Name  string `json:"name"`
+	Value int    `json:"value"`
+}
+
+func (Product) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status",      Property: estype.NewKeywordProperty()},
+			{Path: "title",       Property: estype.NewTextProperty(
+				estype.WithField("keyword", estype.NewKeywordProperty(estype.WithIgnoreAbove())),
+				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
+				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
+			)},
+			{Path: "price",       Property: estype.FieldType("integer")},
+			{Path: "tags",        Property: estype.FieldType("keyword")},
+			{Path: "items",       Property: estype.FieldType("nested")},
+			{Path: "items.name",  Property: estype.NewTextProperty()},
+			{Path: "items.value", Property: estype.FieldType("integer")},
+		},
+	}
 }
 ```
 

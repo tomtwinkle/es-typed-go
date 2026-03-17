@@ -71,9 +71,9 @@ type mappingProperty struct {
 //	func (Product) ESMapping() Mapping {
 //		return Mapping{
 //			Fields: []MappingField{
-//				{Path: Field("status"), Property: NewKeywordProperty()},
-//				{Path: Field("title"),  Property: NewTextProperty()},
-//				{Path: Field("price"),  Property: FieldType("integer")},
+//				{Path: "status", Property: NewKeywordProperty()},
+//				{Path: "title",  Property: NewTextProperty()},
+//				{Path: "price",  Property: FieldType("integer")},
 //			},
 //		}
 //	}

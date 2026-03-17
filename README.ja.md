@@ -33,7 +33,7 @@
 
 ## 機能一覧
 
-- **コンパイル時の安全性** — 専用の型（`Field`、`Index`、`Alias`）が取り違えを防止
+- **コンパイル時の安全性** — 専用の型（`Field`、`Index`、`Alias`）が取り違えを防止。`MappingProperty` インターフェースがフィールドマッピング定義から `any` を排除
 - **コード生成** — Elasticsearch マッピングから型付きフィールド定数を生成
 - **SearchBuilder** — クエリ・ソート・アグリゲーション・ページネーションをひとつの `SearchParams` にまとめる ActiveRecord スタイルのビルダー
 - **Fluent クエリビルダー** — 型安全な Bool、Term、Match、Range、Nested、Prefix、Wildcard、MultiMatch、FunctionScore クエリなど
@@ -122,6 +122,8 @@ type Item struct {
     Price int    `json:"price"`
 }
 ```
+
+各フィールドに正確な ES 型名を伝えるには、struct に `estype.ESMappingProvider` を実装します。実装しない場合、生成されるコメントのフィールド型はすべて `"unknown"` になります。詳細は [ESMappingProvider](#esmappingprovider) を参照してください。
 
 `-struct` を使用する場合、`-package` フラグは `go generate` が自動的に設定する `$GOPACKAGE` がデフォルトになります。`go generate ./...` を実行すると再生成されます。`go install` でグローバルインストール済みの場合は短い形式も使用できます。
 
@@ -533,6 +535,55 @@ mappings := &types.TypeMapping{
 			},
 		),
 	},
+}
+```
+
+### ESMappingProvider
+
+`estyped -struct` を使用する際、各フィールドの Elasticsearch 型名をジェネレータに伝えるために、struct に `estype.ESMappingProvider` を実装します。このメソッドがない場合、生成されるコメントのすべてのフィールド型は `"unknown"` になります。
+
+`MappingField.Property` には `estype.MappingProperty`（`ESTypeName() string` インターフェース）を実装した値を設定します。
+
+| プロパティ値 | 用途 |
+|---|---|
+| `estype.FieldType("integer")` | 型名の文字列指定: `keyword`、`text`、`integer`、`long`、`float`、`double`、`boolean`、`date`、`object`、`nested`、`geo_point`、`dense_vector` など |
+| `estype.NewTextProperty(...)` | アナライザやマルチフィールドサブプロパティを持つテキストフィールド |
+| `estype.NewKeywordProperty(...)` | `ignore_above` などのオプションを持つキーワードフィールド |
+
+`Path` はドット区切りの JSON フィールドパスです。`estype.Field` は named string 型なので、型なし文字列リテラルをそのまま代入できます。
+
+```go
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+	Status string   `json:"status"`
+	Title  string   `json:"title"`
+	Price  int      `json:"price"`
+	Tags   []string `json:"tags"`
+	Items  []Item   `json:"items"`
+}
+
+type Item struct {
+	Name  string `json:"name"`
+	Value int    `json:"value"`
+}
+
+func (Product) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status",      Property: estype.NewKeywordProperty()},
+			{Path: "title",       Property: estype.NewTextProperty(
+				estype.WithField("keyword", estype.NewKeywordProperty(estype.WithIgnoreAbove())),
+				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
+				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
+			)},
+			{Path: "price",       Property: estype.FieldType("integer")},
+			{Path: "tags",        Property: estype.FieldType("keyword")},
+			{Path: "items",       Property: estype.FieldType("nested")},
+			{Path: "items.name",  Property: estype.NewTextProperty()},
+			{Path: "items.value", Property: estype.FieldType("integer")},
+		},
+	}
 }
 ```
 

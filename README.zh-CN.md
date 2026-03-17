@@ -33,7 +33,7 @@
 
 ## 功能特性
 
-- **编译时安全** — 专用类型（`Field`、`Index`、`Alias`）防止混淆
+- **编译时安全** — 专用类型（`Field`、`Index`、`Alias`）防止混淆；`MappingProperty` 接口消除了字段映射定义中的 `any`
 - **代码生成** — 从 Elasticsearch 映射生成类型化字段常量
 - **SearchBuilder** — ActiveRecord 风格的构建器，将查询、排序、聚合和分页合并为单一的 `SearchParams`
 - **Fluent 查询构建器** — 类型安全的 Bool、Term、Match、Range、Nested、Prefix、Wildcard、MultiMatch、FunctionScore 查询等
@@ -122,6 +122,8 @@ type Item struct {
     Price int    `json:"price"`
 }
 ```
+
+要让生成器获取每个字段准确的 ES 类型名，请在 struct 上实现 `estype.ESMappingProvider`。未实现时，生成注释中的所有字段类型将退为 `"unknown"`。详情参见 [ESMappingProvider](#esmappingprovider)。
 
 使用 `-struct` 时，`-package` 标志默认使用 `go generate` 自动设置的 `$GOPACKAGE`。执行 `go generate ./...` 即可重新生成。若已通过 `go install` 全局安装，也可使用简短形式：
 
@@ -533,6 +535,55 @@ mappings := &types.TypeMapping{
 			},
 		),
 	},
+}
+```
+
+### ESMappingProvider
+
+使用 `estyped -struct` 时，在 struct 上实现 `estype.ESMappingProvider` 以告知生成器每个字段的 Elasticsearch 类型名。未实现此方法时，生成注释中所有字段的类型均为 `"unknown"`。
+
+`MappingField.Property` 接受任何实现了 `estype.MappingProperty`（`ESTypeName() string` 接口）的值：
+
+| 属性值 | 适用场景 |
+|---|---|
+| `estype.FieldType("integer")` | 普通 ES 类型名: `keyword`、`text`、`integer`、`long`、`float`、`double`、`boolean`、`date`、`object`、`nested`、`geo_point`、`dense_vector` 等 |
+| `estype.NewTextProperty(...)` | 需要配置分析器或多字段子属性的 text 字段 |
+| `estype.NewKeywordProperty(...)` | 需要设置 `ignore_above` 等选项的 keyword 字段 |
+
+`Path` 是以点分隔的 JSON 字段路径。由于 `estype.Field` 是具名 string 类型，无类型字符串字面量可直接赋值。
+
+```go
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+	Status string   `json:"status"`
+	Title  string   `json:"title"`
+	Price  int      `json:"price"`
+	Tags   []string `json:"tags"`
+	Items  []Item   `json:"items"`
+}
+
+type Item struct {
+	Name  string `json:"name"`
+	Value int    `json:"value"`
+}
+
+func (Product) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status",      Property: estype.NewKeywordProperty()},
+			{Path: "title",       Property: estype.NewTextProperty(
+				estype.WithField("keyword", estype.NewKeywordProperty(estype.WithIgnoreAbove())),
+				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
+				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
+			)},
+			{Path: "price",       Property: estype.FieldType("integer")},
+			{Path: "tags",        Property: estype.FieldType("keyword")},
+			{Path: "items",       Property: estype.FieldType("nested")},
+			{Path: "items.name",  Property: estype.NewTextProperty()},
+			{Path: "items.value", Property: estype.FieldType("integer")},
+		},
+	}
 }
 ```
 
