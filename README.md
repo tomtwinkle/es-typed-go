@@ -51,6 +51,18 @@ go get github.com/tomtwinkle/es-typed-go
 
 This installs the core `estype` package and both `esv8` and `esv9` wrappers.
 
+To use the `estyped` code-generation CLI, install it as a Go tool:
+
+```bash
+go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
+```
+
+This adds an entry to your `go.mod` and lets you invoke the tool with `go tool estyped`. You can also install it globally so that `estyped` is available directly on your PATH:
+
+```bash
+go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
+```
+
 ## Quick Start
 
 ### 1. Define your mapping and generate field constants
@@ -84,13 +96,37 @@ Create your Elasticsearch mapping file:
 }
 ```
 
-Generate typed field constants:
+Generate typed field constants from an Elasticsearch mapping file:
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel
+```
+
+Alternatively, if you already have a Go struct with JSON tags that represents your document model, you can generate directly from it by adding a `//go:generate` directive to the struct file:
+
+```go
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+    Status   string   `json:"status"`
+    Title    string   `json:"title"`
+    Category string   `json:"category"`
+    Items    []Item   `json:"items"`
+}
+
+type Item struct {
+    Name  string `json:"name"`
+    Price int    `json:"price"`
+}
+```
+
+When using `-struct`, the `-package` flag defaults to `$GOPACKAGE` (set automatically by `go generate`). Run `go generate ./...` to regenerate. If you installed `estyped` globally with `go install`, you can also use the shorter form:
+
+```go
+//go:generate estyped -struct Product -out product_fields.go
 ```
 
 This generates:
@@ -135,7 +171,7 @@ const FieldTitleKeyword estype.Field = "title.keyword"
 You can also use struct mode for grouped access:
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel \

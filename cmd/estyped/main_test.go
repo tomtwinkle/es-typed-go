@@ -323,6 +323,307 @@ func TestGenerate_ObjectField(t *testing.T) {
 	assert.Assert(t, ok, "missing constant FieldDataValue")
 }
 
+// writeGoFile writes src as a .go file named name in dir and returns its path.
+func writeGoFile(t *testing.T, dir, name, src string) string {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	assert.NilError(t, os.WriteFile(path, []byte(src), 0o644))
+	return path
+}
+
+// TestParseGoStruct_FlatFields verifies that a flat struct with json tags produces
+// the expected field entries.
+func TestParseGoStruct_FlatFields(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Document struct {
+	Status   string `+"`"+`json:"status"`+"`"+`
+	Title    string `+"`"+`json:"title"`+"`"+`
+	Price    int    `+"`"+`json:"price"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.ConstName] = e.Path
+	}
+	assert.Equal(t, 3, len(got))
+	assert.Equal(t, "price", got["Price"])
+	assert.Equal(t, "status", got["Status"])
+	assert.Equal(t, "title", got["Title"])
+}
+
+// TestParseGoStruct_NestedStruct verifies that a field whose type is another
+// struct defined in the same package is expanded recursively.
+func TestParseGoStruct_NestedStruct(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Items  Item   `+"`"+`json:"items"`+"`"+`
+}
+
+type Item struct {
+	Name  string `+"`"+`json:"name"`+"`"+`
+	Value int    `+"`"+`json:"value"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.ConstName] = e.Path
+	}
+	assert.Equal(t, 4, len(got))
+	assert.Equal(t, "items", got["Items"])
+	assert.Equal(t, "items.name", got["ItemsName"])
+	assert.Equal(t, "items.value", got["ItemsValue"])
+	assert.Equal(t, "status", got["Status"])
+}
+
+// TestParseGoStruct_SliceOfStruct verifies that a slice-of-struct field uses
+// "nested" as the ES type.
+func TestParseGoStruct_SliceOfStruct(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Document struct {
+	Tags []Tag `+"`"+`json:"tags"`+"`"+`
+}
+
+type Tag struct {
+	Value string `+"`"+`json:"value"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	gotTypes := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.ConstName] = e.Path
+		gotTypes[e.ConstName] = e.Type
+	}
+	assert.Equal(t, 2, len(got))
+	assert.Equal(t, "tags", got["Tags"])
+	assert.Equal(t, "nested", gotTypes["Tags"])
+	assert.Equal(t, "tags.value", got["TagsValue"])
+}
+
+// TestParseGoStruct_SkipMinusTag verifies that fields with json:"-" are omitted.
+func TestParseGoStruct_SkipMinusTag(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Document struct {
+	Status  string `+"`"+`json:"status"`+"`"+`
+	Ignored string `+"`"+`json:"-"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(entries))
+	assert.Equal(t, "status", entries[0].Path)
+}
+
+// TestParseGoStruct_OmitemptyTag verifies that omitempty options are handled and
+// the field name before the comma is used.
+func TestParseGoStruct_OmitemptyTag(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Document struct {
+	Status string `+"`"+`json:"status,omitempty"`+"`"+`
+	Title  string `+"`"+`json:"title,omitempty"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.ConstName] = e.Path
+	}
+	assert.Equal(t, 2, len(got))
+	assert.Equal(t, "status", got["Status"])
+	assert.Equal(t, "title", got["Title"])
+}
+
+// TestParseGoStruct_EmbeddedStruct verifies that anonymous embedded struct fields
+// are inlined at the same nesting level.
+func TestParseGoStruct_EmbeddedStruct(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Base struct {
+	ID string `+"`"+`json:"id"`+"`"+`
+}
+
+type Document struct {
+	Base
+	Status string `+"`"+`json:"status"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.ConstName] = e.Path
+	}
+	assert.Equal(t, 2, len(got))
+	assert.Equal(t, "id", got["Id"])
+	assert.Equal(t, "status", got["Status"])
+}
+
+// TestParseGoStruct_TypeNotFound verifies that a helpful error is returned when
+// the requested type does not exist.
+func TestParseGoStruct_TypeNotFound(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+}
+`)
+	_, err := parseGoStruct(dir, "Missing")
+	assert.ErrorContains(t, err, `"Missing" not found`)
+}
+
+// TestParseGoStruct_ConstModeOutput verifies that struct-based parsing produces
+// valid Go source in constant output mode.
+func TestParseGoStruct_ConstModeOutput(t *testing.T) {
+	t.Parallel()
+	srcDir := t.TempDir()
+	writeGoFile(t, srcDir, "doc.go", `package model
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Items  []Item `+"`"+`json:"items"`+"`"+`
+}
+
+type Item struct {
+	Name string `+"`"+`json:"name"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(srcDir, "Document")
+	assert.NilError(t, err)
+
+	td := templateData{Package: "model", Fields: entries}
+	var buf bytes.Buffer
+	assert.NilError(t, constTemplate.Execute(&buf, td))
+	formatted, err := format.Source(buf.Bytes())
+	assert.NilError(t, err)
+
+	// Parse the generated source and verify constants.
+	outDir := t.TempDir()
+	outFile := filepath.Join(outDir, "fields.go")
+	assert.NilError(t, os.WriteFile(outFile, formatted, 0o644))
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, outFile, nil, parser.AllErrors)
+	assert.NilError(t, err)
+
+	assertImport(t, f, `"github.com/tomtwinkle/es-typed-go/estype"`)
+
+	consts := collectConstDecls(f)
+	expectedConsts := map[string]string{
+		"FieldItems":     "items",
+		"FieldItemsName": "items.name",
+		"FieldStatus":    "status",
+	}
+	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts), len(consts))
+	for name, wantValue := range expectedConsts {
+		gotValue, ok := consts[name]
+		assert.Assert(t, ok, "missing constant %q", name)
+		assert.Equal(t, wantValue, gotValue, "constant %s has wrong value", name)
+	}
+}
+
+// TestParseGoStruct_StructModeOutput verifies that struct-based parsing produces
+// valid Go source in struct variable output mode.
+func TestParseGoStruct_StructModeOutput(t *testing.T) {
+	t.Parallel()
+	srcDir := t.TempDir()
+	writeGoFile(t, srcDir, "doc.go", `package model
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Items  []Item `+"`"+`json:"items"`+"`"+`
+}
+
+type Item struct {
+	Name string `+"`"+`json:"name"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(srcDir, "Document")
+	assert.NilError(t, err)
+
+	td := templateData{Package: "model", Name: "Sample", Fields: entries}
+	var buf bytes.Buffer
+	assert.NilError(t, structTemplate.Execute(&buf, td))
+	formatted, err := format.Source(buf.Bytes())
+	assert.NilError(t, err)
+
+	outDir := t.TempDir()
+	outFile := filepath.Join(outDir, "fields.go")
+	assert.NilError(t, os.WriteFile(outFile, formatted, 0o644))
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, outFile, nil, parser.AllErrors)
+	assert.NilError(t, err)
+
+	assertImport(t, f, `"github.com/tomtwinkle/es-typed-go/estype"`)
+
+	structFields := collectStructVarFields(f, "Sample")
+	expectedFields := map[string]string{
+		"Items":      "items",
+		"Items_Name": "items.name",
+		"Status":     "status",
+	}
+	assert.Assert(t, len(structFields) == len(expectedFields), "expected %d struct fields, got %d", len(expectedFields), len(structFields))
+	for name, wantValue := range expectedFields {
+		gotValue, ok := structFields[name]
+		assert.Assert(t, ok, "missing struct field %q", name)
+		assert.Equal(t, wantValue, gotValue, "struct field %s has wrong value", name)
+	}
+}
+
+// TestJSONTagKey covers the jsonTagKey helper for all relevant tag formats.
+func TestJSONTagKey(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		raw  string
+		want string
+	}{
+		"plain":       {raw: `json:"status"`, want: "status"},
+		"omitempty":   {raw: `json:"title,omitempty"`, want: "title"},
+		"skip":        {raw: `json:"-"`, want: "-"},
+		"no_json_tag": {raw: `db:"col"`, want: ""},
+		"empty_name":  {raw: `json:",omitempty"`, want: ""},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := jsonTagKey(tt.raw)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 // --- ast helpers ---
 
 // assertImport verifies that an import path exists in the parsed file.

@@ -51,6 +51,18 @@ go get github.com/tomtwinkle/es-typed-go
 
 コアの `estype` パッケージと `esv8` / `esv9` ラッパーがインストールされます。
 
+`estyped` コード生成 CLI を使用するには、Go ツールとしてインストールします。
+
+```bash
+go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
+```
+
+これにより `go.mod` にエントリが追加され、`go tool estyped` でツールを呼び出せます。PATH 上で直接 `estyped` を使えるようにするには、グローバルインストールも可能です。
+
+```bash
+go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
+```
+
 ## クイックスタート
 
 ### 1. マッピングを定義してフィールド定数を生成する
@@ -84,13 +96,37 @@ Elasticsearch のマッピングファイルを作成します。
 }
 ```
 
-型付きフィールド定数を生成します。
+Elasticsearch マッピングファイルから型付きフィールド定数を生成します。
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel
+```
+
+あるいは、ドキュメントモデルを表す JSON struct tag 付きの Go struct がすでにある場合は、struct ファイルに `//go:generate` ディレクティブを追加することで、その struct から直接生成できます。
+
+```go
+//go:generate go tool estyped -struct Product -out product_fields.go
+
+type Product struct {
+    Status   string   `json:"status"`
+    Title    string   `json:"title"`
+    Category string   `json:"category"`
+    Items    []Item   `json:"items"`
+}
+
+type Item struct {
+    Name  string `json:"name"`
+    Price int    `json:"price"`
+}
+```
+
+`-struct` を使用する場合、`-package` フラグは `go generate` が自動的に設定する `$GOPACKAGE` がデフォルトになります。`go generate ./...` を実行すると再生成されます。`go install` でグローバルインストール済みの場合は短い形式も使用できます。
+
+```go
+//go:generate estyped -struct Product -out product_fields.go
 ```
 
 以下のようなコードが生成されます。
@@ -135,7 +171,7 @@ const FieldTitleKeyword estype.Field = "title.keyword"
 構造体モードを使用すると、グループ化されたアクセスも可能です。
 
 ```bash
-go run github.com/tomtwinkle/es-typed-go/cmd/estyped \
+go tool estyped \
   -mapping mapping.json \
   -out esmodel/fields.go \
   -package esmodel \
