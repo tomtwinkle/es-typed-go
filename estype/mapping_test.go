@@ -33,12 +33,12 @@ func TestParseMappingFullFormat(t *testing.T) {
 	m, err := estype.ParseMapping(data)
 	assert.NilError(t, err)
 	assert.Assert(t, len(m.Fields) == 3)
-	assert.Equal(t, "status", m.Fields[0].Path)
-	assert.Equal(t, "keyword", m.Fields[0].Type)
-	assert.Equal(t, "title", m.Fields[1].Path)
-	assert.Equal(t, "text", m.Fields[1].Type)
-	assert.Equal(t, "title.keyword", m.Fields[2].Path)
-	assert.Equal(t, "keyword", m.Fields[2].Type)
+	assert.Equal(t, estype.Field("status"), m.Fields[0].Path)
+	assert.Equal(t, "keyword", m.Fields[0].TypeName())
+	assert.Equal(t, estype.Field("title"), m.Fields[1].Path)
+	assert.Equal(t, "text", m.Fields[1].TypeName())
+	assert.Equal(t, estype.Field("title.keyword"), m.Fields[2].Path)
+	assert.Equal(t, "keyword", m.Fields[2].TypeName())
 }
 
 func TestParseMappingAbbreviatedFormat(t *testing.T) {
@@ -53,8 +53,8 @@ func TestParseMappingAbbreviatedFormat(t *testing.T) {
 	m, err := estype.ParseMapping(data)
 	assert.NilError(t, err)
 	assert.Assert(t, len(m.Fields) == 2)
-	assert.Equal(t, "id", m.Fields[0].Path)
-	assert.Equal(t, "price", m.Fields[1].Path)
+	assert.Equal(t, estype.Field("id"), m.Fields[0].Path)
+	assert.Equal(t, estype.Field("price"), m.Fields[1].Path)
 }
 
 func TestParseMappingNested(t *testing.T) {
@@ -74,10 +74,10 @@ func TestParseMappingNested(t *testing.T) {
 	m, err := estype.ParseMapping(data)
 	assert.NilError(t, err)
 	assert.Assert(t, len(m.Fields) == 3)
-	assert.Equal(t, "items", m.Fields[0].Path)
-	assert.Equal(t, "nested", m.Fields[0].Type)
-	assert.Equal(t, "items.color", m.Fields[1].Path)
-	assert.Equal(t, "items.date", m.Fields[2].Path)
+	assert.Equal(t, estype.Field("items"), m.Fields[0].Path)
+	assert.Equal(t, "nested", m.Fields[0].TypeName())
+	assert.Equal(t, estype.Field("items.color"), m.Fields[1].Path)
+	assert.Equal(t, estype.Field("items.date"), m.Fields[2].Path)
 }
 
 func TestParseMappingNoProperties(t *testing.T) {
@@ -115,7 +115,7 @@ func TestParseMappingFieldsSorted(t *testing.T) {
 	m, err := estype.ParseMapping(data)
 	assert.NilError(t, err)
 	assert.Assert(t, len(m.Fields) == 3)
-	assert.Equal(t, "a_field", m.Fields[0].Path)
-	assert.Equal(t, "m_field", m.Fields[1].Path)
-	assert.Equal(t, "z_field", m.Fields[2].Path)
+	assert.Equal(t, estype.Field("a_field"), m.Fields[0].Path)
+	assert.Equal(t, estype.Field("m_field"), m.Fields[1].Path)
+	assert.Equal(t, estype.Field("z_field"), m.Fields[2].Path)
 }

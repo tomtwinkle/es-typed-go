@@ -27,11 +27,16 @@
 // a single return statement with a composite literal; more complex expressions are
 // silently ignored and the field type falls back to "unknown".
 //
+// The Property field of each [estype.MappingField] entry accepts either a plain
+// string (the ES type name) or a typed property value from a constructor call
+// such as [estype.NewTextProperty] or [estype.NewKeywordProperty]:
+//
 //	func (Product) ESMapping() estype.Mapping {
 //		return estype.Mapping{
 //			Fields: []estype.MappingField{
-//				{Path: "status", Type: "keyword"},
-//				{Path: "title",  Type: "text"},
+//				{Path: "status", Property: estype.NewKeywordProperty()},
+//				{Path: "title",  Property: estype.NewTextProperty()},
+//				{Path: "price",  Property: "integer"},
 //			},
 //		}
 //	}
@@ -175,10 +180,10 @@ func main() {
 		entries = make([]fieldEntry, 0, len(mapping.Fields))
 		for _, f := range mapping.Fields {
 			entries = append(entries, fieldEntry{
-				ConstName: toPascalCase(f.Path),
-				FieldName: toStructFieldName(f.Path),
-				Path:      f.Path,
-				Type:      fieldType(f.Type),
+				ConstName: toPascalCase(f.Path.String()),
+				FieldName: toStructFieldName(f.Path.String()),
+				Path:      f.Path.String(),
+				Type:      fieldType(f.TypeName()),
 			})
 		}
 	}
@@ -476,14 +481,15 @@ func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[s
 
 // parseESMappingBody extracts field path→type pairs from the body of an
 // ESMapping() method.  It expects a single return statement whose result is a
-// composite literal that constructs an estype.Mapping value, e.g.:
+// composite literal that constructs an estype.Mapping value.
 //
-//	return estype.Mapping{
-//		Fields: []estype.MappingField{
-//			{Path: "status", Type: "keyword"},
-//			{Path: "title",  Type: "text"},
-//		},
-//	}
+// The Property field of each MappingField entry is resolved to an ES type name
+// in two ways:
+//
+//   - A plain string literal (e.g. Property: "integer") is used directly.
+//   - A call to a NewXxxProperty constructor (e.g. Property: estype.NewTextProperty(...))
+//     is resolved by extracting "Xxx" from the function name and converting it
+//     to snake_case (e.g. "Text" → "text", "DenseVector" → "dense_vector").
 //
 // Any element that cannot be statically resolved is silently skipped.
 func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
@@ -526,16 +532,13 @@ func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
 					if !ok {
 						continue
 					}
-					fVal, ok := fkv.Value.(*ast.BasicLit)
-					if !ok || fVal.Kind != token.STRING {
-						continue
-					}
-					val := strings.Trim(fVal.Value, `"`)
 					switch fKey.Name {
 					case "Path":
-						path = val
-					case "Type":
-						esType = val
+						if bl, ok := fkv.Value.(*ast.BasicLit); ok && bl.Kind == token.STRING {
+							path = strings.Trim(bl.Value, `"`)
+						}
+					case "Property":
+						esType = propertyValueTypeName(fkv.Value)
 					}
 				}
 				if path != "" && esType != "" {
@@ -544,4 +547,69 @@ func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
 			}
 		}
 	}
+}
+
+// propertyValueTypeName extracts the Elasticsearch type name from an AST
+// expression used as the Property field of an estype.MappingField literal.
+// It handles two forms:
+//   - A string literal: the string value is returned directly.
+//   - A call expression such as NewTextProperty(...) or estype.NewTextProperty(...):
+//     the ES type name is derived from the constructor function name.
+func propertyValueTypeName(expr ast.Expr) string {
+	switch e := expr.(type) {
+	case *ast.BasicLit:
+		if e.Kind == token.STRING {
+			return strings.Trim(e.Value, `"`)
+		}
+	case *ast.CallExpr:
+		return propertyCallTypeName(e.Fun)
+	}
+	return ""
+}
+
+// propertyCallTypeName derives the Elasticsearch type name from the function
+// expression of a NewXxxProperty constructor call.
+// The function may be an unqualified identifier (NewTextProperty) or a selector
+// expression (estype.NewTextProperty, esv8.NewTextProperty, etc.).
+// Returns "" when the expression does not match the New…Property pattern.
+func propertyCallTypeName(expr ast.Expr) string {
+	var name string
+	switch e := expr.(type) {
+	case *ast.Ident:
+		name = e.Name
+	case *ast.SelectorExpr:
+		name = e.Sel.Name
+	}
+	if !strings.HasPrefix(name, "New") || !strings.HasSuffix(name, "Property") {
+		return ""
+	}
+	// Extract the PascalCase type fragment between "New" and "Property".
+	middle := name[3 : len(name)-8]
+	if middle == "" {
+		return ""
+	}
+	return pascalToSnake(middle)
+}
+
+// pascalToSnake converts a PascalCase string to snake_case.
+// Used to derive an Elasticsearch type name from a Go constructor name fragment.
+// Examples:
+//
+//	"Text"        → "text"
+//	"Keyword"     → "keyword"
+//	"DenseVector" → "dense_vector"
+func pascalToSnake(s string) string {
+	result := make([]byte, 0, len(s)+4)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if i > 0 && c >= 'A' && c <= 'Z' {
+			result = append(result, '_')
+		}
+		if c >= 'A' && c <= 'Z' {
+			result = append(result, c + 32) // to lower
+		} else {
+			result = append(result, c)
+		}
+	}
+	return string(result)
 }

@@ -15,9 +15,27 @@ type Mapping struct {
 // MappingField represents a single field in an Elasticsearch mapping.
 type MappingField struct {
 	// Path is the dot-separated path to the field (e.g. "items.color").
-	Path string
-	// Type is the Elasticsearch field type (e.g. "keyword", "text", "nested").
-	Type string
+	Path Field
+	// Property holds the Elasticsearch property definition for this field.
+	// It accepts either a plain type-name string (e.g. "keyword", "text",
+	// "integer") or a typed property value such as [TextProperty] or
+	// [KeywordProperty] constructed with [NewTextProperty] / [NewKeywordProperty].
+	Property any
+}
+
+// TypeName returns the Elasticsearch type name for the field.
+// If Property is a plain string, that string is returned directly.
+// If Property implements ESTypeName() string (e.g. [TextProperty],
+// [KeywordProperty]), that method is called.
+// Otherwise an empty string is returned.
+func (f MappingField) TypeName() string {
+	switch v := f.Property.(type) {
+	case string:
+		return v
+	case interface{ ESTypeName() string }:
+		return v.ESTypeName()
+	}
+	return ""
 }
 
 // mappingRoot mirrors the JSON structure returned by the ES Get Mapping API.
@@ -43,9 +61,9 @@ type mappingProperty struct {
 // (e.g. "keyword" instead of "unknown").
 //
 // Place the go:generate directive and the struct definition in the same file,
-// then add an ESMapping() method that returns the field types as plain strings
-// matching the Elasticsearch field type names (e.g. "keyword", "text",
-// "integer", "date", "nested"):
+// then add an ESMapping() method that returns [MappingField] entries using either
+// plain type-name strings (e.g. "keyword", "text", "integer") or typed property
+// values constructed with [NewTextProperty], [NewKeywordProperty], etc.:
 //
 //	//go:generate go tool estyped -struct Product -out product_fields.go
 //
@@ -57,8 +75,8 @@ type mappingProperty struct {
 //	func (Product) ESMapping() Mapping {
 //		return Mapping{
 //			Fields: []MappingField{
-//				{Path: "status", Type: "keyword"},
-//				{Path: "title",  Type: "text"},
+//				{Path: "status", Property: NewKeywordProperty()},
+//				{Path: "title",  Property: NewTextProperty()},
 //			},
 //		}
 //	}
@@ -115,7 +133,7 @@ func collectFields(prefix string, props map[string]mappingProperty, out *[]Mappi
 			path = prefix + "." + name
 		}
 
-		*out = append(*out, MappingField{Path: path, Type: prop.Type})
+		*out = append(*out, MappingField{Path: Field(path), Property: prop.Type})
 
 		// Recurse into nested object/nested properties.
 		if prop.Properties != nil {

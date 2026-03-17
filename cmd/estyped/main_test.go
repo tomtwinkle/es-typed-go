@@ -98,10 +98,10 @@ func generateSource(t *testing.T, mappingData []byte, pkgName, structName string
 	entries := make([]fieldEntry, 0, len(mapping.Fields))
 	for _, f := range mapping.Fields {
 		entries = append(entries, fieldEntry{
-			ConstName: toPascalCase(f.Path),
-			FieldName: toStructFieldName(f.Path),
-			Path:      f.Path,
-			Type:      fieldType(f.Type),
+			ConstName: toPascalCase(f.Path.String()),
+			FieldName: toStructFieldName(f.Path.String()),
+			Path:      f.Path.String(),
+			Type:      fieldType(f.TypeName()),
 		})
 	}
 
@@ -624,6 +624,57 @@ func TestJSONTagKey(t *testing.T) {
 	}
 }
 
+// TestPascalToSnake covers the pascalToSnake helper used to derive ES type names
+// from property constructor function name fragments.
+func TestPascalToSnake(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		input string
+		want  string
+	}{
+		"single_word":   {input: "Text", want: "text"},
+		"single_lower":  {input: "Keyword", want: "keyword"},
+		"two_words":     {input: "DenseVector", want: "dense_vector"},
+		"three_words":   {input: "RankFeatures", want: "rank_features"},
+		"all_lower":     {input: "nested", want: "nested"},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := pascalToSnake(tt.input)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestPropertyCallTypeName covers the propertyCallTypeName helper that derives an
+// ES type name from a NewXxxProperty constructor function AST expression.
+func TestPropertyCallTypeName(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		src  string // a Go expression that is the Fun part of a CallExpr
+		want string
+	}{
+		"ident_text":     {src: "NewTextProperty", want: "text"},
+		"ident_keyword":  {src: "NewKeywordProperty", want: "keyword"},
+		"ident_nested":   {src: "NewNestedProperty", want: "nested"},
+		"ident_dense":    {src: "NewDenseVectorProperty", want: "dense_vector"},
+		"not_new":        {src: "MakeTextProperty", want: ""},
+		"not_property":   {src: "NewTextField", want: ""},
+		"empty_middle":   {src: "NewProperty", want: ""},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			fset := token.NewFileSet()
+			expr, err := parser.ParseExprFrom(fset, "", tt.src, 0)
+			assert.NilError(t, err)
+			got := propertyCallTypeName(expr)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 // TestExtractESMappingMethod verifies that the extractESMappingMethod function
 // correctly parses the return statement of an ESMapping() method and returns
 // the expected path→type map.
@@ -648,8 +699,8 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
-			{Path: "title",  Type: "text"},
+			{Path: "status", Property: "keyword"},
+			{Path: "title", Property: "text"},
 		},
 	}
 }
@@ -669,7 +720,7 @@ type Document struct {
 func (d *Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
+			{Path: "status", Property: "keyword"},
 		},
 	}
 }
@@ -698,7 +749,7 @@ type Other struct{}
 func (Other) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
+			{Path: "status", Property: "keyword"},
 		},
 	}
 }
@@ -723,9 +774,9 @@ type Item struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status",     Type: "keyword"},
-			{Path: "items",      Type: "nested"},
-			{Path: "items.name", Type: "text"},
+			{Path: "status", Property: "keyword"},
+			{Path: "items", Property: "nested"},
+			{Path: "items.name", Property: "text"},
 		},
 	}
 }
@@ -736,6 +787,54 @@ func (Document) ESMapping() estype.Mapping {
 				"items":      "nested",
 				"items.name": "text",
 			},
+		},
+		"typed_property_constructors": {
+			src: `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string ` + "`" + `json:"status"` + "`" + `
+	Title  string ` + "`" + `json:"title"` + "`" + `
+	Price  int    ` + "`" + `json:"price"` + "`" + `
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Property: estype.NewKeywordProperty()},
+			{Path: "title",  Property: estype.NewTextProperty(estype.WithSearchAnalyzer(estype.Analyzer("my_analyzer")))},
+			{Path: "price",  Property: "integer"},
+		},
+	}
+}
+`,
+			typeName: "Document",
+			want: map[string]string{
+				"status": "keyword",
+				"title":  "text",
+				"price":  "integer",
+			},
+		},
+		"unqualified_constructors": {
+			src: `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string ` + "`" + `json:"status"` + "`" + `
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Property: NewKeywordProperty()},
+		},
+	}
+}
+`,
+			typeName: "Document",
+			want:     map[string]string{"status": "keyword"},
 		},
 	}
 
@@ -778,9 +877,9 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
-			{Path: "title",  Type: "text"},
-			{Path: "price",  Type: "integer"},
+			{Path: "status", Property: "keyword"},
+			{Path: "title", Property: "text"},
+			{Path: "price", Property: "integer"},
 		},
 	}
 }
@@ -814,7 +913,7 @@ type Document struct {
 func (d *Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
+			{Path: "status", Property: "keyword"},
 		},
 	}
 }
@@ -846,7 +945,7 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
+			{Path: "status", Property: "keyword"},
 		},
 	}
 }
@@ -886,10 +985,10 @@ type Item struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status",      Type: "keyword"},
-			{Path: "items",       Type: "nested"},
-			{Path: "items.name",  Type: "text"},
-			{Path: "items.value", Type: "integer"},
+			{Path: "status", Property: "keyword"},
+			{Path: "items", Property: "nested"},
+			{Path: "items.name", Property: "text"},
+			{Path: "items.value", Property: "integer"},
 		},
 	}
 }
@@ -925,8 +1024,8 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Type: "keyword"},
-			{Path: "title",  Type: "text"},
+			{Path: "status", Property: "keyword"},
+			{Path: "title", Property: "text"},
 		},
 	}
 }
@@ -948,6 +1047,48 @@ func (Document) ESMapping() estype.Mapping {
 	assert.NilError(t, constTemplate.Execute(&buf, td))
 	_, err = format.Source(buf.Bytes())
 	assert.NilError(t, err)
+}
+
+// TestParseGoStruct_WithESMapping_TypedProperty verifies that ESMapping() using
+// typed property constructors (NewTextProperty, NewKeywordProperty) instead of
+// plain strings produces the correct ES type in the generated entries.
+func TestParseGoStruct_WithESMapping_TypedProperty(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Title  string `+"`"+`json:"title"`+"`"+`
+	Price  int    `+"`"+`json:"price"`+"`"+`
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Property: estype.NewKeywordProperty(estype.WithIgnoreAbove(256))},
+			{Path: "title",  Property: estype.NewTextProperty(
+				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
+				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
+			)},
+			{Path: "price",  Property: "integer"},
+		},
+	}
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.Path] = e.Type
+	}
+	assert.Equal(t, 3, len(got))
+	assert.Equal(t, "keyword", got["status"])
+	assert.Equal(t, "text", got["title"])
+	assert.Equal(t, "integer", got["price"])
 }
 
 // --- ast helpers ---
