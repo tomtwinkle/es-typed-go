@@ -15,7 +15,9 @@ type Mapping struct {
 // MappingField represents a single field in an Elasticsearch mapping.
 type MappingField struct {
 	// Path is the dot-separated path to the field (e.g. "items.color").
-	Path Field
+	// It is typed as string because paths originate from JSON keys and are
+	// used directly as string values throughout the mapping pipeline.
+	Path string
 	// Property holds the Elasticsearch property definition for this field.
 	// Use a typed property value such as [TextProperty] or [KeywordProperty]
 	// constructed with [NewTextProperty] / [NewKeywordProperty], or use
@@ -130,7 +132,7 @@ func collectFields(prefix string, props map[string]mappingProperty, out *[]Mappi
 			path = prefix + "." + name
 		}
 
-		*out = append(*out, MappingField{Path: Field(path), Property: FieldType(prop.Type)})
+		*out = append(*out, MappingField{Path: path, Property: FieldType(prop.Type)})
 
 		// Recurse into nested object/nested properties.
 		if prop.Properties != nil {

@@ -550,7 +550,7 @@ mappings := &types.TypeMapping{
 | `estype.NewTextProperty(...)` | 需要配置分析器或多字段子属性的 text 字段 |
 | `estype.NewKeywordProperty(...)` | 需要设置 `ignore_above` 等选项的 keyword 字段 |
 
-`Path` 是以点分隔的 JSON 字段路径。由于 `estype.Field` 是具名 string 类型，无类型字符串字面量可直接赋值。
+`Path` 是以点分隔的 JSON 字段路径，类型为 `string`。由于路径来源于 JSON 键名，使用 `string` 类型可以避免在代码中构建 mapping 时进行显式类型转换。
 
 ```go
 //go:generate go tool estyped -struct Product -out product_fields.go

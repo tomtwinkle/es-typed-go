@@ -98,9 +98,9 @@ func generateSource(t *testing.T, mappingData []byte, pkgName, structName string
 	entries := make([]fieldEntry, 0, len(mapping.Fields))
 	for _, f := range mapping.Fields {
 		entries = append(entries, fieldEntry{
-			ConstName: toPascalCase(f.Path.String()),
-			FieldName: toStructFieldName(f.Path.String()),
-			Path:      f.Path.String(),
+			ConstName: toPascalCase(f.Path),
+			FieldName: toStructFieldName(f.Path),
+			Path:      f.Path,
 			Type:      fieldType(f.TypeName()),
 		})
 	}

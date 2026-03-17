@@ -550,7 +550,7 @@ mappings := &types.TypeMapping{
 | `estype.NewTextProperty(...)` | アナライザやマルチフィールドサブプロパティを持つテキストフィールド |
 | `estype.NewKeywordProperty(...)` | `ignore_above` などのオプションを持つキーワードフィールド |
 
-`Path` はドット区切りの JSON フィールドパスです。`estype.Field` は named string 型なので、型なし文字列リテラルをそのまま代入できます。
+`Path` はドット区切りの JSON フィールドパスで、型は `string` です。パスは JSON のキーに由来するため、`string` 型にすることでプログラムからマッピングを構築する際に明示的な型変換が不要になります。
 
 ```go
 //go:generate go tool estyped -struct Product -out product_fields.go

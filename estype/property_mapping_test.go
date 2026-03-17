@@ -16,14 +16,14 @@ func TestMappingFieldTypeName(t *testing.T) {
 		field estype.MappingField
 		want  string
 	}{
-		"field_type_keyword":  {field: estype.MappingField{Path: estype.Field("status"), Property: estype.FieldType("keyword")}, want: "keyword"},
-		"field_type_text":     {field: estype.MappingField{Path: estype.Field("title"), Property: estype.FieldType("text")}, want: "text"},
-		"field_type_integer":  {field: estype.MappingField{Path: estype.Field("price"), Property: estype.FieldType("integer")}, want: "integer"},
-		"field_type_nested":   {field: estype.MappingField{Path: estype.Field("items"), Property: estype.FieldType("nested")}, want: "nested"},
-		"text_property":       {field: estype.MappingField{Path: estype.Field("title"), Property: estype.NewTextProperty()}, want: "text"},
-		"keyword_property":    {field: estype.MappingField{Path: estype.Field("status"), Property: estype.NewKeywordProperty()}, want: "keyword"},
-		"nil_property":        {field: estype.MappingField{Path: estype.Field("status")}, want: ""},
-		"field_type_empty":    {field: estype.MappingField{Path: estype.Field("status"), Property: estype.FieldType("")}, want: ""},
+		"field_type_keyword":  {field: estype.MappingField{Path: "status", Property: estype.FieldType("keyword")}, want: "keyword"},
+		"field_type_text":     {field: estype.MappingField{Path: "title", Property: estype.FieldType("text")}, want: "text"},
+		"field_type_integer":  {field: estype.MappingField{Path: "price", Property: estype.FieldType("integer")}, want: "integer"},
+		"field_type_nested":   {field: estype.MappingField{Path: "items", Property: estype.FieldType("nested")}, want: "nested"},
+		"text_property":       {field: estype.MappingField{Path: "title", Property: estype.NewTextProperty()}, want: "text"},
+		"keyword_property":    {field: estype.MappingField{Path: "status", Property: estype.NewKeywordProperty()}, want: "keyword"},
+		"nil_property":        {field: estype.MappingField{Path: "status"}, want: ""},
+		"field_type_empty":    {field: estype.MappingField{Path: "status", Property: estype.FieldType("")}, want: ""},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -130,10 +130,9 @@ func TestKeywordProperty(t *testing.T) {
 }
 
 // TestMappingFieldPath verifies that the Path field of MappingField is of type
-// estype.Field and behaves like a typed string.
+// string and holds the dot-separated field path.
 func TestMappingFieldPath(t *testing.T) {
 	t.Parallel()
-	f := estype.MappingField{Path: estype.Field("items.color"), Property: estype.FieldType("keyword")}
-	assert.Equal(t, estype.Field("items.color"), f.Path)
-	assert.Equal(t, "items.color", f.Path.String())
+	f := estype.MappingField{Path: "items.color", Property: estype.FieldType("keyword")}
+	assert.Equal(t, "items.color", f.Path)
 }

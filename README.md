@@ -550,7 +550,7 @@ When using `estyped -struct`, implement `estype.ESMappingProvider` on your struc
 | `estype.NewTextProperty(...)` | Text field with analyzer or multi-field sub-properties |
 | `estype.NewKeywordProperty(...)` | Keyword field with `ignore_above` or similar options |
 
-`Path` accepts bare string literals because `estype.Field` is a named string type that allows direct assignment from untyped string constants.
+`Path` is a dot-separated JSON field path and is typed as `string`. Because paths originate from JSON keys, using `string` avoids the need for an explicit type conversion when building a mapping programmatically.
 
 ```go
 //go:generate go tool estyped -struct Product -out product_fields.go
