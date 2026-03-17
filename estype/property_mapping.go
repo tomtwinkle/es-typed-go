@@ -1,5 +1,31 @@
 package estype
 
+// MappingProperty is implemented by all Elasticsearch field property types.
+// Use this interface as the type for [MappingField.Property] to enforce that
+// only recognized property values can be assigned at compile time.
+//
+// The two built-in implementations are typed property structs such as
+// [TextProperty] and [KeywordProperty], and the [FieldType] string type for
+// cases where a plain ES type name string suffices (e.g. "integer", "date").
+type MappingProperty interface {
+	// ESTypeName returns the Elasticsearch type name for this property
+	// (e.g. "text", "keyword", "integer").
+	ESTypeName() string
+}
+
+// FieldType is an Elasticsearch field type name as a typed string.
+// It satisfies the [MappingProperty] interface and is the correct way to
+// specify a plain ES type name in a [MappingField]:
+//
+//	estype.MappingField{Path: "price", Property: estype.FieldType("integer")}
+//
+// Common type names: "text", "keyword", "integer", "long", "float", "double",
+// "boolean", "date", "object", "nested", "geo_point", "dense_vector", etc.
+type FieldType string
+
+// ESTypeName returns the underlying Elasticsearch type name string.
+func (f FieldType) ESTypeName() string { return string(f) }
+
 // Analyzer is a named Elasticsearch analyzer.
 // Use a typed Analyzer value instead of a plain string to avoid typos in
 // analyzer names when defining field mappings via [ESMappingProvider].
@@ -23,7 +49,7 @@ type TextProperty struct {
 	// IndexAnalyzer is the analyzer used at index time.
 	IndexAnalyzer *Analyzer
 	// Fields holds named multi-field sub-properties (e.g. a keyword sub-field).
-	Fields map[string]any
+	Fields map[string]MappingProperty
 }
 
 // ESTypeName returns the Elasticsearch type name for a text property.
@@ -53,10 +79,10 @@ func WithIndexAnalyzer(a Analyzer) TextPropertyOption {
 // a text field:
 //
 //	estype.WithField("keyword", estype.NewKeywordProperty())
-func WithField(name string, property any) TextPropertyOption {
+func WithField(name string, property MappingProperty) TextPropertyOption {
 	return func(p *TextProperty) {
 		if p.Fields == nil {
-			p.Fields = make(map[string]any)
+			p.Fields = make(map[string]MappingProperty)
 		}
 		p.Fields[name] = property
 	}

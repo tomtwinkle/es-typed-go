@@ -675,6 +675,36 @@ func TestPropertyCallTypeName(t *testing.T) {
 	}
 }
 
+// TestPropertyValueTypeName covers the propertyValueTypeName helper that extracts
+// an ES type name from a full Property value AST expression.
+// It covers FieldType("...") conversions, NewXxxProperty(...) constructors,
+// and the plain string literal fallback.
+func TestPropertyValueTypeName(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		src  string // a Go expression used as the Property value
+		want string
+	}{
+		"field_type_qualified":    {src: `estype.FieldType("integer")`, want: "integer"},
+		"field_type_unqualified":  {src: `FieldType("keyword")`, want: "keyword"},
+		"field_type_empty":        {src: `FieldType("")`, want: ""},
+		"constructor_qualified":   {src: `estype.NewTextProperty()`, want: "text"},
+		"constructor_unqualified": {src: `NewKeywordProperty()`, want: "keyword"},
+		"string_literal_fallback": {src: `"date"`, want: "date"},
+		"non_string_literal":      {src: `42`, want: ""},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			fset := token.NewFileSet()
+			expr, err := parser.ParseExprFrom(fset, "", tt.src, 0)
+			assert.NilError(t, err)
+			got := propertyValueTypeName(expr)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 // TestExtractESMappingMethod verifies that the extractESMappingMethod function
 // correctly parses the return statement of an ESMapping() method and returns
 // the expected path→type map.
@@ -699,8 +729,8 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
-			{Path: "title", Property: "text"},
+			{Path: "status", Property: estype.FieldType("keyword")},
+			{Path: "title", Property: estype.FieldType("text")},
 		},
 	}
 }
@@ -720,7 +750,7 @@ type Document struct {
 func (d *Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
+			{Path: "status", Property: estype.FieldType("keyword")},
 		},
 	}
 }
@@ -749,7 +779,7 @@ type Other struct{}
 func (Other) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
+			{Path: "status", Property: estype.FieldType("keyword")},
 		},
 	}
 }
@@ -774,9 +804,9 @@ type Item struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
-			{Path: "items", Property: "nested"},
-			{Path: "items.name", Property: "text"},
+			{Path: "status", Property: estype.FieldType("keyword")},
+			{Path: "items", Property: estype.FieldType("nested")},
+			{Path: "items.name", Property: estype.FieldType("text")},
 		},
 	}
 }
@@ -804,7 +834,7 @@ func (Document) ESMapping() estype.Mapping {
 		Fields: []estype.MappingField{
 			{Path: "status", Property: estype.NewKeywordProperty()},
 			{Path: "title",  Property: estype.NewTextProperty(estype.WithSearchAnalyzer(estype.Analyzer("my_analyzer")))},
-			{Path: "price",  Property: "integer"},
+			{Path: "price",  Property: estype.FieldType("integer")},
 		},
 	}
 }
@@ -877,9 +907,9 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
-			{Path: "title", Property: "text"},
-			{Path: "price", Property: "integer"},
+			{Path: "status", Property: estype.FieldType("keyword")},
+			{Path: "title", Property: estype.FieldType("text")},
+			{Path: "price", Property: estype.FieldType("integer")},
 		},
 	}
 }
@@ -913,7 +943,7 @@ type Document struct {
 func (d *Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
+			{Path: "status", Property: estype.FieldType("keyword")},
 		},
 	}
 }
@@ -945,7 +975,7 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
+			{Path: "status", Property: estype.FieldType("keyword")},
 		},
 	}
 }
@@ -985,10 +1015,10 @@ type Item struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
-			{Path: "items", Property: "nested"},
-			{Path: "items.name", Property: "text"},
-			{Path: "items.value", Property: "integer"},
+			{Path: "status", Property: estype.FieldType("keyword")},
+			{Path: "items", Property: estype.FieldType("nested")},
+			{Path: "items.name", Property: estype.FieldType("text")},
+			{Path: "items.value", Property: estype.FieldType("integer")},
 		},
 	}
 }
@@ -1024,8 +1054,8 @@ type Document struct {
 func (Document) ESMapping() estype.Mapping {
 	return estype.Mapping{
 		Fields: []estype.MappingField{
-			{Path: "status", Property: "keyword"},
-			{Path: "title", Property: "text"},
+			{Path: "status", Property: estype.FieldType("keyword")},
+			{Path: "title", Property: estype.FieldType("text")},
 		},
 	}
 }
@@ -1073,7 +1103,7 @@ func (Document) ESMapping() estype.Mapping {
 				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
 				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
 			)},
-			{Path: "price",  Property: "integer"},
+			{Path: "price",  Property: estype.FieldType("integer")},
 		},
 	}
 }
