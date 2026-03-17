@@ -37,6 +37,35 @@ type mappingProperty struct {
 	Fields     map[string]mappingProperty `json:"fields"`
 }
 
+// ESMappingProvider is implemented by types that describe their Elasticsearch
+// field mapping. The estyped generator reads this method when running in struct
+// mode to determine field types, so they appear correctly in generated code
+// (e.g. "keyword" instead of "unknown").
+//
+// Place the go:generate directive and the struct definition in the same file,
+// then add an ESMapping() method that returns the field types as plain strings
+// matching the Elasticsearch field type names (e.g. "keyword", "text",
+// "integer", "date", "nested"):
+//
+//	//go:generate go tool estyped -struct Product -out product_fields.go
+//
+//	type Product struct {
+//		Status string `json:"status"`
+//		Title  string `json:"title"`
+//	}
+//
+//	func (Product) ESMapping() Mapping {
+//		return Mapping{
+//			Fields: []MappingField{
+//				{Path: "status", Type: "keyword"},
+//				{Path: "title",  Type: "text"},
+//			},
+//		}
+//	}
+type ESMappingProvider interface {
+	ESMapping() Mapping
+}
+
 // ParseMapping parses an Elasticsearch index mapping JSON and returns the field list.
 // It accepts both the full Get Mapping API response format:
 //

@@ -624,6 +624,332 @@ func TestJSONTagKey(t *testing.T) {
 	}
 }
 
+// TestExtractESMappingMethod verifies that the extractESMappingMethod function
+// correctly parses the return statement of an ESMapping() method and returns
+// the expected path→type map.
+func TestExtractESMappingMethod(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		src      string
+		typeName string
+		want     map[string]string
+	}{
+		"value_receiver": {
+			src: `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string ` + "`" + `json:"status"` + "`" + `
+	Title  string ` + "`" + `json:"title"` + "`" + `
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+			{Path: "title",  Type: "text"},
+		},
+	}
+}
+`,
+			typeName: "Document",
+			want:     map[string]string{"status": "keyword", "title": "text"},
+		},
+		"pointer_receiver": {
+			src: `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string ` + "`" + `json:"status"` + "`" + `
+}
+
+func (d *Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+		},
+	}
+}
+`,
+			typeName: "Document",
+			want:     map[string]string{"status": "keyword"},
+		},
+		"no_method": {
+			src: `package model
+
+type Document struct {
+	Status string ` + "`" + `json:"status"` + "`" + `
+}
+`,
+			typeName: "Document",
+			want:     map[string]string{},
+		},
+		"wrong_receiver_type": {
+			src: `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct{}
+type Other struct{}
+
+func (Other) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+		},
+	}
+}
+`,
+			typeName: "Document",
+			want:     map[string]string{},
+		},
+		"nested_field_paths": {
+			src: `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string ` + "`" + `json:"status"` + "`" + `
+	Items  []Item ` + "`" + `json:"items"` + "`" + `
+}
+
+type Item struct {
+	Name string ` + "`" + `json:"name"` + "`" + `
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status",     Type: "keyword"},
+			{Path: "items",      Type: "nested"},
+			{Path: "items.name", Type: "text"},
+		},
+	}
+}
+`,
+			typeName: "Document",
+			want: map[string]string{
+				"status":     "keyword",
+				"items":      "nested",
+				"items.name": "text",
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			writeGoFile(t, dir, "doc.go", tt.src)
+
+			pkgs, err := parser.ParseDir(token.NewFileSet(), dir, nil, 0)
+			assert.NilError(t, err)
+
+			got := extractESMappingMethod(pkgs, tt.typeName)
+			assert.Equal(t, len(tt.want), len(got))
+			for path, wantType := range tt.want {
+				gotType, ok := got[path]
+				assert.Assert(t, ok, "missing path %q", path)
+				assert.Equal(t, wantType, gotType)
+			}
+		})
+	}
+}
+
+// TestParseGoStruct_WithESMapping verifies that when a struct has an ESMapping()
+// method, the generated field entries use the types declared in that method
+// instead of "unknown".
+func TestParseGoStruct_WithESMapping(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Title  string `+"`"+`json:"title"`+"`"+`
+	Price  int    `+"`"+`json:"price"`+"`"+`
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+			{Path: "title",  Type: "text"},
+			{Path: "price",  Type: "integer"},
+		},
+	}
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.Path] = e.Type
+	}
+	assert.Equal(t, 3, len(got))
+	assert.Equal(t, "keyword", got["status"])
+	assert.Equal(t, "text", got["title"])
+	assert.Equal(t, "integer", got["price"])
+}
+
+// TestParseGoStruct_WithESMapping_PointerReceiver verifies that ESMapping() with
+// a pointer receiver is also detected and its types are applied.
+func TestParseGoStruct_WithESMapping_PointerReceiver(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+}
+
+func (d *Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+		},
+	}
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(entries))
+	assert.Equal(t, "status", entries[0].Path)
+	assert.Equal(t, "keyword", entries[0].Type)
+}
+
+// TestParseGoStruct_WithESMapping_PartialOverride verifies that only fields
+// present in ESMapping() have their type overridden; fields absent from the
+// method fall back to "unknown" or their struct-derived default.
+func TestParseGoStruct_WithESMapping_PartialOverride(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status  string `+"`"+`json:"status"`+"`"+`
+	Title   string `+"`"+`json:"title"`+"`"+`
+	Enabled bool   `+"`"+`json:"enabled"`+"`"+`
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+		},
+	}
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.Path] = e.Type
+	}
+	assert.Equal(t, 3, len(got))
+	assert.Equal(t, "keyword", got["status"])
+	assert.Equal(t, "unknown", got["title"])
+	assert.Equal(t, "unknown", got["enabled"])
+}
+
+// TestParseGoStruct_WithESMapping_NestedFields verifies that ESMapping() can
+// supply types for both parent struct fields and their nested children.
+func TestParseGoStruct_WithESMapping_NestedFields(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Items  []Item `+"`"+`json:"items"`+"`"+`
+}
+
+type Item struct {
+	Name  string `+"`"+`json:"name"`+"`"+`
+	Value int    `+"`"+`json:"value"`+"`"+`
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status",      Type: "keyword"},
+			{Path: "items",       Type: "nested"},
+			{Path: "items.name",  Type: "text"},
+			{Path: "items.value", Type: "integer"},
+		},
+	}
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.Path] = e.Type
+	}
+	assert.Equal(t, 4, len(got))
+	assert.Equal(t, "keyword", got["status"])
+	assert.Equal(t, "nested", got["items"])
+	assert.Equal(t, "text", got["items.name"])
+	assert.Equal(t, "integer", got["items.value"])
+}
+
+// TestParseGoStruct_WithESMapping_ConstOutput verifies that struct-based parsing
+// with an ESMapping() method produces correct types in the generated constant output.
+func TestParseGoStruct_WithESMapping_ConstOutput(t *testing.T) {
+	t.Parallel()
+	srcDir := t.TempDir()
+	writeGoFile(t, srcDir, "doc.go", `package model
+
+import "github.com/tomtwinkle/es-typed-go/estype"
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+	Title  string `+"`"+`json:"title"`+"`"+`
+}
+
+func (Document) ESMapping() estype.Mapping {
+	return estype.Mapping{
+		Fields: []estype.MappingField{
+			{Path: "status", Type: "keyword"},
+			{Path: "title",  Type: "text"},
+		},
+	}
+}
+`)
+	entries, err := parseGoStruct(srcDir, "Document")
+	assert.NilError(t, err)
+
+	// Verify that types are correctly read from ESMapping().
+	gotTypes := make(map[string]string, len(entries))
+	for _, e := range entries {
+		gotTypes[e.Path] = e.Type
+	}
+	assert.Equal(t, "keyword", gotTypes["status"])
+	assert.Equal(t, "text", gotTypes["title"])
+
+	// Also verify the generated Go source is valid.
+	td := templateData{Package: "model", Fields: entries}
+	var buf bytes.Buffer
+	assert.NilError(t, constTemplate.Execute(&buf, td))
+	_, err = format.Source(buf.Bytes())
+	assert.NilError(t, err)
+}
+
 // --- ast helpers ---
 
 // assertImport verifies that an import path exists in the parsed file.
