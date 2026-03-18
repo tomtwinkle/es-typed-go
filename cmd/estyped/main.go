@@ -21,6 +21,26 @@
 //
 //	//go:generate go tool estyped -struct Product -out product_fields.go
 //
+// When the struct (or a pointer to it) implements [estype.ESMappingProvider] by
+// defining an ESMapping() method, the generator reads the returned [estype.Mapping]
+// to determine the Elasticsearch type of each field.  The method body must contain
+// a single return statement with a composite literal; more complex expressions are
+// silently ignored and the field type falls back to "unknown".
+//
+// The Property field of each [estype.MappingField] entry accepts a typed
+// property value from a constructor call such as [estype.NewTextProperty] or
+// [estype.NewKeywordProperty], or [estype.FieldType] for a plain type name:
+//
+//	func (Product) ESMapping() estype.Mapping {
+//		return estype.Mapping{
+//			Fields: []estype.MappingField{
+//				{Path: "status", Property: estype.NewKeywordProperty()},
+//				{Path: "title",  Property: estype.NewTextProperty()},
+//				{Path: "price",  Property: estype.FieldType("integer")},
+//			},
+//		}
+//	}
+//
 // There are two output modes:
 //
 // Constant mode (default): generates individual constants.
@@ -163,7 +183,7 @@ func main() {
 				ConstName: toPascalCase(f.Path),
 				FieldName: toStructFieldName(f.Path),
 				Path:      f.Path,
-				Type:      fieldType(f.Type),
+				Type:      fieldType(f.TypeName()),
 			})
 		}
 	}
@@ -253,7 +273,9 @@ func fieldType(t string) string {
 }
 
 // parseGoStruct extracts fieldEntry values from a named Go struct type by reading
-// JSON struct tags from all .go files found in srcDir.
+// JSON struct tags from all .go files found in srcDir.  If the struct (or a
+// pointer to it) has an ESMapping() method, its return value is parsed
+// statically to determine the Elasticsearch type of each field.
 func parseGoStruct(srcDir, typeName string) ([]fieldEntry, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, srcDir, nil, 0)
@@ -273,8 +295,11 @@ func parseGoStruct(srcDir, typeName string) ([]fieldEntry, error) {
 		return nil, fmt.Errorf("type %q not found in %s", typeName, srcDir)
 	}
 
+	// Extract ES field types from the optional ESMapping() method.
+	mappingTypes := extractESMappingMethod(pkgs, typeName)
+
 	var entries []fieldEntry
-	extractGoStructEntries(typeName, "", typeMap, &entries)
+	extractGoStructEntries(typeName, "", typeMap, mappingTypes, &entries)
 	sort.Slice(entries, func(i, j int) bool {
 		return entries[i].Path < entries[j].Path
 	})
@@ -303,8 +328,10 @@ func collectStructTypes(f *ast.File, typeMap map[string]*ast.StructType) {
 }
 
 // extractGoStructEntries recursively walks the named struct and appends fieldEntry
-// values for every JSON-visible field.
-func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.StructType, entries *[]fieldEntry) {
+// values for every JSON-visible field.  mappingTypes maps field paths to their
+// Elasticsearch type string; entries from ESMapping() override defaults derived
+// from the Go type.
+func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.StructType, mappingTypes map[string]string, entries *[]fieldEntry) {
 	st, ok := typeMap[typeName]
 	if !ok {
 		return
@@ -313,7 +340,7 @@ func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.Str
 		// Anonymous embedded field: inline its fields at the same nesting level.
 		if len(field.Names) == 0 {
 			if name := derefTypeName(field.Type); name != "" {
-				extractGoStructEntries(name, prefix, typeMap, entries)
+				extractGoStructEntries(name, prefix, typeMap, mappingTypes, entries)
 			}
 			continue
 		}
@@ -335,22 +362,30 @@ func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.Str
 			if isSliceExpr(field.Type) {
 				esType = "nested"
 			}
+			// Allow ESMapping() to override the derived type.
+			if t, ok := mappingTypes[path]; ok {
+				esType = t
+			}
 			*entries = append(*entries, fieldEntry{
 				ConstName: toPascalCase(path),
 				FieldName: toStructFieldName(path),
 				Path:      path,
 				Type:      esType,
 			})
-			extractGoStructEntries(elemName, path, typeMap, entries)
+			extractGoStructEntries(elemName, path, typeMap, mappingTypes, entries)
 			continue
 		}
 
-		// Leaf field — ES type cannot be determined from Go type alone.
+		// Leaf field — use type from ESMapping() if available, otherwise "unknown".
+		esType := "unknown"
+		if t, ok := mappingTypes[path]; ok {
+			esType = t
+		}
 		*entries = append(*entries, fieldEntry{
 			ConstName: toPascalCase(path),
 			FieldName: toStructFieldName(path),
 			Path:      path,
-			Type:      "unknown",
+			Type:      esType,
 		})
 	}
 }
@@ -415,4 +450,191 @@ func isSliceExpr(expr ast.Expr) bool {
 		return t.Len == nil
 	}
 	return false
+}
+
+// extractESMappingMethod searches the parsed packages for a method named
+// "ESMapping" with a value or pointer receiver of the given type name.  It
+// parses the method body with [parseESMappingBody] and returns a map from
+// field path to Elasticsearch type string.  An empty map is returned when
+// the method is absent or its body cannot be statically analysed.
+func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[string]string {
+	fieldTypes := make(map[string]string)
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				fd, ok := decl.(*ast.FuncDecl)
+				if !ok || fd.Recv == nil || fd.Name.Name != "ESMapping" || fd.Body == nil {
+					continue
+				}
+				for _, recv := range fd.Recv.List {
+					if derefTypeName(recv.Type) != typeName {
+						continue
+					}
+					parseESMappingBody(fd.Body, fieldTypes)
+					return fieldTypes
+				}
+			}
+		}
+	}
+	return fieldTypes
+}
+
+// parseESMappingBody extracts field path→type pairs from the body of an
+// ESMapping() method.  It expects a single return statement whose result is a
+// composite literal that constructs an estype.Mapping value.
+//
+// The Property field of each MappingField entry is resolved to an ES type name
+// in two ways:
+//
+//   - A plain string literal (e.g. Property: "integer") is used directly.
+//   - A call to a NewXxxProperty constructor (e.g. Property: estype.NewTextProperty(...))
+//     is resolved by extracting "Xxx" from the function name and converting it
+//     to snake_case (e.g. "Text" → "text", "DenseVector" → "dense_vector").
+//
+// Any element that cannot be statically resolved is silently skipped.
+func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
+	for _, stmt := range body.List {
+		ret, ok := stmt.(*ast.ReturnStmt)
+		if !ok || len(ret.Results) != 1 {
+			continue
+		}
+		mappingLit, ok := ret.Results[0].(*ast.CompositeLit)
+		if !ok {
+			continue
+		}
+		// Look for the "Fields" key in the outer composite literal.
+		for _, elt := range mappingLit.Elts {
+			kv, ok := elt.(*ast.KeyValueExpr)
+			if !ok {
+				continue
+			}
+			key, ok := kv.Key.(*ast.Ident)
+			if !ok || key.Name != "Fields" {
+				continue
+			}
+			// The value should be a slice composite literal.
+			fieldSlice, ok := kv.Value.(*ast.CompositeLit)
+			if !ok {
+				continue
+			}
+			for _, fieldElt := range fieldSlice.Elts {
+				fieldLit, ok := fieldElt.(*ast.CompositeLit)
+				if !ok {
+					continue
+				}
+				var path, esType string
+				for _, fElt := range fieldLit.Elts {
+					fkv, ok := fElt.(*ast.KeyValueExpr)
+					if !ok {
+						continue
+					}
+					fKey, ok := fkv.Key.(*ast.Ident)
+					if !ok {
+						continue
+					}
+					switch fKey.Name {
+					case "Path":
+						if bl, ok := fkv.Value.(*ast.BasicLit); ok && bl.Kind == token.STRING {
+							path = strings.Trim(bl.Value, `"`)
+						}
+					case "Property":
+						esType = propertyValueTypeName(fkv.Value)
+					}
+				}
+				if path != "" && esType != "" {
+					out[path] = esType
+				}
+			}
+		}
+	}
+}
+
+// propertyValueTypeName extracts the Elasticsearch type name from an AST
+// expression used as the Property field of an estype.MappingField literal.
+// It handles three forms:
+//   - A [estype.FieldType] conversion: FieldType("integer") or estype.FieldType("integer")
+//   - A constructor call: NewTextProperty(...) or estype.NewTextProperty(...);
+//     the ES type name is derived from the constructor function name.
+//   - A plain string literal: "integer" (accepted for resilience when parsing
+//     code that predates the [estype.FieldType] introduction).
+func propertyValueTypeName(expr ast.Expr) string {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok {
+		// Plain string literal fallback.
+		if bl, ok := expr.(*ast.BasicLit); ok && bl.Kind == token.STRING {
+			return strings.Trim(bl.Value, `"`)
+		}
+		return ""
+	}
+	// Detect FieldType("...") or estype.FieldType("...") conversion calls.
+	if name := fieldTypeFuncName(call.Fun); name == "FieldType" {
+		if len(call.Args) == 1 {
+			if bl, ok := call.Args[0].(*ast.BasicLit); ok && bl.Kind == token.STRING {
+				return strings.Trim(bl.Value, `"`)
+			}
+		}
+		return ""
+	}
+	// Fall through to constructor call detection.
+	return propertyCallTypeName(call.Fun)
+}
+
+// fieldTypeFuncName returns the simple function name from an expression if it
+// is an identifier or selector (e.g. both "FieldType" and "estype.FieldType"
+// return "FieldType").  Returns "" for any other expression shape.
+func fieldTypeFuncName(expr ast.Expr) string {
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return e.Name
+	case *ast.SelectorExpr:
+		return e.Sel.Name
+	}
+	return ""
+}
+
+// propertyCallTypeName derives the Elasticsearch type name from the function
+// expression of a NewXxxProperty constructor call.
+// The function may be an unqualified identifier (NewTextProperty) or a selector
+// expression (estype.NewTextProperty, esv8.NewTextProperty, etc.).
+// Returns "" when the expression does not match the New…Property pattern.
+func propertyCallTypeName(expr ast.Expr) string {
+	var name string
+	switch e := expr.(type) {
+	case *ast.Ident:
+		name = e.Name
+	case *ast.SelectorExpr:
+		name = e.Sel.Name
+	}
+	if !strings.HasPrefix(name, "New") || !strings.HasSuffix(name, "Property") {
+		return ""
+	}
+	// Extract the PascalCase type fragment between "New" and "Property".
+	middle := name[3 : len(name)-8]
+	if middle == "" {
+		return ""
+	}
+	return pascalToSnake(middle)
+}
+
+// pascalToSnake converts a PascalCase string to snake_case.
+// Used to derive an Elasticsearch type name from a Go constructor name fragment.
+// Examples:
+//
+//	"Text"        → "text"
+//	"Keyword"     → "keyword"
+//	"DenseVector" → "dense_vector"
+func pascalToSnake(s string) string {
+	result := make([]byte, 0, len(s)+4)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if i > 0 && c >= 'A' && c <= 'Z' {
+			result = append(result, '_')
+		}
+		if c >= 'A' && c <= 'Z' {
+			result = append(result, c + 32) // to lower
+		} else {
+			result = append(result, c)
+		}
+	}
+	return string(result)
 }

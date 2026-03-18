@@ -15,9 +15,24 @@ type Mapping struct {
 // MappingField represents a single field in an Elasticsearch mapping.
 type MappingField struct {
 	// Path is the dot-separated path to the field (e.g. "items.color").
+	// It is typed as string because paths originate from JSON keys and are
+	// used directly as string values throughout the mapping pipeline.
 	Path string
-	// Type is the Elasticsearch field type (e.g. "keyword", "text", "nested").
-	Type string
+	// Property holds the Elasticsearch property definition for this field.
+	// Use a typed property value such as [TextProperty] or [KeywordProperty]
+	// constructed with [NewTextProperty] / [NewKeywordProperty], or use
+	// [FieldType] for a plain ES type name string (e.g. [FieldType]("integer")).
+	Property MappingProperty
+}
+
+// TypeName returns the Elasticsearch type name for the field by calling
+// [MappingProperty.ESTypeName] on the stored property.
+// Returns an empty string when Property is nil.
+func (f MappingField) TypeName() string {
+	if f.Property == nil {
+		return ""
+	}
+	return f.Property.ESTypeName()
 }
 
 // mappingRoot mirrors the JSON structure returned by the ES Get Mapping API.
@@ -35,6 +50,37 @@ type mappingProperty struct {
 	Type       string                    `json:"type"`
 	Properties map[string]mappingProperty `json:"properties"`
 	Fields     map[string]mappingProperty `json:"fields"`
+}
+
+// ESMappingProvider is implemented by types that describe their Elasticsearch
+// field mapping. The estyped generator reads this method when running in struct
+// mode to determine field types, so they appear correctly in generated code
+// (e.g. "keyword" instead of "unknown").
+//
+// Place the go:generate directive and the struct definition in the same file,
+// then add an ESMapping() method that returns [MappingField] entries.
+// Use typed property values ([NewTextProperty], [NewKeywordProperty], etc.) or
+// [FieldType] for simple type names such as "integer" or "date":
+//
+//	//go:generate go tool estyped -struct Product -out product_fields.go
+//
+//	type Product struct {
+//		Status string `json:"status"`
+//		Title  string `json:"title"`
+//		Price  int    `json:"price"`
+//	}
+//
+//	func (Product) ESMapping() Mapping {
+//		return Mapping{
+//			Fields: []MappingField{
+//				{Path: "status", Property: NewKeywordProperty()},
+//				{Path: "title",  Property: NewTextProperty()},
+//				{Path: "price",  Property: FieldType("integer")},
+//			},
+//		}
+//	}
+type ESMappingProvider interface {
+	ESMapping() Mapping
 }
 
 // ParseMapping parses an Elasticsearch index mapping JSON and returns the field list.
@@ -86,7 +132,7 @@ func collectFields(prefix string, props map[string]mappingProperty, out *[]Mappi
 			path = prefix + "." + name
 		}
 
-		*out = append(*out, MappingField{Path: path, Type: prop.Type})
+		*out = append(*out, MappingField{Path: path, Property: FieldType(prop.Type)})
 
 		// Recurse into nested object/nested properties.
 		if prop.Properties != nil {

@@ -34,11 +34,11 @@ func TestParseMappingFullFormat(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(m.Fields) == 3)
 	assert.Equal(t, "status", m.Fields[0].Path)
-	assert.Equal(t, "keyword", m.Fields[0].Type)
+	assert.Equal(t, "keyword", m.Fields[0].TypeName())
 	assert.Equal(t, "title", m.Fields[1].Path)
-	assert.Equal(t, "text", m.Fields[1].Type)
+	assert.Equal(t, "text", m.Fields[1].TypeName())
 	assert.Equal(t, "title.keyword", m.Fields[2].Path)
-	assert.Equal(t, "keyword", m.Fields[2].Type)
+	assert.Equal(t, "keyword", m.Fields[2].TypeName())
 }
 
 func TestParseMappingAbbreviatedFormat(t *testing.T) {
@@ -75,7 +75,7 @@ func TestParseMappingNested(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, len(m.Fields) == 3)
 	assert.Equal(t, "items", m.Fields[0].Path)
-	assert.Equal(t, "nested", m.Fields[0].Type)
+	assert.Equal(t, "nested", m.Fields[0].TypeName())
 	assert.Equal(t, "items.color", m.Fields[1].Path)
 	assert.Equal(t, "items.date", m.Fields[2].Path)
 }
