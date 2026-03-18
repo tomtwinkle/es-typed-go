@@ -190,15 +190,15 @@ import "github.com/tomtwinkle/es-typed-go/estype"
 
 // Product provides typed field names for the Elasticsearch index mapping.
 var Product = struct {
-	Category    estype.Field
-	Date        estype.Field
-	Items       estype.Field
-	Items_Name  estype.Field
-	Items_Value estype.Field
-	Price       estype.Field
-	Status      estype.Field
-	Tags        estype.Field
-	Title       estype.Field
+	Category      estype.Field
+	Date          estype.Field
+	Items         estype.Field
+	Items_Name    estype.Field
+	Items_Value   estype.Field
+	Price         estype.Field
+	Status        estype.Field
+	Tags          estype.Field
+	Title         estype.Field
 	Title_Keyword estype.Field
 }{
 	Category:      "category",
@@ -212,8 +212,6 @@ var Product = struct {
 	Title:         "title",
 	Title_Keyword: "title.keyword",
 }
-
-// Usage: esmodel.Product.Status, esmodel.Product.Items_Name, etc.
 ```
 
 ### 2. Build type-safe queries
