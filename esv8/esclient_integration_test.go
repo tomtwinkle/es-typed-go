@@ -947,7 +947,7 @@ esv8.WithSearchAsYouTypeNorms(true),
 esv8.WithSearchAsYouTypeSimilarity("BM25"),
 ),
 "value": esv8.NewMatchOnlyTextProperty(),
-"id":    esv8.NewCountedKeywordProperty(),
+"id":    esv8.NewCountedKeywordProperty(esv8.WithCountedKeywordIndex(true)),
 },
 }
 
@@ -1276,7 +1276,7 @@ esv8.WithVersionStore(false),
 esv8.WithDenseVectorDims(3),
 esv8.WithDenseVectorIndex(false),
 ),
-"value": esv8.NewSparseVectorProperty(),
+"value": esv8.NewSparseVectorProperty(esv8.WithSparseVectorStore(false)),
 "price": esv8.NewRankFeatureProperty(
 esv8.WithRankFeaturePositiveScoreImpact(true),
 ),
@@ -1312,4 +1312,148 @@ Properties: map[string]types.Property{
 res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 assert.NilError(t, err)
 assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_Dynamic(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewDynamicProperty(
+				esv8.WithDynamicAnalyzer("standard"),
+				esv8.WithDynamicSearchAnalyzer("standard"),
+				esv8.WithDynamicCoerce(true),
+				esv8.WithDynamicDocValues(true),
+				esv8.WithDynamicEnabled(true),
+				esv8.WithDynamicFormat("strict_date_optional_time||epoch_millis"),
+				esv8.WithDynamicIgnoreMalformed(true),
+				esv8.WithDynamicIndex(true),
+				esv8.WithDynamicStore(false),
+				esv8.WithDynamicNorms(true),
+				esv8.WithDynamicLocale("en"),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_PassthroughObject(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"items": esv8.NewPassthroughObjectProperty(
+				esv8.WithPassthroughObjectEnabled(true),
+				esv8.WithPassthroughObjectProperties(map[string]types.Property{
+					"name": esv8.NewKeywordProperty(),
+				}),
+				esv8.WithPassthroughObjectPriority(10),
+				esv8.WithPassthroughObjectStore(false),
+				esv8.WithPassthroughObjectTimeSeriesDimension(false),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_RankVector(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewRankVectorProperty(
+				esv8.WithRankVectorDims(3),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_SemanticText(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewSemanticTextProperty(
+				esv8.WithSemanticTextInferenceId("my-elser-endpoint"),
+				esv8.WithSemanticTextSearchInferenceId("my-elser-endpoint"),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_Murmur3Hash(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewMurmur3HashProperty(
+				esv8.WithMurmur3HashDocValues(true),
+				esv8.WithMurmur3HashStore(false),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_IcuCollation(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewIcuCollationProperty(
+				esv8.WithIcuCollationLanguage("en"),
+				esv8.WithIcuCollationCountry("US"),
+				esv8.WithIcuCollationDocValues(true),
+				esv8.WithIcuCollationIndex(true),
+				esv8.WithIcuCollationStore(false),
+				esv8.WithIcuCollationNullValue(""),
+				esv8.WithIcuCollationNorms(true),
+				esv8.WithIcuCollationRules(""),
+				esv8.WithIcuCollationVariant(""),
+				esv8.WithIcuCollationCaseLevel(false),
+				esv8.WithIcuCollationNumeric(false),
+				esv8.WithIcuCollationHiraganaQuaternaryMode(false),
+				esv8.WithIcuCollationVariableTop(""),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
