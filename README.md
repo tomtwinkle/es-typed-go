@@ -494,7 +494,7 @@ params := query.NewSearch().
 
 ### Property Builders (Index Mappings)
 
-Define index mappings with type-safe functional-option constructors:
+Define index mappings with type-safe functional-option constructors. For a complete list of all 53 property types and their options, see the [Property Reference](docs/property-reference.md).
 
 ```go
 import (
@@ -762,7 +762,13 @@ esv9/              Elasticsearch v9 wrapper (mirrors esv8)
   query/           Query, sort, and aggregation builders for v9
   generator/       Code generator for v9 API coverage tests
 cmd/estyped/       CLI tool: generates typed Field constants from ES mappings
+docs/              Reference documentation
 ```
+
+## Documentation
+
+- [Property Reference](docs/property-reference.md) — All property types and their functional options
+- [プロパティリファレンス](docs/property-reference.ja.md) — 全プロパティ型とオプションの一覧（日本語）
 
 ## Requirements
 
