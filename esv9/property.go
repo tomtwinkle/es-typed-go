@@ -1999,9 +1999,9 @@ type ExponentialHistogramPropertyOption func(*types.ExponentialHistogramProperty
 
 // NewExponentialHistogramProperty creates a new exponential histogram property mapping.
 func NewExponentialHistogramProperty(opts ...ExponentialHistogramPropertyOption) *types.ExponentialHistogramProperty {
-prop := types.NewExponentialHistogramProperty()
-for _, opt := range opts {
-opt(prop)
-}
-return prop
+	prop := types.NewExponentialHistogramProperty()
+	for _, opt := range opts {
+		opt(prop)
+	}
+	return prop
 }

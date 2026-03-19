@@ -1,5 +1,7 @@
 package estype
 
+import "strings"
+
 // DateFormat represents the date format for DateProperty.
 // https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/mapping-date-format
 type DateFormat string
@@ -337,12 +339,12 @@ const (
 // JoinDateFormats joins multiple DateFormat values with "||" separator
 // for use in Elasticsearch date field format configuration.
 func JoinDateFormats(formats ...DateFormat) string {
-	result := ""
+	var result strings.Builder
 	for i, f := range formats {
 		if i > 0 {
-			result += "||"
+			result.WriteString("||")
 		}
-		result += string(f)
+		result.WriteString(string(f))
 	}
-	return result
+	return result.String()
 }

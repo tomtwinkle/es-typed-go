@@ -16,14 +16,14 @@ func TestMappingFieldTypeName(t *testing.T) {
 		field estype.MappingField
 		want  string
 	}{
-		"field_type_keyword":  {field: estype.MappingField{Path: "status", Property: estype.FieldType("keyword")}, want: "keyword"},
-		"field_type_text":     {field: estype.MappingField{Path: "title", Property: estype.FieldType("text")}, want: "text"},
-		"field_type_integer":  {field: estype.MappingField{Path: "price", Property: estype.FieldType("integer")}, want: "integer"},
-		"field_type_nested":   {field: estype.MappingField{Path: "items", Property: estype.FieldType("nested")}, want: "nested"},
-		"text_property":       {field: estype.MappingField{Path: "title", Property: estype.NewTextProperty()}, want: "text"},
-		"keyword_property":    {field: estype.MappingField{Path: "status", Property: estype.NewKeywordProperty()}, want: "keyword"},
-		"nil_property":        {field: estype.MappingField{Path: "status"}, want: ""},
-		"field_type_empty":    {field: estype.MappingField{Path: "status", Property: estype.FieldType("")}, want: ""},
+		"field_type_keyword": {field: estype.MappingField{Path: "status", Property: estype.FieldType("keyword")}, want: "keyword"},
+		"field_type_text":    {field: estype.MappingField{Path: "title", Property: estype.FieldType("text")}, want: "text"},
+		"field_type_integer": {field: estype.MappingField{Path: "price", Property: estype.FieldType("integer")}, want: "integer"},
+		"field_type_nested":  {field: estype.MappingField{Path: "items", Property: estype.FieldType("nested")}, want: "nested"},
+		"text_property":      {field: estype.MappingField{Path: "title", Property: estype.NewTextProperty()}, want: "text"},
+		"keyword_property":   {field: estype.MappingField{Path: "status", Property: estype.NewKeywordProperty()}, want: "keyword"},
+		"nil_property":       {field: estype.MappingField{Path: "status"}, want: ""},
+		"field_type_empty":   {field: estype.MappingField{Path: "status", Property: estype.FieldType("")}, want: ""},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -193,124 +193,1573 @@ func TestMappingFieldPath(t *testing.T) {
 // TestTextPropertyOptions verifies all With* options for TextProperty.
 func TestTextPropertyOptions(t *testing.T) {
 	t.Parallel()
-	t.Run("WithSearchAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithSearchAnalyzer("my_analyzer")); assert.Assert(t, p.SearchAnalyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer) })
-	t.Run("WithIndexAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithIndexAnalyzer("my_analyzer")); assert.Assert(t, p.IndexAnalyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.IndexAnalyzer) })
-	t.Run("WithField", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithField("status", estype.NewKeywordProperty())); assert.Assert(t, p.Fields != nil); assert.Equal(t, "keyword", p.Fields["status"].ESTypeName()) })
-	t.Run("WithTextSearchQuoteAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextSearchQuoteAnalyzer("my_analyzer")); assert.Assert(t, p.SearchQuoteAnalyzer != nil); assert.Equal(t, "my_analyzer", *p.SearchQuoteAnalyzer) })
-	t.Run("WithTextFielddata", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextFielddata(true)); assert.Assert(t, p.Fielddata != nil); assert.Equal(t, true, *p.Fielddata) })
-	t.Run("WithTextIndex", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) })
-	t.Run("WithTextStore", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) })
-	t.Run("WithTextNorms", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextNorms(true)); assert.Assert(t, p.Norms != nil); assert.Equal(t, true, *p.Norms) })
-	t.Run("WithTextSimilarity", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextSimilarity("BM25")); assert.Assert(t, p.Similarity != nil); assert.Equal(t, "BM25", *p.Similarity) })
-	t.Run("WithTextIndexPhrases", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextIndexPhrases(true)); assert.Assert(t, p.IndexPhrases != nil); assert.Equal(t, true, *p.IndexPhrases) })
-	t.Run("WithTextPositionIncrementGap", func(t *testing.T) { t.Parallel(); p := estype.NewTextProperty(estype.WithTextPositionIncrementGap(100)); assert.Assert(t, p.PositionIncrementGap != nil); assert.Equal(t, 100, *p.PositionIncrementGap) })
+	t.Run("WithSearchAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithSearchAnalyzer("my_analyzer"))
+		assert.Assert(t, p.SearchAnalyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer)
+	})
+	t.Run("WithIndexAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithIndexAnalyzer("my_analyzer"))
+		assert.Assert(t, p.IndexAnalyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.IndexAnalyzer)
+	})
+	t.Run("WithField", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithField("status", estype.NewKeywordProperty()))
+		assert.Assert(t, p.Fields != nil)
+		assert.Equal(t, "keyword", p.Fields["status"].ESTypeName())
+	})
+	t.Run("WithTextSearchQuoteAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextSearchQuoteAnalyzer("my_analyzer"))
+		assert.Assert(t, p.SearchQuoteAnalyzer != nil)
+		assert.Equal(t, "my_analyzer", *p.SearchQuoteAnalyzer)
+	})
+	t.Run("WithTextFielddata", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextFielddata(true))
+		assert.Assert(t, p.Fielddata != nil)
+		assert.Equal(t, true, *p.Fielddata)
+	})
+	t.Run("WithTextIndex", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("WithTextStore", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("WithTextNorms", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextNorms(true))
+		assert.Assert(t, p.Norms != nil)
+		assert.Equal(t, true, *p.Norms)
+	})
+	t.Run("WithTextSimilarity", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextSimilarity("BM25"))
+		assert.Assert(t, p.Similarity != nil)
+		assert.Equal(t, "BM25", *p.Similarity)
+	})
+	t.Run("WithTextIndexPhrases", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextIndexPhrases(true))
+		assert.Assert(t, p.IndexPhrases != nil)
+		assert.Equal(t, true, *p.IndexPhrases)
+	})
+	t.Run("WithTextPositionIncrementGap", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTextProperty(estype.WithTextPositionIncrementGap(100))
+		assert.Assert(t, p.PositionIncrementGap != nil)
+		assert.Equal(t, 100, *p.PositionIncrementGap)
+	})
 }
 
 // TestKeywordPropertyOptions verifies all With* options for KeywordProperty.
 func TestKeywordPropertyOptions(t *testing.T) {
 	t.Parallel()
-	t.Run("WithIgnoreAbove_default", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithIgnoreAbove()); assert.Assert(t, p.IgnoreAbove != nil); assert.Equal(t, 256, *p.IgnoreAbove) })
-	t.Run("WithIgnoreAbove_custom", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithIgnoreAbove(512)); assert.Assert(t, p.IgnoreAbove != nil); assert.Equal(t, 512, *p.IgnoreAbove) })
-	t.Run("WithKeywordDocValues", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) })
-	t.Run("WithKeywordIndex", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) })
-	t.Run("WithKeywordStore", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) })
-	t.Run("WithKeywordNullValue", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordNullValue("status")); assert.Assert(t, p.NullValue != nil); assert.Equal(t, "status", *p.NullValue) })
-	t.Run("WithKeywordNormalizer", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordNormalizer("lowercase")); assert.Assert(t, p.Normalizer != nil); assert.Equal(t, "lowercase", *p.Normalizer) })
-	t.Run("WithKeywordNorms", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordNorms(true)); assert.Assert(t, p.Norms != nil); assert.Equal(t, true, *p.Norms) })
-	t.Run("WithKeywordSimilarity", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordSimilarity("BM25")); assert.Assert(t, p.Similarity != nil); assert.Equal(t, "BM25", *p.Similarity) })
-	t.Run("WithKeywordEagerGlobalOrdinals", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordEagerGlobalOrdinals(true)); assert.Assert(t, p.EagerGlobalOrdinals != nil); assert.Equal(t, true, *p.EagerGlobalOrdinals) })
-	t.Run("WithKeywordSplitQueriesOnWhitespace", func(t *testing.T) { t.Parallel(); p := estype.NewKeywordProperty(estype.WithKeywordSplitQueriesOnWhitespace(true)); assert.Assert(t, p.SplitQueriesOnWhitespace != nil); assert.Equal(t, true, *p.SplitQueriesOnWhitespace) })
+	t.Run("WithIgnoreAbove_default", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithIgnoreAbove())
+		assert.Assert(t, p.IgnoreAbove != nil)
+		assert.Equal(t, 256, *p.IgnoreAbove)
+	})
+	t.Run("WithIgnoreAbove_custom", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithIgnoreAbove(512))
+		assert.Assert(t, p.IgnoreAbove != nil)
+		assert.Equal(t, 512, *p.IgnoreAbove)
+	})
+	t.Run("WithKeywordDocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("WithKeywordIndex", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("WithKeywordStore", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("WithKeywordNullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordNullValue("status"))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, "status", *p.NullValue)
+	})
+	t.Run("WithKeywordNormalizer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordNormalizer("lowercase"))
+		assert.Assert(t, p.Normalizer != nil)
+		assert.Equal(t, "lowercase", *p.Normalizer)
+	})
+	t.Run("WithKeywordNorms", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordNorms(true))
+		assert.Assert(t, p.Norms != nil)
+		assert.Equal(t, true, *p.Norms)
+	})
+	t.Run("WithKeywordSimilarity", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordSimilarity("BM25"))
+		assert.Assert(t, p.Similarity != nil)
+		assert.Equal(t, "BM25", *p.Similarity)
+	})
+	t.Run("WithKeywordEagerGlobalOrdinals", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordEagerGlobalOrdinals(true))
+		assert.Assert(t, p.EagerGlobalOrdinals != nil)
+		assert.Equal(t, true, *p.EagerGlobalOrdinals)
+	})
+	t.Run("WithKeywordSplitQueriesOnWhitespace", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewKeywordProperty(estype.WithKeywordSplitQueriesOnWhitespace(true))
+		assert.Assert(t, p.SplitQueriesOnWhitespace != nil)
+		assert.Equal(t, true, *p.SplitQueriesOnWhitespace)
+	})
 }
 
-func TestConstantKeywordPropertyOptions(t *testing.T) { t.Parallel(); t.Run("WithConstantKeywordValue", func(t *testing.T) { t.Parallel(); p := estype.NewConstantKeywordProperty(estype.WithConstantKeywordValue("status")); assert.Assert(t, p.Value != nil); assert.Equal(t, "status", *p.Value) }) }
-func TestCountedKeywordPropertyOptions(t *testing.T) { t.Parallel(); t.Run("WithCountedKeywordIndex", func(t *testing.T) { t.Parallel(); p := estype.NewCountedKeywordProperty(estype.WithCountedKeywordIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }) }
+func TestConstantKeywordPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("WithConstantKeywordValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewConstantKeywordProperty(estype.WithConstantKeywordValue("status"))
+		assert.Assert(t, p.Value != nil)
+		assert.Equal(t, "status", *p.Value)
+	})
+}
+func TestCountedKeywordPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("WithCountedKeywordIndex", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewCountedKeywordProperty(estype.WithCountedKeywordIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+}
 
 // TestWildcardPropertyOptions verifies all With* options for WildcardProperty.
 func TestWildcardPropertyOptions(t *testing.T) {
 	t.Parallel()
-	t.Run("WithWildcardIgnoreAbove", func(t *testing.T) { t.Parallel(); p := estype.NewWildcardProperty(estype.WithWildcardIgnoreAbove(1024)); assert.Assert(t, p.IgnoreAbove != nil); assert.Equal(t, 1024, *p.IgnoreAbove) })
-	t.Run("WithWildcardNullValue", func(t *testing.T) { t.Parallel(); p := estype.NewWildcardProperty(estype.WithWildcardNullValue("name")); assert.Assert(t, p.NullValue != nil); assert.Equal(t, "name", *p.NullValue) })
-	t.Run("WithWildcardStore", func(t *testing.T) { t.Parallel(); p := estype.NewWildcardProperty(estype.WithWildcardStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) })
+	t.Run("WithWildcardIgnoreAbove", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewWildcardProperty(estype.WithWildcardIgnoreAbove(1024))
+		assert.Assert(t, p.IgnoreAbove != nil)
+		assert.Equal(t, 1024, *p.IgnoreAbove)
+	})
+	t.Run("WithWildcardNullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewWildcardProperty(estype.WithWildcardNullValue("name"))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, "name", *p.NullValue)
+	})
+	t.Run("WithWildcardStore", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewWildcardProperty(estype.WithWildcardStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
 }
 
-func TestMatchOnlyTextPropertyOptions(t *testing.T) { t.Parallel(); t.Run("WithMatchOnlyTextField", func(t *testing.T) { t.Parallel(); p := estype.NewMatchOnlyTextProperty(estype.WithMatchOnlyTextField("status", estype.NewKeywordProperty())); assert.Assert(t, p.Fields != nil); assert.Equal(t, "keyword", p.Fields["status"].ESTypeName()) }) }
+func TestMatchOnlyTextPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("WithMatchOnlyTextField", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewMatchOnlyTextProperty(estype.WithMatchOnlyTextField("status", estype.NewKeywordProperty()))
+		assert.Assert(t, p.Fields != nil)
+		assert.Equal(t, "keyword", p.Fields["status"].ESTypeName())
+	})
+}
 
 // TestCompletionPropertyOptions verifies all With* options for CompletionProperty.
 func TestCompletionPropertyOptions(t *testing.T) {
 	t.Parallel()
-	t.Run("WithCompletionAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewCompletionProperty(estype.WithCompletionAnalyzer("my_analyzer")); assert.Assert(t, p.Analyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer) })
-	t.Run("WithCompletionSearchAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewCompletionProperty(estype.WithCompletionSearchAnalyzer("my_analyzer")); assert.Assert(t, p.SearchAnalyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer) })
-	t.Run("WithCompletionMaxInputLength", func(t *testing.T) { t.Parallel(); p := estype.NewCompletionProperty(estype.WithCompletionMaxInputLength(50)); assert.Assert(t, p.MaxInputLength != nil); assert.Equal(t, 50, *p.MaxInputLength) })
-	t.Run("WithCompletionPreservePositionIncrements", func(t *testing.T) { t.Parallel(); p := estype.NewCompletionProperty(estype.WithCompletionPreservePositionIncrements(true)); assert.Assert(t, p.PreservePositionIncrements != nil); assert.Equal(t, true, *p.PreservePositionIncrements) })
-	t.Run("WithCompletionPreserveSeparators", func(t *testing.T) { t.Parallel(); p := estype.NewCompletionProperty(estype.WithCompletionPreserveSeparators(true)); assert.Assert(t, p.PreserveSeparators != nil); assert.Equal(t, true, *p.PreserveSeparators) })
+	t.Run("WithCompletionAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewCompletionProperty(estype.WithCompletionAnalyzer("my_analyzer"))
+		assert.Assert(t, p.Analyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer)
+	})
+	t.Run("WithCompletionSearchAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewCompletionProperty(estype.WithCompletionSearchAnalyzer("my_analyzer"))
+		assert.Assert(t, p.SearchAnalyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer)
+	})
+	t.Run("WithCompletionMaxInputLength", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewCompletionProperty(estype.WithCompletionMaxInputLength(50))
+		assert.Assert(t, p.MaxInputLength != nil)
+		assert.Equal(t, 50, *p.MaxInputLength)
+	})
+	t.Run("WithCompletionPreservePositionIncrements", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewCompletionProperty(estype.WithCompletionPreservePositionIncrements(true))
+		assert.Assert(t, p.PreservePositionIncrements != nil)
+		assert.Equal(t, true, *p.PreservePositionIncrements)
+	})
+	t.Run("WithCompletionPreserveSeparators", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewCompletionProperty(estype.WithCompletionPreserveSeparators(true))
+		assert.Assert(t, p.PreserveSeparators != nil)
+		assert.Equal(t, true, *p.PreserveSeparators)
+	})
 }
 
 // TestSearchAsYouTypePropertyOptions verifies all With* options for SearchAsYouTypeProperty.
 func TestSearchAsYouTypePropertyOptions(t *testing.T) {
 	t.Parallel()
-	t.Run("WithSearchAsYouTypeAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeAnalyzer("my_analyzer")); assert.Assert(t, p.Analyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer) })
-	t.Run("WithSearchAsYouTypeSearchAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeSearchAnalyzer("my_analyzer")); assert.Assert(t, p.SearchAnalyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer) })
-	t.Run("WithSearchAsYouTypeMaxShingleSize", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeMaxShingleSize(3)); assert.Assert(t, p.MaxShingleSize != nil); assert.Equal(t, 3, *p.MaxShingleSize) })
-	t.Run("WithSearchAsYouTypeSearchQuoteAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeSearchQuoteAnalyzer("my_analyzer")); assert.Assert(t, p.SearchQuoteAnalyzer != nil); assert.Equal(t, "my_analyzer", *p.SearchQuoteAnalyzer) })
-	t.Run("WithSearchAsYouTypeIndex", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) })
-	t.Run("WithSearchAsYouTypeStore", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) })
-	t.Run("WithSearchAsYouTypeNorms", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeNorms(true)); assert.Assert(t, p.Norms != nil); assert.Equal(t, true, *p.Norms) })
-	t.Run("WithSearchAsYouTypeSimilarity", func(t *testing.T) { t.Parallel(); p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeSimilarity("BM25")); assert.Assert(t, p.Similarity != nil); assert.Equal(t, "BM25", *p.Similarity) })
+	t.Run("WithSearchAsYouTypeAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeAnalyzer("my_analyzer"))
+		assert.Assert(t, p.Analyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer)
+	})
+	t.Run("WithSearchAsYouTypeSearchAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeSearchAnalyzer("my_analyzer"))
+		assert.Assert(t, p.SearchAnalyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer)
+	})
+	t.Run("WithSearchAsYouTypeMaxShingleSize", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeMaxShingleSize(3))
+		assert.Assert(t, p.MaxShingleSize != nil)
+		assert.Equal(t, 3, *p.MaxShingleSize)
+	})
+	t.Run("WithSearchAsYouTypeSearchQuoteAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeSearchQuoteAnalyzer("my_analyzer"))
+		assert.Assert(t, p.SearchQuoteAnalyzer != nil)
+		assert.Equal(t, "my_analyzer", *p.SearchQuoteAnalyzer)
+	})
+	t.Run("WithSearchAsYouTypeIndex", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("WithSearchAsYouTypeStore", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("WithSearchAsYouTypeNorms", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeNorms(true))
+		assert.Assert(t, p.Norms != nil)
+		assert.Equal(t, true, *p.Norms)
+	})
+	t.Run("WithSearchAsYouTypeSimilarity", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSearchAsYouTypeProperty(estype.WithSearchAsYouTypeSimilarity("BM25"))
+		assert.Assert(t, p.Similarity != nil)
+		assert.Equal(t, "BM25", *p.Similarity)
+	})
 }
 
 // TestBooleanPropertyOptions verifies all With* options for BooleanProperty.
 func TestBooleanPropertyOptions(t *testing.T) {
 	t.Parallel()
-	t.Run("WithBooleanNullValue", func(t *testing.T) { t.Parallel(); p := estype.NewBooleanProperty(estype.WithBooleanNullValue(true)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, true, *p.NullValue) })
-	t.Run("WithBooleanDocValues", func(t *testing.T) { t.Parallel(); p := estype.NewBooleanProperty(estype.WithBooleanDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) })
-	t.Run("WithBooleanIndex", func(t *testing.T) { t.Parallel(); p := estype.NewBooleanProperty(estype.WithBooleanIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) })
-	t.Run("WithBooleanStore", func(t *testing.T) { t.Parallel(); p := estype.NewBooleanProperty(estype.WithBooleanStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) })
+	t.Run("WithBooleanNullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewBooleanProperty(estype.WithBooleanNullValue(true))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, true, *p.NullValue)
+	})
+	t.Run("WithBooleanDocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewBooleanProperty(estype.WithBooleanDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("WithBooleanIndex", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewBooleanProperty(estype.WithBooleanIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("WithBooleanStore", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewBooleanProperty(estype.WithBooleanStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
 }
 
-func TestIntegerNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberNullValue(42)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, 42, *p.NullValue) }) }
-func TestLongNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewLongNumberProperty(estype.WithLongNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewLongNumberProperty(estype.WithLongNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewLongNumberProperty(estype.WithLongNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewLongNumberProperty(estype.WithLongNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewLongNumberProperty(estype.WithLongNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewLongNumberProperty(estype.WithLongNumberNullValue(99)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, int64(99), *p.NullValue) }) }
-func TestShortNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewShortNumberProperty(estype.WithShortNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewShortNumberProperty(estype.WithShortNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewShortNumberProperty(estype.WithShortNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewShortNumberProperty(estype.WithShortNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewShortNumberProperty(estype.WithShortNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewShortNumberProperty(estype.WithShortNumberNullValue(7)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, 7, *p.NullValue) }) }
-func TestByteNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewByteNumberProperty(estype.WithByteNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewByteNumberProperty(estype.WithByteNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewByteNumberProperty(estype.WithByteNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewByteNumberProperty(estype.WithByteNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewByteNumberProperty(estype.WithByteNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewByteNumberProperty(estype.WithByteNumberNullValue(1)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, byte(1), *p.NullValue) }) }
-func TestDoubleNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberNullValue(1.5)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, 1.5, *p.NullValue) }) }
-func TestFloatNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewFloatNumberProperty(estype.WithFloatNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewFloatNumberProperty(estype.WithFloatNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewFloatNumberProperty(estype.WithFloatNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewFloatNumberProperty(estype.WithFloatNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewFloatNumberProperty(estype.WithFloatNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewFloatNumberProperty(estype.WithFloatNumberNullValue(2.5)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, float32(2.5), *p.NullValue) }) }
-func TestHalfFloatNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberNullValue(3.5)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, float32(3.5), *p.NullValue) }) }
-func TestUnsignedLongNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberNullValue(100)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, uint64(100), *p.NullValue) }) }
-func TestScaledFloatNumberPropertyOptions(t *testing.T) { t.Parallel(); t.Run("ScalingFactor", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScalingFactor(100.0)); assert.Assert(t, p.ScalingFactor != nil); assert.Equal(t, 100.0, *p.ScalingFactor) }); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberNullValue(9.99)); assert.Assert(t, p.NullValue != nil); assert.Equal(t, 9.99, *p.NullValue) }) }
+func TestIntegerNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerNumberProperty(estype.WithIntegerNumberNullValue(42))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, 42, *p.NullValue)
+	})
+}
+func TestLongNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongNumberProperty(estype.WithLongNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongNumberProperty(estype.WithLongNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongNumberProperty(estype.WithLongNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongNumberProperty(estype.WithLongNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongNumberProperty(estype.WithLongNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongNumberProperty(estype.WithLongNumberNullValue(99))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, int64(99), *p.NullValue)
+	})
+}
+func TestShortNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShortNumberProperty(estype.WithShortNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShortNumberProperty(estype.WithShortNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShortNumberProperty(estype.WithShortNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShortNumberProperty(estype.WithShortNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShortNumberProperty(estype.WithShortNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShortNumberProperty(estype.WithShortNumberNullValue(7))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, 7, *p.NullValue)
+	})
+}
+func TestByteNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewByteNumberProperty(estype.WithByteNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewByteNumberProperty(estype.WithByteNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewByteNumberProperty(estype.WithByteNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewByteNumberProperty(estype.WithByteNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewByteNumberProperty(estype.WithByteNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewByteNumberProperty(estype.WithByteNumberNullValue(1))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, byte(1), *p.NullValue)
+	})
+}
+func TestDoubleNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleNumberProperty(estype.WithDoubleNumberNullValue(1.5))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, 1.5, *p.NullValue)
+	})
+}
+func TestFloatNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatNumberProperty(estype.WithFloatNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatNumberProperty(estype.WithFloatNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatNumberProperty(estype.WithFloatNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatNumberProperty(estype.WithFloatNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatNumberProperty(estype.WithFloatNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatNumberProperty(estype.WithFloatNumberNullValue(2.5))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, float32(2.5), *p.NullValue)
+	})
+}
+func TestHalfFloatNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHalfFloatNumberProperty(estype.WithHalfFloatNumberNullValue(3.5))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, float32(3.5), *p.NullValue)
+	})
+}
+func TestUnsignedLongNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewUnsignedLongNumberProperty(estype.WithUnsignedLongNumberNullValue(100))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, uint64(100), *p.NullValue)
+	})
+}
+func TestScaledFloatNumberPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("ScalingFactor", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScalingFactor(100.0))
+		assert.Assert(t, p.ScalingFactor != nil)
+		assert.Equal(t, 100.0, *p.ScalingFactor)
+	})
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewScaledFloatNumberProperty(estype.WithScaledFloatNumberNullValue(9.99))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, 9.99, *p.NullValue)
+	})
+}
 
-func TestDatePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Format", func(t *testing.T) { t.Parallel(); p := estype.NewDateProperty(estype.WithDateFormat("yyyy-MM-dd")); assert.Assert(t, p.Format != nil); assert.Equal(t, "yyyy-MM-dd", *p.Format) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewDateProperty(estype.WithDateDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewDateProperty(estype.WithDateIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDateProperty(estype.WithDateIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewDateProperty(estype.WithDateStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("Locale", func(t *testing.T) { t.Parallel(); p := estype.NewDateProperty(estype.WithDateLocale("en_US")); assert.Assert(t, p.Locale != nil); assert.Equal(t, "en_US", *p.Locale) }) }
-func TestDateNanosPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Format", func(t *testing.T) { t.Parallel(); p := estype.NewDateNanosProperty(estype.WithDateNanosFormat("strict_date_optional_time_nanos")); assert.Assert(t, p.Format != nil); assert.Equal(t, "strict_date_optional_time_nanos", *p.Format) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewDateNanosProperty(estype.WithDateNanosDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewDateNanosProperty(estype.WithDateNanosIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDateNanosProperty(estype.WithDateNanosIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewDateNanosProperty(estype.WithDateNanosStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
+func TestDatePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Format", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateProperty(estype.WithDateFormat("yyyy-MM-dd"))
+		assert.Assert(t, p.Format != nil)
+		assert.Equal(t, "yyyy-MM-dd", *p.Format)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateProperty(estype.WithDateDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateProperty(estype.WithDateIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateProperty(estype.WithDateIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateProperty(estype.WithDateStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("Locale", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateProperty(estype.WithDateLocale("en_US"))
+		assert.Assert(t, p.Locale != nil)
+		assert.Equal(t, "en_US", *p.Locale)
+	})
+}
+func TestDateNanosPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Format", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateNanosProperty(estype.WithDateNanosFormat("strict_date_optional_time_nanos"))
+		assert.Assert(t, p.Format != nil)
+		assert.Equal(t, "strict_date_optional_time_nanos", *p.Format)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateNanosProperty(estype.WithDateNanosDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateNanosProperty(estype.WithDateNanosIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateNanosProperty(estype.WithDateNanosIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateNanosProperty(estype.WithDateNanosStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
 
-func TestGeoPointPropertyOptions(t *testing.T) { t.Parallel(); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewGeoPointProperty(estype.WithGeoPointIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("IgnoreZValue", func(t *testing.T) { t.Parallel(); p := estype.NewGeoPointProperty(estype.WithGeoPointIgnoreZValue(true)); assert.Assert(t, p.IgnoreZValue != nil); assert.Equal(t, true, *p.IgnoreZValue) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewGeoPointProperty(estype.WithGeoPointDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewGeoPointProperty(estype.WithGeoPointIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewGeoPointProperty(estype.WithGeoPointStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestGeoShapePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewGeoShapeProperty(estype.WithGeoShapeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewGeoShapeProperty(estype.WithGeoShapeIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("IgnoreZValue", func(t *testing.T) { t.Parallel(); p := estype.NewGeoShapeProperty(estype.WithGeoShapeIgnoreZValue(true)); assert.Assert(t, p.IgnoreZValue != nil); assert.Equal(t, true, *p.IgnoreZValue) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewGeoShapeProperty(estype.WithGeoShapeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewGeoShapeProperty(estype.WithGeoShapeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewGeoShapeProperty(estype.WithGeoShapeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestShapePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewShapeProperty(estype.WithShapeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewShapeProperty(estype.WithShapeIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("IgnoreZValue", func(t *testing.T) { t.Parallel(); p := estype.NewShapeProperty(estype.WithShapeIgnoreZValue(true)); assert.Assert(t, p.IgnoreZValue != nil); assert.Equal(t, true, *p.IgnoreZValue) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewShapeProperty(estype.WithShapeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewShapeProperty(estype.WithShapeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestPointPropertyOptions(t *testing.T) { t.Parallel(); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewPointProperty(estype.WithPointIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("IgnoreZValue", func(t *testing.T) { t.Parallel(); p := estype.NewPointProperty(estype.WithPointIgnoreZValue(true)); assert.Assert(t, p.IgnoreZValue != nil); assert.Equal(t, true, *p.IgnoreZValue) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewPointProperty(estype.WithPointDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewPointProperty(estype.WithPointStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewPointProperty(estype.WithPointNullValue("value")); assert.Assert(t, p.NullValue != nil); assert.Equal(t, "value", *p.NullValue) }) }
+func TestGeoPointPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoPointProperty(estype.WithGeoPointIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("IgnoreZValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoPointProperty(estype.WithGeoPointIgnoreZValue(true))
+		assert.Assert(t, p.IgnoreZValue != nil)
+		assert.Equal(t, true, *p.IgnoreZValue)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoPointProperty(estype.WithGeoPointDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoPointProperty(estype.WithGeoPointIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoPointProperty(estype.WithGeoPointStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestGeoShapePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoShapeProperty(estype.WithGeoShapeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoShapeProperty(estype.WithGeoShapeIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("IgnoreZValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoShapeProperty(estype.WithGeoShapeIgnoreZValue(true))
+		assert.Assert(t, p.IgnoreZValue != nil)
+		assert.Equal(t, true, *p.IgnoreZValue)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoShapeProperty(estype.WithGeoShapeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoShapeProperty(estype.WithGeoShapeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewGeoShapeProperty(estype.WithGeoShapeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestShapePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShapeProperty(estype.WithShapeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShapeProperty(estype.WithShapeIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("IgnoreZValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShapeProperty(estype.WithShapeIgnoreZValue(true))
+		assert.Assert(t, p.IgnoreZValue != nil)
+		assert.Equal(t, true, *p.IgnoreZValue)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShapeProperty(estype.WithShapeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewShapeProperty(estype.WithShapeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestPointPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPointProperty(estype.WithPointIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("IgnoreZValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPointProperty(estype.WithPointIgnoreZValue(true))
+		assert.Assert(t, p.IgnoreZValue != nil)
+		assert.Equal(t, true, *p.IgnoreZValue)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPointProperty(estype.WithPointDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPointProperty(estype.WithPointStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPointProperty(estype.WithPointNullValue("value"))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, "value", *p.NullValue)
+	})
+}
 
-func TestIntegerRangePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestLongRangePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewLongRangeProperty(estype.WithLongRangeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewLongRangeProperty(estype.WithLongRangeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewLongRangeProperty(estype.WithLongRangeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewLongRangeProperty(estype.WithLongRangeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestFloatRangePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewFloatRangeProperty(estype.WithFloatRangeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewFloatRangeProperty(estype.WithFloatRangeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewFloatRangeProperty(estype.WithFloatRangeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewFloatRangeProperty(estype.WithFloatRangeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestDoubleRangePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestDateRangePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Format", func(t *testing.T) { t.Parallel(); p := estype.NewDateRangeProperty(estype.WithDateRangeFormat("yyyy-MM-dd")); assert.Assert(t, p.Format != nil); assert.Equal(t, "yyyy-MM-dd", *p.Format) }); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewDateRangeProperty(estype.WithDateRangeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewDateRangeProperty(estype.WithDateRangeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDateRangeProperty(estype.WithDateRangeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewDateRangeProperty(estype.WithDateRangeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestIpRangePropertyOptions(t *testing.T) { t.Parallel(); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewIpRangeProperty(estype.WithIpRangeCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewIpRangeProperty(estype.WithIpRangeDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewIpRangeProperty(estype.WithIpRangeIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewIpRangeProperty(estype.WithIpRangeStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
+func TestIntegerRangePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIntegerRangeProperty(estype.WithIntegerRangeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestLongRangePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongRangeProperty(estype.WithLongRangeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongRangeProperty(estype.WithLongRangeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongRangeProperty(estype.WithLongRangeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewLongRangeProperty(estype.WithLongRangeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestFloatRangePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatRangeProperty(estype.WithFloatRangeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatRangeProperty(estype.WithFloatRangeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatRangeProperty(estype.WithFloatRangeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFloatRangeProperty(estype.WithFloatRangeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestDoubleRangePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDoubleRangeProperty(estype.WithDoubleRangeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestDateRangePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Format", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateRangeProperty(estype.WithDateRangeFormat("yyyy-MM-dd"))
+		assert.Assert(t, p.Format != nil)
+		assert.Equal(t, "yyyy-MM-dd", *p.Format)
+	})
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateRangeProperty(estype.WithDateRangeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateRangeProperty(estype.WithDateRangeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateRangeProperty(estype.WithDateRangeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDateRangeProperty(estype.WithDateRangeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestIpRangePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpRangeProperty(estype.WithIpRangeCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpRangeProperty(estype.WithIpRangeDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpRangeProperty(estype.WithIpRangeIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpRangeProperty(estype.WithIpRangeStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
 
-func TestObjectPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Enabled", func(t *testing.T) { t.Parallel(); p := estype.NewObjectProperty(estype.WithObjectEnabled(true)); assert.Assert(t, p.Enabled != nil); assert.Equal(t, true, *p.Enabled) }); t.Run("Property", func(t *testing.T) { t.Parallel(); p := estype.NewObjectProperty(estype.WithObjectProperty("status", estype.NewKeywordProperty())); assert.Assert(t, p.Properties != nil); assert.Equal(t, "keyword", p.Properties["status"].ESTypeName()) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewObjectProperty(estype.WithObjectStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestNestedPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Property", func(t *testing.T) { t.Parallel(); p := estype.NewNestedProperty(estype.WithNestedProperty("name", estype.NewKeywordProperty())); assert.Assert(t, p.Properties != nil); assert.Equal(t, "keyword", p.Properties["name"].ESTypeName()) }); t.Run("Enabled", func(t *testing.T) { t.Parallel(); p := estype.NewNestedProperty(estype.WithNestedEnabled(true)); assert.Assert(t, p.Enabled != nil); assert.Equal(t, true, *p.Enabled) }); t.Run("IncludeInParent", func(t *testing.T) { t.Parallel(); p := estype.NewNestedProperty(estype.WithNestedIncludeInParent(true)); assert.Assert(t, p.IncludeInParent != nil); assert.Equal(t, true, *p.IncludeInParent) }); t.Run("IncludeInRoot", func(t *testing.T) { t.Parallel(); p := estype.NewNestedProperty(estype.WithNestedIncludeInRoot(true)); assert.Assert(t, p.IncludeInRoot != nil); assert.Equal(t, true, *p.IncludeInRoot) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewNestedProperty(estype.WithNestedStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestFlattenedPropertyOptions(t *testing.T) { t.Parallel(); t.Run("DepthLimit", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedDepthLimit(5)); assert.Assert(t, p.DepthLimit != nil); assert.Equal(t, 5, *p.DepthLimit) }); t.Run("IgnoreAbove", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedIgnoreAbove(256)); assert.Assert(t, p.IgnoreAbove != nil); assert.Equal(t, 256, *p.IgnoreAbove) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedNullValue("value")); assert.Assert(t, p.NullValue != nil); assert.Equal(t, "value", *p.NullValue) }); t.Run("EagerGlobalOrdinals", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedEagerGlobalOrdinals(true)); assert.Assert(t, p.EagerGlobalOrdinals != nil); assert.Equal(t, true, *p.EagerGlobalOrdinals) }); t.Run("Similarity", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedSimilarity("BM25")); assert.Assert(t, p.Similarity != nil); assert.Equal(t, "BM25", *p.Similarity) }); t.Run("SplitQueriesOnWhitespace", func(t *testing.T) { t.Parallel(); p := estype.NewFlattenedProperty(estype.WithFlattenedSplitQueriesOnWhitespace(true)); assert.Assert(t, p.SplitQueriesOnWhitespace != nil); assert.Equal(t, true, *p.SplitQueriesOnWhitespace) }) }
-func TestJoinPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Relation", func(t *testing.T) { t.Parallel(); p := estype.NewJoinProperty(estype.WithJoinRelation("category", "items", "tags")); assert.Assert(t, p.Relations != nil); assert.Equal(t, 2, len(p.Relations["category"])); assert.Equal(t, "items", p.Relations["category"][0]); assert.Equal(t, "tags", p.Relations["category"][1]) }); t.Run("EagerGlobalOrdinals", func(t *testing.T) { t.Parallel(); p := estype.NewJoinProperty(estype.WithJoinEagerGlobalOrdinals(true)); assert.Assert(t, p.EagerGlobalOrdinals != nil); assert.Equal(t, true, *p.EagerGlobalOrdinals) }) }
-func TestPassthroughObjectPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Property", func(t *testing.T) { t.Parallel(); p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectProperty("status", estype.NewKeywordProperty())); assert.Assert(t, p.Properties != nil); assert.Equal(t, "keyword", p.Properties["status"].ESTypeName()) }); t.Run("Enabled", func(t *testing.T) { t.Parallel(); p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectEnabled(true)); assert.Assert(t, p.Enabled != nil); assert.Equal(t, true, *p.Enabled) }); t.Run("Priority", func(t *testing.T) { t.Parallel(); p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectPriority(10)); assert.Assert(t, p.Priority != nil); assert.Equal(t, 10, *p.Priority) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("TimeSeriesDimension", func(t *testing.T) { t.Parallel(); p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectTimeSeriesDimension(true)); assert.Assert(t, p.TimeSeriesDimension != nil); assert.Equal(t, true, *p.TimeSeriesDimension) }) }
+func TestObjectPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Enabled", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewObjectProperty(estype.WithObjectEnabled(true))
+		assert.Assert(t, p.Enabled != nil)
+		assert.Equal(t, true, *p.Enabled)
+	})
+	t.Run("Property", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewObjectProperty(estype.WithObjectProperty("status", estype.NewKeywordProperty()))
+		assert.Assert(t, p.Properties != nil)
+		assert.Equal(t, "keyword", p.Properties["status"].ESTypeName())
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewObjectProperty(estype.WithObjectStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestNestedPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Property", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewNestedProperty(estype.WithNestedProperty("name", estype.NewKeywordProperty()))
+		assert.Assert(t, p.Properties != nil)
+		assert.Equal(t, "keyword", p.Properties["name"].ESTypeName())
+	})
+	t.Run("Enabled", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewNestedProperty(estype.WithNestedEnabled(true))
+		assert.Assert(t, p.Enabled != nil)
+		assert.Equal(t, true, *p.Enabled)
+	})
+	t.Run("IncludeInParent", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewNestedProperty(estype.WithNestedIncludeInParent(true))
+		assert.Assert(t, p.IncludeInParent != nil)
+		assert.Equal(t, true, *p.IncludeInParent)
+	})
+	t.Run("IncludeInRoot", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewNestedProperty(estype.WithNestedIncludeInRoot(true))
+		assert.Assert(t, p.IncludeInRoot != nil)
+		assert.Equal(t, true, *p.IncludeInRoot)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewNestedProperty(estype.WithNestedStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestFlattenedPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("DepthLimit", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedDepthLimit(5))
+		assert.Assert(t, p.DepthLimit != nil)
+		assert.Equal(t, 5, *p.DepthLimit)
+	})
+	t.Run("IgnoreAbove", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedIgnoreAbove(256))
+		assert.Assert(t, p.IgnoreAbove != nil)
+		assert.Equal(t, 256, *p.IgnoreAbove)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedNullValue("value"))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, "value", *p.NullValue)
+	})
+	t.Run("EagerGlobalOrdinals", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedEagerGlobalOrdinals(true))
+		assert.Assert(t, p.EagerGlobalOrdinals != nil)
+		assert.Equal(t, true, *p.EagerGlobalOrdinals)
+	})
+	t.Run("Similarity", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedSimilarity("BM25"))
+		assert.Assert(t, p.Similarity != nil)
+		assert.Equal(t, "BM25", *p.Similarity)
+	})
+	t.Run("SplitQueriesOnWhitespace", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFlattenedProperty(estype.WithFlattenedSplitQueriesOnWhitespace(true))
+		assert.Assert(t, p.SplitQueriesOnWhitespace != nil)
+		assert.Equal(t, true, *p.SplitQueriesOnWhitespace)
+	})
+}
+func TestJoinPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Relation", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewJoinProperty(estype.WithJoinRelation("category", "items", "tags"))
+		assert.Assert(t, p.Relations != nil)
+		assert.Equal(t, 2, len(p.Relations["category"]))
+		assert.Equal(t, "items", p.Relations["category"][0])
+		assert.Equal(t, "tags", p.Relations["category"][1])
+	})
+	t.Run("EagerGlobalOrdinals", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewJoinProperty(estype.WithJoinEagerGlobalOrdinals(true))
+		assert.Assert(t, p.EagerGlobalOrdinals != nil)
+		assert.Equal(t, true, *p.EagerGlobalOrdinals)
+	})
+}
+func TestPassthroughObjectPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Property", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectProperty("status", estype.NewKeywordProperty()))
+		assert.Assert(t, p.Properties != nil)
+		assert.Equal(t, "keyword", p.Properties["status"].ESTypeName())
+	})
+	t.Run("Enabled", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectEnabled(true))
+		assert.Assert(t, p.Enabled != nil)
+		assert.Equal(t, true, *p.Enabled)
+	})
+	t.Run("Priority", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectPriority(10))
+		assert.Assert(t, p.Priority != nil)
+		assert.Equal(t, 10, *p.Priority)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("TimeSeriesDimension", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewPassthroughObjectProperty(estype.WithPassthroughObjectTimeSeriesDimension(true))
+		assert.Assert(t, p.TimeSeriesDimension != nil)
+		assert.Equal(t, true, *p.TimeSeriesDimension)
+	})
+}
 
-func TestIpPropertyOptions(t *testing.T) { t.Parallel(); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewIpProperty(estype.WithIpDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewIpProperty(estype.WithIpIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewIpProperty(estype.WithIpIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewIpProperty(estype.WithIpStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewIpProperty(estype.WithIpNullValue("value")); assert.Assert(t, p.NullValue != nil); assert.Equal(t, "value", *p.NullValue) }) }
-func TestBinaryPropertyOptions(t *testing.T) { t.Parallel(); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewBinaryProperty(estype.WithBinaryDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewBinaryProperty(estype.WithBinaryStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestTokenCountPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Analyzer", func(t *testing.T) { t.Parallel(); p := estype.NewTokenCountProperty(estype.WithTokenCountAnalyzer("my_analyzer")); assert.Assert(t, p.Analyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewTokenCountProperty(estype.WithTokenCountDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewTokenCountProperty(estype.WithTokenCountIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewTokenCountProperty(estype.WithTokenCountStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("EnablePositionIncrements", func(t *testing.T) { t.Parallel(); p := estype.NewTokenCountProperty(estype.WithTokenCountEnablePositionIncrements(true)); assert.Assert(t, p.EnablePositionIncrements != nil); assert.Equal(t, true, *p.EnablePositionIncrements) }) }
-func TestFieldAliasPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Path", func(t *testing.T) { t.Parallel(); p := estype.NewFieldAliasProperty(estype.WithFieldAliasPath("status")); assert.Assert(t, p.Path != nil); assert.Equal(t, "status", *p.Path) }) }
-func TestHistogramPropertyOptions(t *testing.T) { t.Parallel(); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewHistogramProperty(estype.WithHistogramIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }) }
-func TestVersionPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewVersionProperty(estype.WithVersionStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestDenseVectorPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Dims", func(t *testing.T) { t.Parallel(); p := estype.NewDenseVectorProperty(estype.WithDenseVectorDims(128)); assert.Assert(t, p.Dims != nil); assert.Equal(t, 128, *p.Dims) }); t.Run("Similarity", func(t *testing.T) { t.Parallel(); p := estype.NewDenseVectorProperty(estype.WithDenseVectorSimilarity("cosine")); assert.Assert(t, p.Similarity != nil); assert.Equal(t, "cosine", *p.Similarity) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDenseVectorProperty(estype.WithDenseVectorIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }) }
-func TestSparseVectorPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewSparseVectorProperty(estype.WithSparseVectorStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestRankFeaturePropertyOptions(t *testing.T) { t.Parallel(); t.Run("PositiveScoreImpact", func(t *testing.T) { t.Parallel(); p := estype.NewRankFeatureProperty(estype.WithRankFeaturePositiveScoreImpact(true)); assert.Assert(t, p.PositiveScoreImpact != nil); assert.Equal(t, true, *p.PositiveScoreImpact) }) }
-func TestRankFeaturesPropertyOptions(t *testing.T) { t.Parallel(); t.Run("PositiveScoreImpact", func(t *testing.T) { t.Parallel(); p := estype.NewRankFeaturesProperty(estype.WithRankFeaturesPositiveScoreImpact(true)); assert.Assert(t, p.PositiveScoreImpact != nil); assert.Equal(t, true, *p.PositiveScoreImpact) }) }
-func TestRankVectorPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Dims", func(t *testing.T) { t.Parallel(); p := estype.NewRankVectorProperty(estype.WithRankVectorDims(64)); assert.Assert(t, p.Dims != nil); assert.Equal(t, 64, *p.Dims) }) }
-func TestSemanticTextPropertyOptions(t *testing.T) { t.Parallel(); t.Run("InferenceId", func(t *testing.T) { t.Parallel(); p := estype.NewSemanticTextProperty(estype.WithSemanticTextInferenceId("id")); assert.Assert(t, p.InferenceId != nil); assert.Equal(t, "id", *p.InferenceId) }); t.Run("SearchInferenceId", func(t *testing.T) { t.Parallel(); p := estype.NewSemanticTextProperty(estype.WithSemanticTextSearchInferenceId("id")); assert.Assert(t, p.SearchInferenceId != nil); assert.Equal(t, "id", *p.SearchInferenceId) }) }
-func TestAggregateMetricDoublePropertyOptions(t *testing.T) { t.Parallel(); t.Run("DefaultMetric", func(t *testing.T) { t.Parallel(); p := estype.NewAggregateMetricDoubleProperty(estype.WithAggregateMetricDoubleDefaultMetric("value")); assert.Assert(t, p.DefaultMetric != nil); assert.Equal(t, "value", *p.DefaultMetric) }); t.Run("Metrics", func(t *testing.T) { t.Parallel(); p := estype.NewAggregateMetricDoubleProperty(estype.WithAggregateMetricDoubleMetrics("min", "max")); assert.Equal(t, 2, len(p.Metrics)); assert.Equal(t, "min", p.Metrics[0]); assert.Equal(t, "max", p.Metrics[1]) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewAggregateMetricDoubleProperty(estype.WithAggregateMetricDoubleIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }) }
-func TestMurmur3HashPropertyOptions(t *testing.T) { t.Parallel(); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewMurmur3HashProperty(estype.WithMurmur3HashDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewMurmur3HashProperty(estype.WithMurmur3HashStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }) }
-func TestIcuCollationPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Language", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationLanguage("name")); assert.Assert(t, p.Language != nil); assert.Equal(t, "name", *p.Language) }); t.Run("Country", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationCountry("value")); assert.Assert(t, p.Country != nil); assert.Equal(t, "value", *p.Country) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("NullValue", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationNullValue("value")); assert.Assert(t, p.NullValue != nil); assert.Equal(t, "value", *p.NullValue) }); t.Run("Norms", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationNorms(true)); assert.Assert(t, p.Norms != nil); assert.Equal(t, true, *p.Norms) }); t.Run("Rules", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationRules("value")); assert.Assert(t, p.Rules != nil); assert.Equal(t, "value", *p.Rules) }); t.Run("Variant", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationVariant("value")); assert.Assert(t, p.Variant != nil); assert.Equal(t, "value", *p.Variant) }); t.Run("CaseLevel", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationCaseLevel(true)); assert.Assert(t, p.CaseLevel != nil); assert.Equal(t, true, *p.CaseLevel) }); t.Run("Numeric", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationNumeric(true)); assert.Assert(t, p.Numeric != nil); assert.Equal(t, true, *p.Numeric) }); t.Run("HiraganaQuaternaryMode", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationHiraganaQuaternaryMode(true)); assert.Assert(t, p.HiraganaQuaternaryMode != nil); assert.Equal(t, true, *p.HiraganaQuaternaryMode) }); t.Run("VariableTop", func(t *testing.T) { t.Parallel(); p := estype.NewIcuCollationProperty(estype.WithIcuCollationVariableTop("value")); assert.Assert(t, p.VariableTop != nil); assert.Equal(t, "value", *p.VariableTop) }) }
-func TestDynamicPropertyOptions(t *testing.T) { t.Parallel(); t.Run("Analyzer", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicAnalyzer("my_analyzer")); assert.Assert(t, p.Analyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer) }); t.Run("SearchAnalyzer", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicSearchAnalyzer("my_analyzer")); assert.Assert(t, p.SearchAnalyzer != nil); assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer) }); t.Run("Coerce", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicCoerce(true)); assert.Assert(t, p.Coerce != nil); assert.Equal(t, true, *p.Coerce) }); t.Run("DocValues", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicDocValues(true)); assert.Assert(t, p.DocValues != nil); assert.Equal(t, true, *p.DocValues) }); t.Run("Enabled", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicEnabled(true)); assert.Assert(t, p.Enabled != nil); assert.Equal(t, true, *p.Enabled) }); t.Run("Format", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicFormat("yyyy-MM-dd")); assert.Assert(t, p.Format != nil); assert.Equal(t, "yyyy-MM-dd", *p.Format) }); t.Run("IgnoreMalformed", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicIgnoreMalformed(true)); assert.Assert(t, p.IgnoreMalformed != nil); assert.Equal(t, true, *p.IgnoreMalformed) }); t.Run("Index", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicIndex(true)); assert.Assert(t, p.Index != nil); assert.Equal(t, true, *p.Index) }); t.Run("Store", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicStore(true)); assert.Assert(t, p.Store != nil); assert.Equal(t, true, *p.Store) }); t.Run("Norms", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicNorms(true)); assert.Assert(t, p.Norms != nil); assert.Equal(t, true, *p.Norms) }); t.Run("Locale", func(t *testing.T) { t.Parallel(); p := estype.NewDynamicProperty(estype.WithDynamicLocale("en_US")); assert.Assert(t, p.Locale != nil); assert.Equal(t, "en_US", *p.Locale) }) }
+func TestIpPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpProperty(estype.WithIpDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpProperty(estype.WithIpIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpProperty(estype.WithIpIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpProperty(estype.WithIpStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIpProperty(estype.WithIpNullValue("value"))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, "value", *p.NullValue)
+	})
+}
+func TestBinaryPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewBinaryProperty(estype.WithBinaryDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewBinaryProperty(estype.WithBinaryStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestTokenCountPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Analyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTokenCountProperty(estype.WithTokenCountAnalyzer("my_analyzer"))
+		assert.Assert(t, p.Analyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTokenCountProperty(estype.WithTokenCountDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTokenCountProperty(estype.WithTokenCountIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTokenCountProperty(estype.WithTokenCountStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("EnablePositionIncrements", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewTokenCountProperty(estype.WithTokenCountEnablePositionIncrements(true))
+		assert.Assert(t, p.EnablePositionIncrements != nil)
+		assert.Equal(t, true, *p.EnablePositionIncrements)
+	})
+}
+func TestFieldAliasPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Path", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewFieldAliasProperty(estype.WithFieldAliasPath("status"))
+		assert.Assert(t, p.Path != nil)
+		assert.Equal(t, "status", *p.Path)
+	})
+}
+func TestHistogramPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewHistogramProperty(estype.WithHistogramIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+}
+func TestVersionPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewVersionProperty(estype.WithVersionStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestDenseVectorPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Dims", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDenseVectorProperty(estype.WithDenseVectorDims(128))
+		assert.Assert(t, p.Dims != nil)
+		assert.Equal(t, 128, *p.Dims)
+	})
+	t.Run("Similarity", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDenseVectorProperty(estype.WithDenseVectorSimilarity("cosine"))
+		assert.Assert(t, p.Similarity != nil)
+		assert.Equal(t, "cosine", *p.Similarity)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDenseVectorProperty(estype.WithDenseVectorIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+}
+func TestSparseVectorPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSparseVectorProperty(estype.WithSparseVectorStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestRankFeaturePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("PositiveScoreImpact", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewRankFeatureProperty(estype.WithRankFeaturePositiveScoreImpact(true))
+		assert.Assert(t, p.PositiveScoreImpact != nil)
+		assert.Equal(t, true, *p.PositiveScoreImpact)
+	})
+}
+func TestRankFeaturesPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("PositiveScoreImpact", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewRankFeaturesProperty(estype.WithRankFeaturesPositiveScoreImpact(true))
+		assert.Assert(t, p.PositiveScoreImpact != nil)
+		assert.Equal(t, true, *p.PositiveScoreImpact)
+	})
+}
+func TestRankVectorPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Dims", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewRankVectorProperty(estype.WithRankVectorDims(64))
+		assert.Assert(t, p.Dims != nil)
+		assert.Equal(t, 64, *p.Dims)
+	})
+}
+func TestSemanticTextPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("InferenceId", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSemanticTextProperty(estype.WithSemanticTextInferenceId("id"))
+		assert.Assert(t, p.InferenceId != nil)
+		assert.Equal(t, "id", *p.InferenceId)
+	})
+	t.Run("SearchInferenceId", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewSemanticTextProperty(estype.WithSemanticTextSearchInferenceId("id"))
+		assert.Assert(t, p.SearchInferenceId != nil)
+		assert.Equal(t, "id", *p.SearchInferenceId)
+	})
+}
+func TestAggregateMetricDoublePropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("DefaultMetric", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewAggregateMetricDoubleProperty(estype.WithAggregateMetricDoubleDefaultMetric("value"))
+		assert.Assert(t, p.DefaultMetric != nil)
+		assert.Equal(t, "value", *p.DefaultMetric)
+	})
+	t.Run("Metrics", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewAggregateMetricDoubleProperty(estype.WithAggregateMetricDoubleMetrics("min", "max"))
+		assert.Equal(t, 2, len(p.Metrics))
+		assert.Equal(t, "min", p.Metrics[0])
+		assert.Equal(t, "max", p.Metrics[1])
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewAggregateMetricDoubleProperty(estype.WithAggregateMetricDoubleIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+}
+func TestMurmur3HashPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewMurmur3HashProperty(estype.WithMurmur3HashDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewMurmur3HashProperty(estype.WithMurmur3HashStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+}
+func TestIcuCollationPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Language", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationLanguage("name"))
+		assert.Assert(t, p.Language != nil)
+		assert.Equal(t, "name", *p.Language)
+	})
+	t.Run("Country", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationCountry("value"))
+		assert.Assert(t, p.Country != nil)
+		assert.Equal(t, "value", *p.Country)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("NullValue", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationNullValue("value"))
+		assert.Assert(t, p.NullValue != nil)
+		assert.Equal(t, "value", *p.NullValue)
+	})
+	t.Run("Norms", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationNorms(true))
+		assert.Assert(t, p.Norms != nil)
+		assert.Equal(t, true, *p.Norms)
+	})
+	t.Run("Rules", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationRules("value"))
+		assert.Assert(t, p.Rules != nil)
+		assert.Equal(t, "value", *p.Rules)
+	})
+	t.Run("Variant", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationVariant("value"))
+		assert.Assert(t, p.Variant != nil)
+		assert.Equal(t, "value", *p.Variant)
+	})
+	t.Run("CaseLevel", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationCaseLevel(true))
+		assert.Assert(t, p.CaseLevel != nil)
+		assert.Equal(t, true, *p.CaseLevel)
+	})
+	t.Run("Numeric", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationNumeric(true))
+		assert.Assert(t, p.Numeric != nil)
+		assert.Equal(t, true, *p.Numeric)
+	})
+	t.Run("HiraganaQuaternaryMode", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationHiraganaQuaternaryMode(true))
+		assert.Assert(t, p.HiraganaQuaternaryMode != nil)
+		assert.Equal(t, true, *p.HiraganaQuaternaryMode)
+	})
+	t.Run("VariableTop", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewIcuCollationProperty(estype.WithIcuCollationVariableTop("value"))
+		assert.Assert(t, p.VariableTop != nil)
+		assert.Equal(t, "value", *p.VariableTop)
+	})
+}
+func TestDynamicPropertyOptions(t *testing.T) {
+	t.Parallel()
+	t.Run("Analyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicAnalyzer("my_analyzer"))
+		assert.Assert(t, p.Analyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.Analyzer)
+	})
+	t.Run("SearchAnalyzer", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicSearchAnalyzer("my_analyzer"))
+		assert.Assert(t, p.SearchAnalyzer != nil)
+		assert.Equal(t, estype.Analyzer("my_analyzer"), *p.SearchAnalyzer)
+	})
+	t.Run("Coerce", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicCoerce(true))
+		assert.Assert(t, p.Coerce != nil)
+		assert.Equal(t, true, *p.Coerce)
+	})
+	t.Run("DocValues", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicDocValues(true))
+		assert.Assert(t, p.DocValues != nil)
+		assert.Equal(t, true, *p.DocValues)
+	})
+	t.Run("Enabled", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicEnabled(true))
+		assert.Assert(t, p.Enabled != nil)
+		assert.Equal(t, true, *p.Enabled)
+	})
+	t.Run("Format", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicFormat("yyyy-MM-dd"))
+		assert.Assert(t, p.Format != nil)
+		assert.Equal(t, "yyyy-MM-dd", *p.Format)
+	})
+	t.Run("IgnoreMalformed", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicIgnoreMalformed(true))
+		assert.Assert(t, p.IgnoreMalformed != nil)
+		assert.Equal(t, true, *p.IgnoreMalformed)
+	})
+	t.Run("Index", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicIndex(true))
+		assert.Assert(t, p.Index != nil)
+		assert.Equal(t, true, *p.Index)
+	})
+	t.Run("Store", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicStore(true))
+		assert.Assert(t, p.Store != nil)
+		assert.Equal(t, true, *p.Store)
+	})
+	t.Run("Norms", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicNorms(true))
+		assert.Assert(t, p.Norms != nil)
+		assert.Equal(t, true, *p.Norms)
+	})
+	t.Run("Locale", func(t *testing.T) {
+		t.Parallel()
+		p := estype.NewDynamicProperty(estype.WithDynamicLocale("en_US"))
+		assert.Assert(t, p.Locale != nil)
+		assert.Equal(t, "en_US", *p.Locale)
+	})
+}

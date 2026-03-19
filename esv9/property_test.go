@@ -744,7 +744,7 @@ func TestCustomOption(t *testing.T) {
 }
 
 func TestNewExponentialHistogramProperty(t *testing.T) {
-t.Parallel()
-prop := esv9.NewExponentialHistogramProperty()
-assert.Assert(t, prop != nil)
+	t.Parallel()
+	prop := esv9.NewExponentialHistogramProperty()
+	assert.Assert(t, prop != nil)
 }

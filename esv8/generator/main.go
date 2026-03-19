@@ -59,8 +59,8 @@ func toMethodName(name string) string {
 			continue
 		}
 		// Convert snake_case to PascalCase.
-		subParts := strings.Split(part, "_")
-		for _, sp := range subParts {
+		subParts := strings.SplitSeq(part, "_")
+		for sp := range subParts {
 			if sp == "" {
 				continue
 			}

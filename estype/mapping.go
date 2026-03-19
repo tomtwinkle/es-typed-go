@@ -47,7 +47,7 @@ type mappingBody struct {
 
 // mappingProperty represents a single property in an ES mapping.
 type mappingProperty struct {
-	Type       string                    `json:"type"`
+	Type       string                     `json:"type"`
 	Properties map[string]mappingProperty `json:"properties"`
 	Fields     map[string]mappingProperty `json:"fields"`
 }

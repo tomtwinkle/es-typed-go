@@ -3,8 +3,8 @@ package estype_test
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
 	"github.com/tomtwinkle/es-typed-go/estype"
+	"gotest.tools/v3/assert"
 )
 
 func TestIndex_String(t *testing.T) {
