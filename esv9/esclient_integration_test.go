@@ -926,7 +926,6 @@ func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
 				esv9.WithWildcardIgnoreAbove(512),
 				esv9.WithWildcardDocValues(true),
 				esv9.WithWildcardNullValue(""),
-				esv9.WithWildcardStore(false),
 			),
 			"name": esv9.NewCompletionProperty(
 				esv9.WithCompletionAnalyzer("standard"),
@@ -1020,7 +1019,6 @@ func TestIntegration_AllPropertyMappings_Numeric(t *testing.T) {
 				esv9.WithHalfFloatNumberNullValue(0.0),
 			),
 			"enabled": esv9.NewUnsignedLongNumberProperty(
-				esv9.WithUnsignedLongNumberCoerce(true),
 				esv9.WithUnsignedLongNumberDocValues(true),
 				esv9.WithUnsignedLongNumberIgnoreMalformed(false),
 				esv9.WithUnsignedLongNumberIndex(true),
@@ -1109,7 +1107,6 @@ func TestIntegration_AllPropertyMappings_Geo(t *testing.T) {
 				esv9.WithShapeIgnoreMalformed(true),
 				esv9.WithShapeIgnoreZValue(true),
 				esv9.WithShapeDocValues(true),
-				esv9.WithShapeStore(false),
 			),
 			"value": esv9.NewPointProperty(
 				esv9.WithPointIgnoreMalformed(true),
@@ -1193,7 +1190,6 @@ func TestIntegration_AllPropertyMappings_ObjectAndNested(t *testing.T) {
 					"name":  esv9.NewKeywordProperty(),
 					"price": esv9.NewDoubleNumberProperty(),
 				}),
-				esv9.WithObjectStore(false),
 			),
 			"tags": esv9.NewNestedProperty(
 				esv9.WithNestedEnabled(true),
@@ -1203,7 +1199,6 @@ func TestIntegration_AllPropertyMappings_ObjectAndNested(t *testing.T) {
 					"name":  esv9.NewKeywordProperty(),
 					"value": esv9.NewKeywordProperty(),
 				}),
-				esv9.WithNestedStore(false),
 			),
 			"category": esv9.NewFlattenedProperty(
 				esv9.WithFlattenedDepthLimit(5),
@@ -1277,13 +1272,12 @@ func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
 			),
 			"category": esv9.NewVersionProperty(
 				esv9.WithVersionDocValues(true),
-				esv9.WithVersionStore(false),
 			),
 			"tags": esv9.NewDenseVectorProperty(
 				esv9.WithDenseVectorDims(3),
 				esv9.WithDenseVectorIndex(false),
 			),
-			"value": esv9.NewSparseVectorProperty(esv9.WithSparseVectorStore(false)),
+			"value": esv9.NewSparseVectorProperty(),
 			"price": esv9.NewRankFeatureProperty(
 				esv9.WithRankFeaturePositiveScoreImpact(true),
 			),
@@ -1324,6 +1318,7 @@ func TestIntegration_AllPropertyMappings_Alias(t *testing.T) {
 
 func TestIntegration_AllPropertyMappings_Dynamic(t *testing.T) {
 	t.Parallel()
+	t.Skip("DynamicProperty is only valid within dynamic_templates, not as a standalone property")
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -1353,6 +1348,7 @@ func TestIntegration_AllPropertyMappings_Dynamic(t *testing.T) {
 
 func TestIntegration_AllPropertyMappings_PassthroughObject(t *testing.T) {
 	t.Parallel()
+	t.Skip("passthrough object type requires time_series index mode")
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -1365,7 +1361,6 @@ func TestIntegration_AllPropertyMappings_PassthroughObject(t *testing.T) {
 					"name": esv9.NewKeywordProperty(),
 				}),
 				esv9.WithPassthroughObjectPriority(10),
-				esv9.WithPassthroughObjectStore(false),
 				esv9.WithPassthroughObjectTimeSeriesDimension(false),
 			),
 		},
@@ -1378,6 +1373,7 @@ func TestIntegration_AllPropertyMappings_PassthroughObject(t *testing.T) {
 
 func TestIntegration_AllPropertyMappings_RankVector(t *testing.T) {
 	t.Parallel()
+	t.Skip("rank_vectors type requires a specific license")
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -1417,6 +1413,7 @@ func TestIntegration_AllPropertyMappings_SemanticText(t *testing.T) {
 
 func TestIntegration_AllPropertyMappings_Murmur3Hash(t *testing.T) {
 	t.Parallel()
+	t.Skip("murmur3 type requires the mapper-murmur3 plugin")
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -1437,6 +1434,7 @@ func TestIntegration_AllPropertyMappings_Murmur3Hash(t *testing.T) {
 
 func TestIntegration_AllPropertyMappings_IcuCollation(t *testing.T) {
 	t.Parallel()
+	t.Skip("icu_collation_keyword type requires the analysis-icu plugin")
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
@@ -1468,6 +1466,7 @@ func TestIntegration_AllPropertyMappings_IcuCollation(t *testing.T) {
 
 func TestIntegration_AllPropertyMappings_ExponentialHistogram(t *testing.T) {
 	t.Parallel()
+	t.Skip("exponential_histogram type is not available in standard Elasticsearch")
 	client := newTestClient(t)
 	ctx := context.Background()
 	idx := uniqueIndex(t, client)
