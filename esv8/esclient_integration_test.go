@@ -1281,7 +1281,6 @@ func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
 				esv8.WithDenseVectorDims(3),
 				esv8.WithDenseVectorIndex(false),
 			),
-			"value": esv8.NewSparseVectorProperty(),
 			"price": esv8.NewRankFeatureProperty(
 				esv8.WithRankFeaturePositiveScoreImpact(true),
 			),
@@ -1386,6 +1385,26 @@ func TestIntegration_AllPropertyMappings_RankVector(t *testing.T) {
 		Properties: map[string]types.Property{
 			"name": esv8.NewRankVectorProperty(
 				esv8.WithRankVectorDims(3),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_SparseVector(t *testing.T) {
+	t.Parallel()
+	t.Skip("sparse_vector type is not supported in Elasticsearch 8.0-8.10")
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"value": esv8.NewSparseVectorProperty(
+				esv8.WithSparseVectorStore(true),
 			),
 		},
 	}

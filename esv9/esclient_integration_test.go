@@ -1274,7 +1274,6 @@ func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
 				esv9.WithDenseVectorDims(3),
 				esv9.WithDenseVectorIndex(false),
 			),
-			"value": esv9.NewSparseVectorProperty(),
 			"price": esv9.NewRankFeatureProperty(
 				esv9.WithRankFeaturePositiveScoreImpact(true),
 			),
@@ -1379,6 +1378,25 @@ func TestIntegration_AllPropertyMappings_RankVector(t *testing.T) {
 		Properties: map[string]types.Property{
 			"name": esv9.NewRankVectorProperty(
 				esv9.WithRankVectorDims(3),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_SparseVector(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"value": esv9.NewSparseVectorProperty(
+				esv9.WithSparseVectorStore(true),
 			),
 		},
 	}
