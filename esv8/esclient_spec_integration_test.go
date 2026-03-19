@@ -321,10 +321,8 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	assert.NilError(t, err)
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	src := "ctx._source.status = 'done'"
 	res, err := client.UpdateByQuery(ctx, idx, &updatebyquery.Request{
-		Query:  &matchAll,
-		Script: &types.Script{Source: &src},
+		Query: &matchAll,
 	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
