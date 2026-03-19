@@ -15,50 +15,18 @@ import (
 	autoscaling_get_autoscaling_capacity "github.com/elastic/go-elasticsearch/v8/typedapi/autoscaling/getautoscalingcapacity"
 	autoscaling_get_autoscaling_policy "github.com/elastic/go-elasticsearch/v8/typedapi/autoscaling/getautoscalingpolicy"
 	autoscaling_put_autoscaling_policy "github.com/elastic/go-elasticsearch/v8/typedapi/autoscaling/putautoscalingpolicy"
-	cat_aliases "github.com/elastic/go-elasticsearch/v8/typedapi/cat/aliases"
-	cat_allocation "github.com/elastic/go-elasticsearch/v8/typedapi/cat/allocation"
-	cat_component_templates "github.com/elastic/go-elasticsearch/v8/typedapi/cat/componenttemplates"
-	cat_count "github.com/elastic/go-elasticsearch/v8/typedapi/cat/count"
-	cat_fielddata "github.com/elastic/go-elasticsearch/v8/typedapi/cat/fielddata"
-	cat_health "github.com/elastic/go-elasticsearch/v8/typedapi/cat/health"
-	cat_help "github.com/elastic/go-elasticsearch/v8/typedapi/cat/help"
-	cat_indices "github.com/elastic/go-elasticsearch/v8/typedapi/cat/indices"
-	cat_master "github.com/elastic/go-elasticsearch/v8/typedapi/cat/master"
-	cat_ml_datafeeds "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mldatafeeds"
-	cat_ml_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mldataframeanalytics"
-	cat_ml_jobs "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mljobs"
-	cat_ml_trained_models "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mltrainedmodels"
-	cat_nodeattrs "github.com/elastic/go-elasticsearch/v8/typedapi/cat/nodeattrs"
-	cat_nodes "github.com/elastic/go-elasticsearch/v8/typedapi/cat/nodes"
-	cat_pending_tasks "github.com/elastic/go-elasticsearch/v8/typedapi/cat/pendingtasks"
-	cat_plugins "github.com/elastic/go-elasticsearch/v8/typedapi/cat/plugins"
-	cat_recovery "github.com/elastic/go-elasticsearch/v8/typedapi/cat/recovery"
-	cat_repositories "github.com/elastic/go-elasticsearch/v8/typedapi/cat/repositories"
-	cat_segments "github.com/elastic/go-elasticsearch/v8/typedapi/cat/segments"
-	cat_shards "github.com/elastic/go-elasticsearch/v8/typedapi/cat/shards"
-	cat_snapshots "github.com/elastic/go-elasticsearch/v8/typedapi/cat/snapshots"
-	cat_tasks "github.com/elastic/go-elasticsearch/v8/typedapi/cat/tasks"
-	cat_templates "github.com/elastic/go-elasticsearch/v8/typedapi/cat/templates"
-	cat_thread_pool "github.com/elastic/go-elasticsearch/v8/typedapi/cat/threadpool"
-	cat_transforms "github.com/elastic/go-elasticsearch/v8/typedapi/cat/transforms"
 	ccr_delete_auto_follow_pattern "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/deleteautofollowpattern"
-	ccr_follow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/follow"
 	ccr_follow_info "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/followinfo"
-	ccr_follow_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/followstats"
 	ccr_forget_follower "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/forgetfollower"
 	ccr_get_auto_follow_pattern "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/getautofollowpattern"
 	ccr_pause_auto_follow_pattern "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/pauseautofollowpattern"
-	ccr_pause_follow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/pausefollow"
 	ccr_put_auto_follow_pattern "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/putautofollowpattern"
 	ccr_resume_auto_follow_pattern "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/resumeautofollowpattern"
-	ccr_resume_follow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/resumefollow"
 	ccr_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/stats"
-	ccr_unfollow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/unfollow"
 	cluster_allocation_explain "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/allocationexplain"
 	cluster_delete_component_template "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/deletecomponenttemplate"
 	cluster_get_component_template "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/getcomponenttemplate"
 	cluster_get_settings "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/getsettings"
-	cluster_health "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/health"
 	cluster_info "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/info"
 	cluster_pending_tasks "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/pendingtasks"
 	cluster_put_component_template "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/putcomponenttemplate"
@@ -97,13 +65,8 @@ import (
 	connector_update_scheduling "github.com/elastic/go-elasticsearch/v8/typedapi/connector/updatescheduling"
 	connector_update_service_type "github.com/elastic/go-elasticsearch/v8/typedapi/connector/updateservicetype"
 	connector_update_status "github.com/elastic/go-elasticsearch/v8/typedapi/connector/updatestatus"
-	core_bulk "github.com/elastic/go-elasticsearch/v8/typedapi/core/bulk"
-	core_clear_scroll "github.com/elastic/go-elasticsearch/v8/typedapi/core/clearscroll"
-	core_close_point_in_time "github.com/elastic/go-elasticsearch/v8/typedapi/core/closepointintime"
-	core_count "github.com/elastic/go-elasticsearch/v8/typedapi/core/count"
 	core_create "github.com/elastic/go-elasticsearch/v8/typedapi/core/create"
 	core_delete "github.com/elastic/go-elasticsearch/v8/typedapi/core/delete"
-	core_delete_by_query "github.com/elastic/go-elasticsearch/v8/typedapi/core/deletebyquery"
 	core_delete_by_query_rethrottle "github.com/elastic/go-elasticsearch/v8/typedapi/core/deletebyqueryrethrottle"
 	core_delete_script "github.com/elastic/go-elasticsearch/v8/typedapi/core/deletescript"
 	core_explain "github.com/elastic/go-elasticsearch/v8/typedapi/core/explain"
@@ -116,24 +79,19 @@ import (
 	core_health_report "github.com/elastic/go-elasticsearch/v8/typedapi/core/healthreport"
 	core_index "github.com/elastic/go-elasticsearch/v8/typedapi/core/index"
 	core_knn_search "github.com/elastic/go-elasticsearch/v8/typedapi/core/knnsearch"
-	core_mget "github.com/elastic/go-elasticsearch/v8/typedapi/core/mget"
-	core_msearch "github.com/elastic/go-elasticsearch/v8/typedapi/core/msearch"
 	core_msearch_template "github.com/elastic/go-elasticsearch/v8/typedapi/core/msearchtemplate"
 	core_mtermvectors "github.com/elastic/go-elasticsearch/v8/typedapi/core/mtermvectors"
-	core_open_point_in_time "github.com/elastic/go-elasticsearch/v8/typedapi/core/openpointintime"
 	core_put_script "github.com/elastic/go-elasticsearch/v8/typedapi/core/putscript"
 	core_rank_eval "github.com/elastic/go-elasticsearch/v8/typedapi/core/rankeval"
 	core_reindex_rethrottle "github.com/elastic/go-elasticsearch/v8/typedapi/core/reindexrethrottle"
 	core_render_search_template "github.com/elastic/go-elasticsearch/v8/typedapi/core/rendersearchtemplate"
 	core_scripts_painless_execute "github.com/elastic/go-elasticsearch/v8/typedapi/core/scriptspainlessexecute"
-	core_scroll "github.com/elastic/go-elasticsearch/v8/typedapi/core/scroll"
 	core_search_mvt "github.com/elastic/go-elasticsearch/v8/typedapi/core/searchmvt"
 	core_search_shards "github.com/elastic/go-elasticsearch/v8/typedapi/core/searchshards"
 	core_search_template "github.com/elastic/go-elasticsearch/v8/typedapi/core/searchtemplate"
 	core_terms_enum "github.com/elastic/go-elasticsearch/v8/typedapi/core/termsenum"
 	core_termvectors "github.com/elastic/go-elasticsearch/v8/typedapi/core/termvectors"
 	core_update "github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
-	core_update_by_query "github.com/elastic/go-elasticsearch/v8/typedapi/core/updatebyquery"
 	core_update_by_query_rethrottle "github.com/elastic/go-elasticsearch/v8/typedapi/core/updatebyqueryrethrottle"
 	dangling_indices_delete_dangling_index "github.com/elastic/go-elasticsearch/v8/typedapi/danglingindices/deletedanglingindex"
 	dangling_indices_import_dangling_index "github.com/elastic/go-elasticsearch/v8/typedapi/danglingindices/importdanglingindex"
@@ -151,7 +109,6 @@ import (
 	esql_async_query_delete "github.com/elastic/go-elasticsearch/v8/typedapi/esql/asyncquerydelete"
 	esql_async_query_get "github.com/elastic/go-elasticsearch/v8/typedapi/esql/asyncqueryget"
 	esql_async_query_stop "github.com/elastic/go-elasticsearch/v8/typedapi/esql/asyncquerystop"
-	esql_query "github.com/elastic/go-elasticsearch/v8/typedapi/esql/query"
 	features_get_features "github.com/elastic/go-elasticsearch/v8/typedapi/features/getfeatures"
 	features_reset_features "github.com/elastic/go-elasticsearch/v8/typedapi/features/resetfeatures"
 	fleet_global_checkpoints "github.com/elastic/go-elasticsearch/v8/typedapi/fleet/globalcheckpoints"
@@ -225,7 +182,6 @@ import (
 	indices_simulate_index_template "github.com/elastic/go-elasticsearch/v8/typedapi/indices/simulateindextemplate"
 	indices_simulate_template "github.com/elastic/go-elasticsearch/v8/typedapi/indices/simulatetemplate"
 	indices_split "github.com/elastic/go-elasticsearch/v8/typedapi/indices/split"
-	indices_stats "github.com/elastic/go-elasticsearch/v8/typedapi/indices/stats"
 	indices_update_aliases "github.com/elastic/go-elasticsearch/v8/typedapi/indices/updatealiases"
 	indices_validate_query "github.com/elastic/go-elasticsearch/v8/typedapi/indices/validatequery"
 	inference_chat_completion_unified "github.com/elastic/go-elasticsearch/v8/typedapi/inference/chatcompletionunified"
@@ -283,16 +239,13 @@ import (
 	migration_get_feature_upgrade_status "github.com/elastic/go-elasticsearch/v8/typedapi/migration/getfeatureupgradestatus"
 	migration_post_feature_upgrade "github.com/elastic/go-elasticsearch/v8/typedapi/migration/postfeatureupgrade"
 	ml_clear_trained_model_deployment_cache "github.com/elastic/go-elasticsearch/v8/typedapi/ml/cleartrainedmodeldeploymentcache"
-	ml_close_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/closejob"
 	ml_delete_calendar "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletecalendar"
 	ml_delete_calendar_event "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletecalendarevent"
 	ml_delete_calendar_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletecalendarjob"
-	ml_delete_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletedatafeed"
 	ml_delete_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletedataframeanalytics"
 	ml_delete_expired_data "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deleteexpireddata"
 	ml_delete_filter "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletefilter"
 	ml_delete_forecast "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deleteforecast"
-	ml_delete_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletejob"
 	ml_delete_model_snapshot "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletemodelsnapshot"
 	ml_delete_trained_model "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletetrainedmodel"
 	ml_delete_trained_model_alias "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletetrainedmodelalias"
@@ -305,13 +258,11 @@ import (
 	ml_get_calendar_events "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getcalendarevents"
 	ml_get_calendars "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getcalendars"
 	ml_get_categories "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getcategories"
-	ml_get_datafeeds "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getdatafeeds"
 	ml_get_datafeed_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getdatafeedstats"
 	ml_get_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getdataframeanalytics"
 	ml_get_data_frame_analytics_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getdataframeanalyticsstats"
 	ml_get_filters "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getfilters"
 	ml_get_influencers "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getinfluencers"
-	ml_get_jobs "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getjobs"
 	ml_get_job_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getjobstats"
 	ml_get_memory_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getmemorystats"
 	ml_get_model_snapshots "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getmodelsnapshots"
@@ -322,17 +273,14 @@ import (
 	ml_get_trained_models_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ml/gettrainedmodelsstats"
 	ml_infer_trained_model "github.com/elastic/go-elasticsearch/v8/typedapi/ml/infertrainedmodel"
 	ml_info "github.com/elastic/go-elasticsearch/v8/typedapi/ml/info"
-	ml_open_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/openjob"
 	ml_post_calendar_events "github.com/elastic/go-elasticsearch/v8/typedapi/ml/postcalendarevents"
 	ml_post_data "github.com/elastic/go-elasticsearch/v8/typedapi/ml/postdata"
 	ml_preview_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/previewdatafeed"
 	ml_preview_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/ml/previewdataframeanalytics"
 	ml_put_calendar "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putcalendar"
 	ml_put_calendar_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putcalendarjob"
-	ml_put_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putdatafeed"
 	ml_put_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putdataframeanalytics"
 	ml_put_filter "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putfilter"
-	ml_put_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putjob"
 	ml_put_trained_model "github.com/elastic/go-elasticsearch/v8/typedapi/ml/puttrainedmodel"
 	ml_put_trained_model_alias "github.com/elastic/go-elasticsearch/v8/typedapi/ml/puttrainedmodelalias"
 	ml_put_trained_model_definition_part "github.com/elastic/go-elasticsearch/v8/typedapi/ml/puttrainedmodeldefinitionpart"
@@ -340,10 +288,8 @@ import (
 	ml_reset_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/resetjob"
 	ml_revert_model_snapshot "github.com/elastic/go-elasticsearch/v8/typedapi/ml/revertmodelsnapshot"
 	ml_set_upgrade_mode "github.com/elastic/go-elasticsearch/v8/typedapi/ml/setupgrademode"
-	ml_start_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/startdatafeed"
 	ml_start_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/ml/startdataframeanalytics"
 	ml_start_trained_model_deployment "github.com/elastic/go-elasticsearch/v8/typedapi/ml/starttrainedmodeldeployment"
-	ml_stop_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/stopdatafeed"
 	ml_stop_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/ml/stopdataframeanalytics"
 	ml_stop_trained_model_deployment "github.com/elastic/go-elasticsearch/v8/typedapi/ml/stoptrainedmodeldeployment"
 	ml_update_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/updatedatafeed"
@@ -497,9 +443,7 @@ import (
 	synonyms_get_synonyms_sets "github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/getsynonymssets"
 	synonyms_put_synonym "github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/putsynonym"
 	synonyms_put_synonym_rule "github.com/elastic/go-elasticsearch/v8/typedapi/synonyms/putsynonymrule"
-	tasks_cancel "github.com/elastic/go-elasticsearch/v8/typedapi/tasks/cancel"
 	tasks_get "github.com/elastic/go-elasticsearch/v8/typedapi/tasks/get"
-	tasks_list "github.com/elastic/go-elasticsearch/v8/typedapi/tasks/list"
 	text_structure_find_field_structure "github.com/elastic/go-elasticsearch/v8/typedapi/textstructure/findfieldstructure"
 	text_structure_find_message_structure "github.com/elastic/go-elasticsearch/v8/typedapi/textstructure/findmessagestructure"
 	text_structure_find_structure "github.com/elastic/go-elasticsearch/v8/typedapi/textstructure/findstructure"
@@ -564,136 +508,16 @@ func (c *esClient) AutoscalingPutAutoscalingPolicy(ctx context.Context, name str
 	return c.typedClient.Autoscaling.PutAutoscalingPolicy(name).Request(req).Do(ctx)
 }
 
-func (c *esClient) Bulk(ctx context.Context, req *core_bulk.Request) (*core_bulk.Response, error) {
-	return c.typedClient.Bulk().Request(req).Do(ctx)
-}
-
 func (c *esClient) Capabilities(ctx context.Context) (bool, error) {
 	return c.typedClient.Capabilities.Capabilities().Do(ctx)
-}
-
-func (c *esClient) CatAliases(ctx context.Context) (cat_aliases.Response, error) {
-	return c.typedClient.Cat.Aliases().Do(ctx)
-}
-
-func (c *esClient) CatAllocation(ctx context.Context) (cat_allocation.Response, error) {
-	return c.typedClient.Cat.Allocation().Do(ctx)
-}
-
-func (c *esClient) CatCircuitBreaker(ctx context.Context) (json.RawMessage, error) {
-	return c.performRaw(ctx, "GET", "/_cat/circuit_breaker", nil)
-}
-
-func (c *esClient) CatComponentTemplates(ctx context.Context) (cat_component_templates.Response, error) {
-	return c.typedClient.Cat.ComponentTemplates().Do(ctx)
-}
-
-func (c *esClient) CatCount(ctx context.Context) (cat_count.Response, error) {
-	return c.typedClient.Cat.Count().Do(ctx)
-}
-
-func (c *esClient) CatFielddata(ctx context.Context) (cat_fielddata.Response, error) {
-	return c.typedClient.Cat.Fielddata().Do(ctx)
-}
-
-func (c *esClient) CatHealth(ctx context.Context) (cat_health.Response, error) {
-	return c.typedClient.Cat.Health().Do(ctx)
-}
-
-func (c *esClient) CatHelp(ctx context.Context) (*cat_help.Response, error) {
-	return c.typedClient.Cat.Help().Do(ctx)
-}
-
-func (c *esClient) CatIndices(ctx context.Context) (cat_indices.Response, error) {
-	return c.typedClient.Cat.Indices().Do(ctx)
-}
-
-func (c *esClient) CatMaster(ctx context.Context) (cat_master.Response, error) {
-	return c.typedClient.Cat.Master().Do(ctx)
-}
-
-func (c *esClient) CatMlDataFrameAnalytics(ctx context.Context) (cat_ml_data_frame_analytics.Response, error) {
-	return c.typedClient.Cat.MlDataFrameAnalytics().Do(ctx)
-}
-
-func (c *esClient) CatMlDatafeeds(ctx context.Context) (cat_ml_datafeeds.Response, error) {
-	return c.typedClient.Cat.MlDatafeeds().Do(ctx)
-}
-
-func (c *esClient) CatMlJobs(ctx context.Context) (cat_ml_jobs.Response, error) {
-	return c.typedClient.Cat.MlJobs().Do(ctx)
-}
-
-func (c *esClient) CatMlTrainedModels(ctx context.Context) (cat_ml_trained_models.Response, error) {
-	return c.typedClient.Cat.MlTrainedModels().Do(ctx)
-}
-
-func (c *esClient) CatNodeattrs(ctx context.Context) (cat_nodeattrs.Response, error) {
-	return c.typedClient.Cat.Nodeattrs().Do(ctx)
-}
-
-func (c *esClient) CatNodes(ctx context.Context) (cat_nodes.Response, error) {
-	return c.typedClient.Cat.Nodes().Do(ctx)
-}
-
-func (c *esClient) CatPendingTasks(ctx context.Context) (cat_pending_tasks.Response, error) {
-	return c.typedClient.Cat.PendingTasks().Do(ctx)
-}
-
-func (c *esClient) CatPlugins(ctx context.Context) (cat_plugins.Response, error) {
-	return c.typedClient.Cat.Plugins().Do(ctx)
-}
-
-func (c *esClient) CatRecovery(ctx context.Context) (cat_recovery.Response, error) {
-	return c.typedClient.Cat.Recovery().Do(ctx)
-}
-
-func (c *esClient) CatRepositories(ctx context.Context) (cat_repositories.Response, error) {
-	return c.typedClient.Cat.Repositories().Do(ctx)
-}
-
-func (c *esClient) CatSegments(ctx context.Context) (cat_segments.Response, error) {
-	return c.typedClient.Cat.Segments().Do(ctx)
-}
-
-func (c *esClient) CatShards(ctx context.Context) (cat_shards.Response, error) {
-	return c.typedClient.Cat.Shards().Do(ctx)
-}
-
-func (c *esClient) CatSnapshots(ctx context.Context) (cat_snapshots.Response, error) {
-	return c.typedClient.Cat.Snapshots().Do(ctx)
-}
-
-func (c *esClient) CatTasks(ctx context.Context) (cat_tasks.Response, error) {
-	return c.typedClient.Cat.Tasks().Do(ctx)
-}
-
-func (c *esClient) CatTemplates(ctx context.Context) (cat_templates.Response, error) {
-	return c.typedClient.Cat.Templates().Do(ctx)
-}
-
-func (c *esClient) CatThreadPool(ctx context.Context) (cat_thread_pool.Response, error) {
-	return c.typedClient.Cat.ThreadPool().Do(ctx)
-}
-
-func (c *esClient) CatTransforms(ctx context.Context) (cat_transforms.Response, error) {
-	return c.typedClient.Cat.Transforms().Do(ctx)
 }
 
 func (c *esClient) CcrDeleteAutoFollowPattern(ctx context.Context, name string) (*ccr_delete_auto_follow_pattern.Response, error) {
 	return c.typedClient.Ccr.DeleteAutoFollowPattern(name).Do(ctx)
 }
 
-func (c *esClient) CcrFollow(ctx context.Context, index string, req *ccr_follow.Request) (*ccr_follow.Response, error) {
-	return c.typedClient.Ccr.Follow(index).Request(req).Do(ctx)
-}
-
 func (c *esClient) CcrFollowInfo(ctx context.Context, index string) (*ccr_follow_info.Response, error) {
 	return c.typedClient.Ccr.FollowInfo(index).Do(ctx)
-}
-
-func (c *esClient) CcrFollowStats(ctx context.Context, index string) (*ccr_follow_stats.Response, error) {
-	return c.typedClient.Ccr.FollowStats(index).Do(ctx)
 }
 
 func (c *esClient) CcrForgetFollower(ctx context.Context, index string, req *ccr_forget_follower.Request) (*ccr_forget_follower.Response, error) {
@@ -708,10 +532,6 @@ func (c *esClient) CcrPauseAutoFollowPattern(ctx context.Context, name string) (
 	return c.typedClient.Ccr.PauseAutoFollowPattern(name).Do(ctx)
 }
 
-func (c *esClient) CcrPauseFollow(ctx context.Context, index string) (*ccr_pause_follow.Response, error) {
-	return c.typedClient.Ccr.PauseFollow(index).Do(ctx)
-}
-
 func (c *esClient) CcrPutAutoFollowPattern(ctx context.Context, name string, req *ccr_put_auto_follow_pattern.Request) (*ccr_put_auto_follow_pattern.Response, error) {
 	return c.typedClient.Ccr.PutAutoFollowPattern(name).Request(req).Do(ctx)
 }
@@ -720,24 +540,8 @@ func (c *esClient) CcrResumeAutoFollowPattern(ctx context.Context, name string) 
 	return c.typedClient.Ccr.ResumeAutoFollowPattern(name).Do(ctx)
 }
 
-func (c *esClient) CcrResumeFollow(ctx context.Context, index string, req *ccr_resume_follow.Request) (*ccr_resume_follow.Response, error) {
-	return c.typedClient.Ccr.ResumeFollow(index).Request(req).Do(ctx)
-}
-
 func (c *esClient) CcrStats(ctx context.Context) (*ccr_stats.Response, error) {
 	return c.typedClient.Ccr.Stats().Do(ctx)
-}
-
-func (c *esClient) CcrUnfollow(ctx context.Context, index string) (*ccr_unfollow.Response, error) {
-	return c.typedClient.Ccr.Unfollow(index).Do(ctx)
-}
-
-func (c *esClient) ClearScroll(ctx context.Context, req *core_clear_scroll.Request) (*core_clear_scroll.Response, error) {
-	return c.typedClient.ClearScroll().Request(req).Do(ctx)
-}
-
-func (c *esClient) ClosePointInTime(ctx context.Context, req *core_close_point_in_time.Request) (*core_close_point_in_time.Response, error) {
-	return c.typedClient.ClosePointInTime().Request(req).Do(ctx)
 }
 
 func (c *esClient) ClusterAllocationExplain(ctx context.Context, req *cluster_allocation_explain.Request) (*cluster_allocation_explain.Response, error) {
@@ -762,10 +566,6 @@ func (c *esClient) ClusterGetComponentTemplate(ctx context.Context) (*cluster_ge
 
 func (c *esClient) ClusterGetSettings(ctx context.Context) (*cluster_get_settings.Response, error) {
 	return c.typedClient.Cluster.GetSettings().Do(ctx)
-}
-
-func (c *esClient) ClusterHealth(ctx context.Context) (*cluster_health.Response, error) {
-	return c.typedClient.Cluster.Health().Do(ctx)
 }
 
 func (c *esClient) ClusterInfo(ctx context.Context, target string) (*cluster_info.Response, error) {
@@ -940,10 +740,6 @@ func (c *esClient) ConnectorUpdateStatus(ctx context.Context, connectorid string
 	return c.typedClient.Connector.UpdateStatus(connectorid).Request(req).Do(ctx)
 }
 
-func (c *esClient) Count(ctx context.Context, req *core_count.Request) (*core_count.Response, error) {
-	return c.typedClient.Count().Request(req).Do(ctx)
-}
-
 func (c *esClient) Create(ctx context.Context, index string, id string, req *core_create.Request) (*core_create.Response, error) {
 	return c.typedClient.Create(index, id).Request(req).Do(ctx)
 }
@@ -962,10 +758,6 @@ func (c *esClient) DanglingIndicesListDanglingIndices(ctx context.Context) (*dan
 
 func (c *esClient) Delete(ctx context.Context, index string, id string) (*core_delete.Response, error) {
 	return c.typedClient.Delete(index, id).Do(ctx)
-}
-
-func (c *esClient) DeleteByQuery(ctx context.Context, index string, req *core_delete_by_query.Request) (*core_delete_by_query.Response, error) {
-	return c.typedClient.DeleteByQuery(index).Request(req).Do(ctx)
 }
 
 func (c *esClient) DeleteByQueryRethrottle(ctx context.Context, taskid string) (*core_delete_by_query_rethrottle.Response, error) {
@@ -1026,10 +818,6 @@ func (c *esClient) EsqlAsyncQueryGet(ctx context.Context, id string) (esql_async
 
 func (c *esClient) EsqlAsyncQueryStop(ctx context.Context, id string) (esql_async_query_stop.Response, error) {
 	return c.typedClient.Esql.AsyncQueryStop(id).Do(ctx)
-}
-
-func (c *esClient) EsqlQuery(ctx context.Context, req *esql_query.Request) (esql_query.Response, error) {
-	return c.typedClient.Esql.Query().Request(req).Do(ctx)
 }
 
 func (c *esClient) EsqlDeleteView(ctx context.Context, name string) (json.RawMessage, error) {
@@ -1448,10 +1236,6 @@ func (c *esClient) IndicesSplit(ctx context.Context, index string, target string
 	return c.typedClient.Indices.Split(index, target).Request(req).Do(ctx)
 }
 
-func (c *esClient) IndicesStats(ctx context.Context) (*indices_stats.Response, error) {
-	return c.typedClient.Indices.Stats().Do(ctx)
-}
-
 func (c *esClient) IndicesUpdateAliases(ctx context.Context, req *indices_update_aliases.Request) (*indices_update_aliases.Response, error) {
 	return c.typedClient.Indices.UpdateAliases().Request(req).Do(ctx)
 }
@@ -1733,10 +1517,6 @@ func (c *esClient) LogstashPutPipeline(ctx context.Context, id string, req *logs
 	return res.StatusCode >= 200 && res.StatusCode < 300, nil
 }
 
-func (c *esClient) Mget(ctx context.Context, req *core_mget.Request) (*core_mget.Response, error) {
-	return c.typedClient.Mget().Request(req).Do(ctx)
-}
-
 func (c *esClient) MigrationDeprecations(ctx context.Context) (*migration_deprecations.Response, error) {
 	return c.typedClient.Migration.Deprecations().Do(ctx)
 }
@@ -1751,10 +1531,6 @@ func (c *esClient) MigrationPostFeatureUpgrade(ctx context.Context) (*migration_
 
 func (c *esClient) MlClearTrainedModelDeploymentCache(ctx context.Context, modelid string) (*ml_clear_trained_model_deployment_cache.Response, error) {
 	return c.typedClient.Ml.ClearTrainedModelDeploymentCache(modelid).Do(ctx)
-}
-
-func (c *esClient) MlCloseJob(ctx context.Context, jobid string, req *ml_close_job.Request) (*ml_close_job.Response, error) {
-	return c.typedClient.Ml.CloseJob(jobid).Request(req).Do(ctx)
 }
 
 func (c *esClient) MlDeleteCalendar(ctx context.Context, calendarid string) (*ml_delete_calendar.Response, error) {
@@ -1773,10 +1549,6 @@ func (c *esClient) MlDeleteDataFrameAnalytics(ctx context.Context, id string) (*
 	return c.typedClient.Ml.DeleteDataFrameAnalytics(id).Do(ctx)
 }
 
-func (c *esClient) MlDeleteDatafeed(ctx context.Context, datafeedid string) (*ml_delete_datafeed.Response, error) {
-	return c.typedClient.Ml.DeleteDatafeed(datafeedid).Do(ctx)
-}
-
 func (c *esClient) MlDeleteExpiredData(ctx context.Context, req *ml_delete_expired_data.Request) (*ml_delete_expired_data.Response, error) {
 	return c.typedClient.Ml.DeleteExpiredData().Request(req).Do(ctx)
 }
@@ -1787,10 +1559,6 @@ func (c *esClient) MlDeleteFilter(ctx context.Context, filterid string) (*ml_del
 
 func (c *esClient) MlDeleteForecast(ctx context.Context, jobid string) (*ml_delete_forecast.Response, error) {
 	return c.typedClient.Ml.DeleteForecast(jobid).Do(ctx)
-}
-
-func (c *esClient) MlDeleteJob(ctx context.Context, jobid string) (*ml_delete_job.Response, error) {
-	return c.typedClient.Ml.DeleteJob(jobid).Do(ctx)
 }
 
 func (c *esClient) MlDeleteModelSnapshot(ctx context.Context, jobid string, snapshotid string) (*ml_delete_model_snapshot.Response, error) {
@@ -1853,10 +1621,6 @@ func (c *esClient) MlGetDatafeedStats(ctx context.Context) (*ml_get_datafeed_sta
 	return c.typedClient.Ml.GetDatafeedStats().Do(ctx)
 }
 
-func (c *esClient) MlGetDatafeeds(ctx context.Context) (*ml_get_datafeeds.Response, error) {
-	return c.typedClient.Ml.GetDatafeeds().Do(ctx)
-}
-
 func (c *esClient) MlGetFilters(ctx context.Context) (*ml_get_filters.Response, error) {
 	return c.typedClient.Ml.GetFilters().Do(ctx)
 }
@@ -1867,10 +1631,6 @@ func (c *esClient) MlGetInfluencers(ctx context.Context, jobid string, req *ml_g
 
 func (c *esClient) MlGetJobStats(ctx context.Context) (*ml_get_job_stats.Response, error) {
 	return c.typedClient.Ml.GetJobStats().Do(ctx)
-}
-
-func (c *esClient) MlGetJobs(ctx context.Context) (*ml_get_jobs.Response, error) {
-	return c.typedClient.Ml.GetJobs().Do(ctx)
 }
 
 func (c *esClient) MlGetMemoryStats(ctx context.Context) (*ml_get_memory_stats.Response, error) {
@@ -1909,10 +1669,6 @@ func (c *esClient) MlInfo(ctx context.Context) (*ml_info.Response, error) {
 	return c.typedClient.Ml.Info().Do(ctx)
 }
 
-func (c *esClient) MlOpenJob(ctx context.Context, jobid string, req *ml_open_job.Request) (*ml_open_job.Response, error) {
-	return c.typedClient.Ml.OpenJob(jobid).Request(req).Do(ctx)
-}
-
 func (c *esClient) MlPostCalendarEvents(ctx context.Context, calendarid string, req *ml_post_calendar_events.Request) (*ml_post_calendar_events.Response, error) {
 	return c.typedClient.Ml.PostCalendarEvents(calendarid).Request(req).Do(ctx)
 }
@@ -1941,16 +1697,8 @@ func (c *esClient) MlPutDataFrameAnalytics(ctx context.Context, id string, req *
 	return c.typedClient.Ml.PutDataFrameAnalytics(id).Request(req).Do(ctx)
 }
 
-func (c *esClient) MlPutDatafeed(ctx context.Context, datafeedid string, req *ml_put_datafeed.Request) (*ml_put_datafeed.Response, error) {
-	return c.typedClient.Ml.PutDatafeed(datafeedid).Request(req).Do(ctx)
-}
-
 func (c *esClient) MlPutFilter(ctx context.Context, filterid string, req *ml_put_filter.Request) (*ml_put_filter.Response, error) {
 	return c.typedClient.Ml.PutFilter(filterid).Request(req).Do(ctx)
-}
-
-func (c *esClient) MlPutJob(ctx context.Context, jobid string, req *ml_put_job.Request) (*ml_put_job.Response, error) {
-	return c.typedClient.Ml.PutJob(jobid).Request(req).Do(ctx)
 }
 
 func (c *esClient) MlPutTrainedModel(ctx context.Context, modelid string, req *ml_put_trained_model.Request) (*ml_put_trained_model.Response, error) {
@@ -1985,20 +1733,12 @@ func (c *esClient) MlStartDataFrameAnalytics(ctx context.Context, id string) (*m
 	return c.typedClient.Ml.StartDataFrameAnalytics(id).Do(ctx)
 }
 
-func (c *esClient) MlStartDatafeed(ctx context.Context, datafeedid string, req *ml_start_datafeed.Request) (*ml_start_datafeed.Response, error) {
-	return c.typedClient.Ml.StartDatafeed(datafeedid).Request(req).Do(ctx)
-}
-
 func (c *esClient) MlStartTrainedModelDeployment(ctx context.Context, modelid string, req *ml_start_trained_model_deployment.Request) (*ml_start_trained_model_deployment.Response, error) {
 	return c.typedClient.Ml.StartTrainedModelDeployment(modelid).Request(req).Do(ctx)
 }
 
 func (c *esClient) MlStopDataFrameAnalytics(ctx context.Context, id string) (*ml_stop_data_frame_analytics.Response, error) {
 	return c.typedClient.Ml.StopDataFrameAnalytics(id).Do(ctx)
-}
-
-func (c *esClient) MlStopDatafeed(ctx context.Context, datafeedid string, req *ml_stop_datafeed.Request) (*ml_stop_datafeed.Response, error) {
-	return c.typedClient.Ml.StopDatafeed(datafeedid).Request(req).Do(ctx)
 }
 
 func (c *esClient) MlStopTrainedModelDeployment(ctx context.Context, modelid string) (*ml_stop_trained_model_deployment.Response, error) {
@@ -2045,10 +1785,6 @@ func (c *esClient) MonitoringBulk(ctx context.Context, req *monitoring_bulk.Requ
 	return c.typedClient.Monitoring.Bulk().Request(req).Do(ctx)
 }
 
-func (c *esClient) Msearch(ctx context.Context, req *core_msearch.Request) (*core_msearch.Response, error) {
-	return c.typedClient.Msearch().Request(req).Do(ctx)
-}
-
 func (c *esClient) MsearchTemplate(ctx context.Context, req *core_msearch_template.Request) (*core_msearch_template.Response, error) {
 	return c.typedClient.MsearchTemplate().Request(req).Do(ctx)
 }
@@ -2083,10 +1819,6 @@ func (c *esClient) NodesStats(ctx context.Context) (*nodes_stats.Response, error
 
 func (c *esClient) NodesUsage(ctx context.Context) (*nodes_usage.Response, error) {
 	return c.typedClient.Nodes.Usage().Do(ctx)
-}
-
-func (c *esClient) OpenPointInTime(ctx context.Context, index string, keepAlive string, req *core_open_point_in_time.Request) (*core_open_point_in_time.Response, error) {
-	return c.typedClient.OpenPointInTime(index).KeepAlive(keepAlive).Request(req).Do(ctx)
 }
 
 func (c *esClient) Ping(ctx context.Context) (bool, error) {
@@ -2215,10 +1947,6 @@ func (c *esClient) RollupStopJob(ctx context.Context, id string) (*rollup_stop_j
 
 func (c *esClient) ScriptsPainlessExecute(ctx context.Context, req *core_scripts_painless_execute.Request) (*core_scripts_painless_execute.Response, error) {
 	return c.typedClient.ScriptsPainlessExecute().Request(req).Do(ctx)
-}
-
-func (c *esClient) Scroll(ctx context.Context, req *core_scroll.Request) (*core_scroll.Response, error) {
-	return c.typedClient.Scroll().Request(req).Do(ctx)
 }
 
 func (c *esClient) SearchApplicationDelete(ctx context.Context, name string) (*search_application_delete.Response, error) {
@@ -2726,16 +2454,8 @@ func (c *esClient) SynonymsPutSynonymRule(ctx context.Context, setid string, rul
 	return c.typedClient.Synonyms.PutSynonymRule(setid, ruleid).Request(req).Do(ctx)
 }
 
-func (c *esClient) TasksCancel(ctx context.Context) (*tasks_cancel.Response, error) {
-	return c.typedClient.Tasks.Cancel().Do(ctx)
-}
-
 func (c *esClient) TasksGet(ctx context.Context, taskid string) (*tasks_get.Response, error) {
 	return c.typedClient.Tasks.Get(taskid).Do(ctx)
-}
-
-func (c *esClient) TasksList(ctx context.Context) (*tasks_list.Response, error) {
-	return c.typedClient.Tasks.List().Do(ctx)
 }
 
 func (c *esClient) TermsEnum(ctx context.Context, index string, req *core_terms_enum.Request) (*core_terms_enum.Response, error) {
@@ -2816,10 +2536,6 @@ func (c *esClient) TransformUpgradeTransforms(ctx context.Context) (*transform_u
 
 func (c *esClient) Update(ctx context.Context, index string, id string, req *core_update.Request) (*core_update.Response, error) {
 	return c.typedClient.Update(index, id).Request(req).Do(ctx)
-}
-
-func (c *esClient) UpdateByQuery(ctx context.Context, index string, req *core_update_by_query.Request) (*core_update_by_query.Response, error) {
-	return c.typedClient.UpdateByQuery(index).Request(req).Do(ctx)
 }
 
 func (c *esClient) UpdateByQueryRethrottle(ctx context.Context, taskid string) (*core_update_by_query_rethrottle.Response, error) {
