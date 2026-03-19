@@ -20,8 +20,8 @@ import (
 	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
 
-	esv9 "github.com/tomtwinkle/es-typed-go/esv9"
 	"github.com/tomtwinkle/es-typed-go/estype"
+	esv9 "github.com/tomtwinkle/es-typed-go/esv9"
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
@@ -906,13 +906,18 @@ func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
 				esv9.WithTextIndexPhrases(false),
 				esv9.WithTextPositionIncrementGap(100),
 				esv9.WithTextRawKeyword(256),
+				esv9.WithTextFields(map[string]types.Property{
+					"raw": esv9.NewKeywordProperty(esv9.WithKeywordIgnoreAbove(256)),
+				}),
 			),
 			"status": esv9.NewKeywordProperty(
 				esv9.WithKeywordIgnoreAbove(256),
 				esv9.WithKeywordDocValues(true),
 				esv9.WithKeywordIndex(true),
 				esv9.WithKeywordStore(false),
+				esv9.WithKeywordNullValue("N/A"),
 				esv9.WithKeywordNorms(false),
+				esv9.WithKeywordSimilarity("BM25"),
 				esv9.WithKeywordEagerGlobalOrdinals(false),
 				esv9.WithKeywordSplitQueriesOnWhitespace(false),
 			),
@@ -920,6 +925,7 @@ func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
 			"tags": esv9.NewWildcardProperty(
 				esv9.WithWildcardIgnoreAbove(512),
 				esv9.WithWildcardDocValues(true),
+				esv9.WithWildcardNullValue(""),
 				esv9.WithWildcardStore(false),
 			),
 			"name": esv9.NewCompletionProperty(
@@ -932,6 +938,7 @@ func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
 			"category": esv9.NewSearchAsYouTypeProperty(
 				esv9.WithSearchAsYouTypeAnalyzer("standard"),
 				esv9.WithSearchAsYouTypeSearchAnalyzer("standard"),
+				esv9.WithSearchAsYouTypeSearchQuoteAnalyzer("standard"),
 				esv9.WithSearchAsYouTypeMaxShingleSize(3),
 				esv9.WithSearchAsYouTypeIndex(true),
 				esv9.WithSearchAsYouTypeStore(false),
@@ -1013,6 +1020,7 @@ func TestIntegration_AllPropertyMappings_Numeric(t *testing.T) {
 				esv9.WithHalfFloatNumberNullValue(0.0),
 			),
 			"enabled": esv9.NewUnsignedLongNumberProperty(
+				esv9.WithUnsignedLongNumberCoerce(true),
 				esv9.WithUnsignedLongNumberDocValues(true),
 				esv9.WithUnsignedLongNumberIgnoreMalformed(false),
 				esv9.WithUnsignedLongNumberIndex(true),
@@ -1107,6 +1115,7 @@ func TestIntegration_AllPropertyMappings_Geo(t *testing.T) {
 				esv9.WithPointIgnoreMalformed(true),
 				esv9.WithPointIgnoreZValue(true),
 				esv9.WithPointDocValues(true),
+				esv9.WithPointNullValue("POINT(0 0)"),
 				esv9.WithPointStore(false),
 			),
 		},
@@ -1184,20 +1193,25 @@ func TestIntegration_AllPropertyMappings_ObjectAndNested(t *testing.T) {
 					"name":  esv9.NewKeywordProperty(),
 					"price": esv9.NewDoubleNumberProperty(),
 				}),
+				esv9.WithObjectStore(false),
 			),
 			"tags": esv9.NewNestedProperty(
+				esv9.WithNestedEnabled(true),
 				esv9.WithNestedIncludeInParent(false),
 				esv9.WithNestedIncludeInRoot(false),
 				esv9.WithNestedProperties(map[string]types.Property{
 					"name":  esv9.NewKeywordProperty(),
 					"value": esv9.NewKeywordProperty(),
 				}),
+				esv9.WithNestedStore(false),
 			),
 			"category": esv9.NewFlattenedProperty(
 				esv9.WithFlattenedDepthLimit(5),
 				esv9.WithFlattenedDocValues(true),
 				esv9.WithFlattenedIndex(true),
 				esv9.WithFlattenedIgnoreAbove(1024),
+				esv9.WithFlattenedNullValue(""),
+				esv9.WithFlattenedSimilarity("BM25"),
 				esv9.WithFlattenedEagerGlobalOrdinals(false),
 				esv9.WithFlattenedSplitQueriesOnWhitespace(false),
 			),
@@ -1244,6 +1258,7 @@ func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
 				esv9.WithIpDocValues(true),
 				esv9.WithIpIgnoreMalformed(true),
 				esv9.WithIpIndex(true),
+				esv9.WithIpNullValue("0.0.0.0"),
 				esv9.WithIpStore(false),
 			),
 			"name": esv9.NewBinaryProperty(
@@ -1278,6 +1293,7 @@ func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
 			"type": esv9.NewAggregateMetricDoubleProperty(
 				esv9.WithAggregateMetricDoubleDefaultMetric("max"),
 				esv9.WithAggregateMetricDoubleMetrics([]string{"min", "max", "sum", "value_count"}),
+				esv9.WithAggregateMetricDoubleIgnoreMalformed(true),
 			),
 			"items": esv9.NewPercolatorProperty(),
 		},
@@ -1463,6 +1479,36 @@ func TestIntegration_AllPropertyMappings_ExponentialHistogram(t *testing.T) {
 	}
 
 	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_KeywordNormalizer(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	settings := &types.IndexSettings{
+		NumberOfReplicas: func() *string { s := "0"; return &s }(),
+		Analysis: &types.IndexSettingsAnalysis{
+			Normalizer: map[string]types.Normalizer{
+				"my_normalizer": types.LowercaseNormalizer{
+					Type: "lowercase",
+				},
+			},
+		},
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"status": esv9.NewKeywordProperty(
+				esv9.WithKeywordNormalizer("my_normalizer"),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, settings, mappings)
 	assert.NilError(t, err)
 	assert.Assert(t, res.Acknowledged)
 }

@@ -12,16 +12,16 @@ import (
 	"time"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
-	"github.com/google/uuid"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
 
-	esv8 "github.com/tomtwinkle/es-typed-go/esv8"
 	"github.com/tomtwinkle/es-typed-go/estype"
+	esv8 "github.com/tomtwinkle/es-typed-go/esv8"
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
@@ -895,423 +895,439 @@ func TestIntegration_SearchWithRequest(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"title": esv8.NewTextProperty(
-esv8.WithTextAnalyzer("standard"),
-esv8.WithTextSearchAnalyzer("standard"),
-esv8.WithTextSearchQuoteAnalyzer("standard"),
-esv8.WithTextFielddata(false),
-esv8.WithTextIndex(true),
-esv8.WithTextStore(false),
-esv8.WithTextNorms(true),
-esv8.WithTextSimilarity("BM25"),
-esv8.WithTextIndexPhrases(false),
-esv8.WithTextPositionIncrementGap(100),
-esv8.WithTextRawKeyword(256),
-),
-"status": esv8.NewKeywordProperty(
-esv8.WithKeywordIgnoreAbove(256),
-esv8.WithKeywordDocValues(true),
-esv8.WithKeywordIndex(true),
-esv8.WithKeywordStore(false),
-esv8.WithKeywordNorms(false),
-esv8.WithKeywordEagerGlobalOrdinals(false),
-esv8.WithKeywordSplitQueriesOnWhitespace(false),
-),
-"type": esv8.NewConstantKeywordProperty(),
-"tags": esv8.NewWildcardProperty(
-esv8.WithWildcardIgnoreAbove(512),
-esv8.WithWildcardDocValues(true),
-esv8.WithWildcardStore(false),
-),
-"name": esv8.NewCompletionProperty(
-esv8.WithCompletionAnalyzer("standard"),
-esv8.WithCompletionSearchAnalyzer("standard"),
-esv8.WithCompletionMaxInputLength(50),
-esv8.WithCompletionPreservePositionIncrements(true),
-esv8.WithCompletionPreserveSeparators(true),
-),
-"category": esv8.NewSearchAsYouTypeProperty(
-esv8.WithSearchAsYouTypeAnalyzer("standard"),
-esv8.WithSearchAsYouTypeSearchAnalyzer("standard"),
-esv8.WithSearchAsYouTypeMaxShingleSize(3),
-esv8.WithSearchAsYouTypeIndex(true),
-esv8.WithSearchAsYouTypeStore(false),
-esv8.WithSearchAsYouTypeNorms(true),
-esv8.WithSearchAsYouTypeSimilarity("BM25"),
-),
-"value": esv8.NewMatchOnlyTextProperty(),
-"id":    esv8.NewCountedKeywordProperty(esv8.WithCountedKeywordIndex(true)),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"title": esv8.NewTextProperty(
+				esv8.WithTextAnalyzer("standard"),
+				esv8.WithTextSearchAnalyzer("standard"),
+				esv8.WithTextSearchQuoteAnalyzer("standard"),
+				esv8.WithTextFielddata(false),
+				esv8.WithTextIndex(true),
+				esv8.WithTextStore(false),
+				esv8.WithTextNorms(true),
+				esv8.WithTextSimilarity("BM25"),
+				esv8.WithTextIndexPhrases(false),
+				esv8.WithTextPositionIncrementGap(100),
+				esv8.WithTextRawKeyword(256),
+				esv8.WithTextFields(map[string]types.Property{
+					"raw": esv8.NewKeywordProperty(esv8.WithKeywordIgnoreAbove(256)),
+				}),
+			),
+			"status": esv8.NewKeywordProperty(
+				esv8.WithKeywordIgnoreAbove(256),
+				esv8.WithKeywordDocValues(true),
+				esv8.WithKeywordIndex(true),
+				esv8.WithKeywordStore(false),
+				esv8.WithKeywordNullValue("N/A"),
+				esv8.WithKeywordNorms(false),
+				esv8.WithKeywordSimilarity("BM25"),
+				esv8.WithKeywordEagerGlobalOrdinals(false),
+				esv8.WithKeywordSplitQueriesOnWhitespace(false),
+			),
+			"type": esv8.NewConstantKeywordProperty(),
+			"tags": esv8.NewWildcardProperty(
+				esv8.WithWildcardIgnoreAbove(512),
+				esv8.WithWildcardDocValues(true),
+				esv8.WithWildcardNullValue(""),
+				esv8.WithWildcardStore(false),
+			),
+			"name": esv8.NewCompletionProperty(
+				esv8.WithCompletionAnalyzer("standard"),
+				esv8.WithCompletionSearchAnalyzer("standard"),
+				esv8.WithCompletionMaxInputLength(50),
+				esv8.WithCompletionPreservePositionIncrements(true),
+				esv8.WithCompletionPreserveSeparators(true),
+			),
+			"category": esv8.NewSearchAsYouTypeProperty(
+				esv8.WithSearchAsYouTypeAnalyzer("standard"),
+				esv8.WithSearchAsYouTypeSearchAnalyzer("standard"),
+				esv8.WithSearchAsYouTypeSearchQuoteAnalyzer("standard"),
+				esv8.WithSearchAsYouTypeMaxShingleSize(3),
+				esv8.WithSearchAsYouTypeIndex(true),
+				esv8.WithSearchAsYouTypeStore(false),
+				esv8.WithSearchAsYouTypeNorms(true),
+				esv8.WithSearchAsYouTypeSimilarity("BM25"),
+			),
+			"value": esv8.NewMatchOnlyTextProperty(),
+			"id":    esv8.NewCountedKeywordProperty(esv8.WithCountedKeywordIndex(true)),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Numeric(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"id": esv8.NewIntegerNumberProperty(
-esv8.WithIntegerNumberCoerce(true),
-esv8.WithIntegerNumberDocValues(true),
-esv8.WithIntegerNumberIgnoreMalformed(false),
-esv8.WithIntegerNumberIndex(true),
-esv8.WithIntegerNumberStore(false),
-esv8.WithIntegerNumberNullValue(0),
-),
-"price": esv8.NewLongNumberProperty(
-esv8.WithLongNumberCoerce(true),
-esv8.WithLongNumberDocValues(true),
-esv8.WithLongNumberIgnoreMalformed(false),
-esv8.WithLongNumberIndex(true),
-esv8.WithLongNumberStore(false),
-esv8.WithLongNumberNullValue(0),
-),
-"type": esv8.NewShortNumberProperty(
-esv8.WithShortNumberCoerce(true),
-esv8.WithShortNumberDocValues(true),
-esv8.WithShortNumberIgnoreMalformed(false),
-esv8.WithShortNumberIndex(true),
-esv8.WithShortNumberStore(false),
-esv8.WithShortNumberNullValue(0),
-),
-"status": esv8.NewByteNumberProperty(
-esv8.WithByteNumberCoerce(true),
-esv8.WithByteNumberDocValues(true),
-esv8.WithByteNumberIgnoreMalformed(false),
-esv8.WithByteNumberIndex(true),
-esv8.WithByteNumberStore(false),
-esv8.WithByteNumberNullValue(0),
-),
-"value": esv8.NewDoubleNumberProperty(
-esv8.WithDoubleNumberCoerce(true),
-esv8.WithDoubleNumberDocValues(true),
-esv8.WithDoubleNumberIgnoreMalformed(false),
-esv8.WithDoubleNumberIndex(true),
-esv8.WithDoubleNumberStore(false),
-esv8.WithDoubleNumberNullValue(0.0),
-),
-"name": esv8.NewFloatNumberProperty(
-esv8.WithFloatNumberCoerce(true),
-esv8.WithFloatNumberDocValues(true),
-esv8.WithFloatNumberIgnoreMalformed(false),
-esv8.WithFloatNumberIndex(true),
-esv8.WithFloatNumberStore(false),
-esv8.WithFloatNumberNullValue(0.0),
-),
-"category": esv8.NewHalfFloatNumberProperty(
-esv8.WithHalfFloatNumberCoerce(true),
-esv8.WithHalfFloatNumberDocValues(true),
-esv8.WithHalfFloatNumberIgnoreMalformed(false),
-esv8.WithHalfFloatNumberIndex(true),
-esv8.WithHalfFloatNumberStore(false),
-esv8.WithHalfFloatNumberNullValue(0.0),
-),
-"enabled": esv8.NewUnsignedLongNumberProperty(
-esv8.WithUnsignedLongNumberDocValues(true),
-esv8.WithUnsignedLongNumberIgnoreMalformed(false),
-esv8.WithUnsignedLongNumberIndex(true),
-esv8.WithUnsignedLongNumberStore(false),
-esv8.WithUnsignedLongNumberNullValue(0),
-),
-"tags": esv8.NewScaledFloatNumberProperty(
-esv8.WithScaledFloatNumberScalingFactor(100),
-esv8.WithScaledFloatNumberCoerce(true),
-esv8.WithScaledFloatNumberDocValues(true),
-esv8.WithScaledFloatNumberIgnoreMalformed(false),
-esv8.WithScaledFloatNumberIndex(true),
-esv8.WithScaledFloatNumberStore(false),
-esv8.WithScaledFloatNumberNullValue(0.0),
-),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"id": esv8.NewIntegerNumberProperty(
+				esv8.WithIntegerNumberCoerce(true),
+				esv8.WithIntegerNumberDocValues(true),
+				esv8.WithIntegerNumberIgnoreMalformed(false),
+				esv8.WithIntegerNumberIndex(true),
+				esv8.WithIntegerNumberStore(false),
+				esv8.WithIntegerNumberNullValue(0),
+			),
+			"price": esv8.NewLongNumberProperty(
+				esv8.WithLongNumberCoerce(true),
+				esv8.WithLongNumberDocValues(true),
+				esv8.WithLongNumberIgnoreMalformed(false),
+				esv8.WithLongNumberIndex(true),
+				esv8.WithLongNumberStore(false),
+				esv8.WithLongNumberNullValue(0),
+			),
+			"type": esv8.NewShortNumberProperty(
+				esv8.WithShortNumberCoerce(true),
+				esv8.WithShortNumberDocValues(true),
+				esv8.WithShortNumberIgnoreMalformed(false),
+				esv8.WithShortNumberIndex(true),
+				esv8.WithShortNumberStore(false),
+				esv8.WithShortNumberNullValue(0),
+			),
+			"status": esv8.NewByteNumberProperty(
+				esv8.WithByteNumberCoerce(true),
+				esv8.WithByteNumberDocValues(true),
+				esv8.WithByteNumberIgnoreMalformed(false),
+				esv8.WithByteNumberIndex(true),
+				esv8.WithByteNumberStore(false),
+				esv8.WithByteNumberNullValue(0),
+			),
+			"value": esv8.NewDoubleNumberProperty(
+				esv8.WithDoubleNumberCoerce(true),
+				esv8.WithDoubleNumberDocValues(true),
+				esv8.WithDoubleNumberIgnoreMalformed(false),
+				esv8.WithDoubleNumberIndex(true),
+				esv8.WithDoubleNumberStore(false),
+				esv8.WithDoubleNumberNullValue(0.0),
+			),
+			"name": esv8.NewFloatNumberProperty(
+				esv8.WithFloatNumberCoerce(true),
+				esv8.WithFloatNumberDocValues(true),
+				esv8.WithFloatNumberIgnoreMalformed(false),
+				esv8.WithFloatNumberIndex(true),
+				esv8.WithFloatNumberStore(false),
+				esv8.WithFloatNumberNullValue(0.0),
+			),
+			"category": esv8.NewHalfFloatNumberProperty(
+				esv8.WithHalfFloatNumberCoerce(true),
+				esv8.WithHalfFloatNumberDocValues(true),
+				esv8.WithHalfFloatNumberIgnoreMalformed(false),
+				esv8.WithHalfFloatNumberIndex(true),
+				esv8.WithHalfFloatNumberStore(false),
+				esv8.WithHalfFloatNumberNullValue(0.0),
+			),
+			"enabled": esv8.NewUnsignedLongNumberProperty(
+				esv8.WithUnsignedLongNumberCoerce(true),
+				esv8.WithUnsignedLongNumberDocValues(true),
+				esv8.WithUnsignedLongNumberIgnoreMalformed(false),
+				esv8.WithUnsignedLongNumberIndex(true),
+				esv8.WithUnsignedLongNumberStore(false),
+				esv8.WithUnsignedLongNumberNullValue(0),
+			),
+			"tags": esv8.NewScaledFloatNumberProperty(
+				esv8.WithScaledFloatNumberScalingFactor(100),
+				esv8.WithScaledFloatNumberCoerce(true),
+				esv8.WithScaledFloatNumberDocValues(true),
+				esv8.WithScaledFloatNumberIgnoreMalformed(false),
+				esv8.WithScaledFloatNumberIndex(true),
+				esv8.WithScaledFloatNumberStore(false),
+				esv8.WithScaledFloatNumberNullValue(0.0),
+			),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_DateAndBoolean(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"date": esv8.NewDateProperty(
-esv8.WithDateFormat(estype.DateFormatStrictDateOptionalTime, estype.DateFormatEpochMillis),
-esv8.WithDateDocValues(true),
-esv8.WithDateIgnoreMalformed(false),
-esv8.WithDateIndex(true),
-esv8.WithDateStore(false),
-esv8.WithDateLocale("en"),
-),
-"name": esv8.NewDateNanosProperty(
-esv8.WithDateNanosFormat(estype.DateFormatStrictDateOptionalTimeNanos),
-esv8.WithDateNanosDocValues(true),
-esv8.WithDateNanosIgnoreMalformed(false),
-esv8.WithDateNanosIndex(true),
-esv8.WithDateNanosStore(false),
-),
-"enabled": esv8.NewBooleanProperty(
-esv8.WithBooleanDocValues(true),
-esv8.WithBooleanIndex(true),
-esv8.WithBooleanStore(false),
-esv8.WithBooleanNullValue(false),
-),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"date": esv8.NewDateProperty(
+				esv8.WithDateFormat(estype.DateFormatStrictDateOptionalTime, estype.DateFormatEpochMillis),
+				esv8.WithDateDocValues(true),
+				esv8.WithDateIgnoreMalformed(false),
+				esv8.WithDateIndex(true),
+				esv8.WithDateStore(false),
+				esv8.WithDateLocale("en"),
+			),
+			"name": esv8.NewDateNanosProperty(
+				esv8.WithDateNanosFormat(estype.DateFormatStrictDateOptionalTimeNanos),
+				esv8.WithDateNanosDocValues(true),
+				esv8.WithDateNanosIgnoreMalformed(false),
+				esv8.WithDateNanosIndex(true),
+				esv8.WithDateNanosStore(false),
+			),
+			"enabled": esv8.NewBooleanProperty(
+				esv8.WithBooleanDocValues(true),
+				esv8.WithBooleanIndex(true),
+				esv8.WithBooleanStore(false),
+				esv8.WithBooleanNullValue(false),
+			),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Geo(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"name": esv8.NewGeoPointProperty(
-esv8.WithGeoPointIgnoreMalformed(true),
-esv8.WithGeoPointIgnoreZValue(true),
-esv8.WithGeoPointDocValues(true),
-esv8.WithGeoPointIndex(true),
-esv8.WithGeoPointStore(false),
-),
-"status": esv8.NewGeoShapeProperty(
-esv8.WithGeoShapeCoerce(true),
-esv8.WithGeoShapeIgnoreMalformed(true),
-esv8.WithGeoShapeIgnoreZValue(true),
-esv8.WithGeoShapeDocValues(true),
-esv8.WithGeoShapeIndex(true),
-esv8.WithGeoShapeStore(false),
-),
-"category": esv8.NewShapeProperty(
-esv8.WithShapeCoerce(true),
-esv8.WithShapeIgnoreMalformed(true),
-esv8.WithShapeIgnoreZValue(true),
-esv8.WithShapeDocValues(true),
-esv8.WithShapeStore(false),
-),
-"value": esv8.NewPointProperty(
-esv8.WithPointIgnoreMalformed(true),
-esv8.WithPointIgnoreZValue(true),
-esv8.WithPointDocValues(true),
-esv8.WithPointStore(false),
-),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewGeoPointProperty(
+				esv8.WithGeoPointIgnoreMalformed(true),
+				esv8.WithGeoPointIgnoreZValue(true),
+				esv8.WithGeoPointDocValues(true),
+				esv8.WithGeoPointIndex(true),
+				esv8.WithGeoPointStore(false),
+			),
+			"status": esv8.NewGeoShapeProperty(
+				esv8.WithGeoShapeCoerce(true),
+				esv8.WithGeoShapeIgnoreMalformed(true),
+				esv8.WithGeoShapeIgnoreZValue(true),
+				esv8.WithGeoShapeDocValues(true),
+				esv8.WithGeoShapeIndex(true),
+				esv8.WithGeoShapeStore(false),
+			),
+			"category": esv8.NewShapeProperty(
+				esv8.WithShapeCoerce(true),
+				esv8.WithShapeIgnoreMalformed(true),
+				esv8.WithShapeIgnoreZValue(true),
+				esv8.WithShapeDocValues(true),
+				esv8.WithShapeStore(false),
+			),
+			"value": esv8.NewPointProperty(
+				esv8.WithPointIgnoreMalformed(true),
+				esv8.WithPointIgnoreZValue(true),
+				esv8.WithPointDocValues(true),
+				esv8.WithPointNullValue("POINT(0 0)"),
+				esv8.WithPointStore(false),
+			),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Range(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"id": esv8.NewIntegerRangeProperty(
-esv8.WithIntegerRangeCoerce(true),
-esv8.WithIntegerRangeDocValues(true),
-esv8.WithIntegerRangeIndex(true),
-esv8.WithIntegerRangeStore(false),
-),
-"price": esv8.NewLongRangeProperty(
-esv8.WithLongRangeCoerce(true),
-esv8.WithLongRangeDocValues(true),
-esv8.WithLongRangeIndex(true),
-esv8.WithLongRangeStore(false),
-),
-"value": esv8.NewFloatRangeProperty(
-esv8.WithFloatRangeCoerce(true),
-esv8.WithFloatRangeDocValues(true),
-esv8.WithFloatRangeIndex(true),
-esv8.WithFloatRangeStore(false),
-),
-"name": esv8.NewDoubleRangeProperty(
-esv8.WithDoubleRangeCoerce(true),
-esv8.WithDoubleRangeDocValues(true),
-esv8.WithDoubleRangeIndex(true),
-esv8.WithDoubleRangeStore(false),
-),
-"date": esv8.NewDateRangeProperty(
-esv8.WithDateRangeFormat(estype.DateFormatStrictDateOptionalTime),
-esv8.WithDateRangeCoerce(true),
-esv8.WithDateRangeDocValues(true),
-esv8.WithDateRangeIndex(true),
-esv8.WithDateRangeStore(false),
-),
-"status": esv8.NewIpRangeProperty(
-esv8.WithIpRangeCoerce(true),
-esv8.WithIpRangeDocValues(true),
-esv8.WithIpRangeIndex(true),
-esv8.WithIpRangeStore(false),
-),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"id": esv8.NewIntegerRangeProperty(
+				esv8.WithIntegerRangeCoerce(true),
+				esv8.WithIntegerRangeDocValues(true),
+				esv8.WithIntegerRangeIndex(true),
+				esv8.WithIntegerRangeStore(false),
+			),
+			"price": esv8.NewLongRangeProperty(
+				esv8.WithLongRangeCoerce(true),
+				esv8.WithLongRangeDocValues(true),
+				esv8.WithLongRangeIndex(true),
+				esv8.WithLongRangeStore(false),
+			),
+			"value": esv8.NewFloatRangeProperty(
+				esv8.WithFloatRangeCoerce(true),
+				esv8.WithFloatRangeDocValues(true),
+				esv8.WithFloatRangeIndex(true),
+				esv8.WithFloatRangeStore(false),
+			),
+			"name": esv8.NewDoubleRangeProperty(
+				esv8.WithDoubleRangeCoerce(true),
+				esv8.WithDoubleRangeDocValues(true),
+				esv8.WithDoubleRangeIndex(true),
+				esv8.WithDoubleRangeStore(false),
+			),
+			"date": esv8.NewDateRangeProperty(
+				esv8.WithDateRangeFormat(estype.DateFormatStrictDateOptionalTime),
+				esv8.WithDateRangeCoerce(true),
+				esv8.WithDateRangeDocValues(true),
+				esv8.WithDateRangeIndex(true),
+				esv8.WithDateRangeStore(false),
+			),
+			"status": esv8.NewIpRangeProperty(
+				esv8.WithIpRangeCoerce(true),
+				esv8.WithIpRangeDocValues(true),
+				esv8.WithIpRangeIndex(true),
+				esv8.WithIpRangeStore(false),
+			),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_ObjectAndNested(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"items": esv8.NewObjectProperty(
-esv8.WithObjectEnabled(true),
-esv8.WithObjectProperties(map[string]types.Property{
-"name":  esv8.NewKeywordProperty(),
-"price": esv8.NewDoubleNumberProperty(),
-}),
-),
-"tags": esv8.NewNestedProperty(
-esv8.WithNestedIncludeInParent(false),
-esv8.WithNestedIncludeInRoot(false),
-esv8.WithNestedProperties(map[string]types.Property{
-"name":  esv8.NewKeywordProperty(),
-"value": esv8.NewKeywordProperty(),
-}),
-),
-"category": esv8.NewFlattenedProperty(
-esv8.WithFlattenedDepthLimit(5),
-esv8.WithFlattenedDocValues(true),
-esv8.WithFlattenedIndex(true),
-esv8.WithFlattenedIgnoreAbove(1024),
-esv8.WithFlattenedEagerGlobalOrdinals(false),
-esv8.WithFlattenedSplitQueriesOnWhitespace(false),
-),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"items": esv8.NewObjectProperty(
+				esv8.WithObjectEnabled(true),
+				esv8.WithObjectProperties(map[string]types.Property{
+					"name":  esv8.NewKeywordProperty(),
+					"price": esv8.NewDoubleNumberProperty(),
+				}),
+				esv8.WithObjectStore(false),
+			),
+			"tags": esv8.NewNestedProperty(
+				esv8.WithNestedEnabled(true),
+				esv8.WithNestedIncludeInParent(false),
+				esv8.WithNestedIncludeInRoot(false),
+				esv8.WithNestedProperties(map[string]types.Property{
+					"name":  esv8.NewKeywordProperty(),
+					"value": esv8.NewKeywordProperty(),
+				}),
+				esv8.WithNestedStore(false),
+			),
+			"category": esv8.NewFlattenedProperty(
+				esv8.WithFlattenedDepthLimit(5),
+				esv8.WithFlattenedDocValues(true),
+				esv8.WithFlattenedIndex(true),
+				esv8.WithFlattenedIgnoreAbove(1024),
+				esv8.WithFlattenedNullValue(""),
+				esv8.WithFlattenedSimilarity("BM25"),
+				esv8.WithFlattenedEagerGlobalOrdinals(false),
+				esv8.WithFlattenedSplitQueriesOnWhitespace(false),
+			),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Join(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"name": esv8.NewKeywordProperty(),
-"type": esv8.NewJoinProperty(
-esv8.WithJoinRelations(map[string][]string{
-"category": {"items"},
-}),
-esv8.WithJoinEagerGlobalOrdinals(true),
-),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name": esv8.NewKeywordProperty(),
+			"type": esv8.NewJoinProperty(
+				esv8.WithJoinRelations(map[string][]string{
+					"category": {"items"},
+				}),
+				esv8.WithJoinEagerGlobalOrdinals(true),
+			),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"id": esv8.NewIpProperty(
-esv8.WithIpDocValues(true),
-esv8.WithIpIgnoreMalformed(true),
-esv8.WithIpIndex(true),
-esv8.WithIpStore(false),
-),
-"name": esv8.NewBinaryProperty(
-esv8.WithBinaryDocValues(false),
-esv8.WithBinaryStore(false),
-),
-"title": esv8.NewTokenCountProperty(
-esv8.WithTokenCountAnalyzer("standard"),
-esv8.WithTokenCountDocValues(true),
-esv8.WithTokenCountIndex(true),
-esv8.WithTokenCountStore(false),
-esv8.WithTokenCountEnablePositionIncrements(true),
-),
-"status": esv8.NewHistogramProperty(
-esv8.WithHistogramIgnoreMalformed(true),
-),
-"category": esv8.NewVersionProperty(
-esv8.WithVersionDocValues(true),
-esv8.WithVersionStore(false),
-),
-"tags": esv8.NewDenseVectorProperty(
-esv8.WithDenseVectorDims(3),
-esv8.WithDenseVectorIndex(false),
-),
-"value": esv8.NewSparseVectorProperty(esv8.WithSparseVectorStore(false)),
-"price": esv8.NewRankFeatureProperty(
-esv8.WithRankFeaturePositiveScoreImpact(true),
-),
-"enabled": esv8.NewRankFeaturesProperty(
-esv8.WithRankFeaturesPositiveScoreImpact(true),
-),
-"type": esv8.NewAggregateMetricDoubleProperty(
-esv8.WithAggregateMetricDoubleDefaultMetric("max"),
-esv8.WithAggregateMetricDoubleMetrics([]string{"min", "max", "sum", "value_count"}),
-),
-"items": esv8.NewPercolatorProperty(),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"id": esv8.NewIpProperty(
+				esv8.WithIpDocValues(true),
+				esv8.WithIpIgnoreMalformed(true),
+				esv8.WithIpIndex(true),
+				esv8.WithIpNullValue("0.0.0.0"),
+				esv8.WithIpStore(false),
+			),
+			"name": esv8.NewBinaryProperty(
+				esv8.WithBinaryDocValues(false),
+				esv8.WithBinaryStore(false),
+			),
+			"title": esv8.NewTokenCountProperty(
+				esv8.WithTokenCountAnalyzer("standard"),
+				esv8.WithTokenCountDocValues(true),
+				esv8.WithTokenCountIndex(true),
+				esv8.WithTokenCountStore(false),
+				esv8.WithTokenCountEnablePositionIncrements(true),
+			),
+			"status": esv8.NewHistogramProperty(
+				esv8.WithHistogramIgnoreMalformed(true),
+			),
+			"category": esv8.NewVersionProperty(
+				esv8.WithVersionDocValues(true),
+				esv8.WithVersionStore(false),
+			),
+			"tags": esv8.NewDenseVectorProperty(
+				esv8.WithDenseVectorDims(3),
+				esv8.WithDenseVectorIndex(false),
+			),
+			"value": esv8.NewSparseVectorProperty(esv8.WithSparseVectorStore(false)),
+			"price": esv8.NewRankFeatureProperty(
+				esv8.WithRankFeaturePositiveScoreImpact(true),
+			),
+			"enabled": esv8.NewRankFeaturesProperty(
+				esv8.WithRankFeaturesPositiveScoreImpact(true),
+			),
+			"type": esv8.NewAggregateMetricDoubleProperty(
+				esv8.WithAggregateMetricDoubleDefaultMetric("max"),
+				esv8.WithAggregateMetricDoubleMetrics([]string{"min", "max", "sum", "value_count"}),
+				esv8.WithAggregateMetricDoubleIgnoreMalformed(true),
+			),
+			"items": esv8.NewPercolatorProperty(),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Alias(t *testing.T) {
-t.Parallel()
-client := newTestClient(t)
-ctx := context.Background()
-idx := uniqueIndex(t, client)
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
 
-mappings := &types.TypeMapping{
-Properties: map[string]types.Property{
-"status": esv8.NewKeywordProperty(),
-"name":   esv8.NewFieldAliasProperty(esv8.WithFieldAliasPath("status")),
-},
-}
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"status": esv8.NewKeywordProperty(),
+			"name":   esv8.NewFieldAliasProperty(esv8.WithFieldAliasPath("status")),
+		},
+	}
 
-res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
-assert.NilError(t, err)
-assert.Assert(t, res.Acknowledged)
+	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
 }
 
 func TestIntegration_AllPropertyMappings_Dynamic(t *testing.T) {
@@ -1454,6 +1470,36 @@ func TestIntegration_AllPropertyMappings_IcuCollation(t *testing.T) {
 	}
 
 	res, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Acknowledged)
+}
+
+func TestIntegration_AllPropertyMappings_KeywordNormalizer(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+
+	settings := &types.IndexSettings{
+		NumberOfReplicas: func() *string { s := "0"; return &s }(),
+		Analysis: &types.IndexSettingsAnalysis{
+			Normalizer: map[string]types.Normalizer{
+				"my_normalizer": types.LowercaseNormalizer{
+					Type: "lowercase",
+				},
+			},
+		},
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"status": esv8.NewKeywordProperty(
+				esv8.WithKeywordNormalizer("my_normalizer"),
+			),
+		},
+	}
+
+	res, err := client.CreateIndex(ctx, idx, settings, mappings)
 	assert.NilError(t, err)
 	assert.Assert(t, res.Acknowledged)
 }
