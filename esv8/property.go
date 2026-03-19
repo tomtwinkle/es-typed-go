@@ -166,19 +166,9 @@ func WithWildcardIgnoreAbove(v int) WildcardPropertyOption {
 	return func(p *types.WildcardProperty) { p.IgnoreAbove = &v }
 }
 
-// WithWildcardDocValues sets whether doc values are enabled.
-func WithWildcardDocValues(v bool) WildcardPropertyOption {
-	return func(p *types.WildcardProperty) { p.DocValues = &v }
-}
-
 // WithWildcardNullValue sets the null value for the field.
 func WithWildcardNullValue(v string) WildcardPropertyOption {
 	return func(p *types.WildcardProperty) { p.NullValue = &v }
-}
-
-// WithWildcardStore sets whether the field value is stored.
-func WithWildcardStore(v bool) WildcardPropertyOption {
-	return func(p *types.WildcardProperty) { p.Store = &v }
 }
 
 // ---------------------------------------------------------------------------
@@ -718,11 +708,6 @@ func NewUnsignedLongNumberProperty(opts ...UnsignedLongNumberPropertyOption) *ty
 	return prop
 }
 
-// WithUnsignedLongNumberCoerce sets whether to coerce values to the correct type.
-func WithUnsignedLongNumberCoerce(v bool) UnsignedLongNumberPropertyOption {
-	return func(p *types.UnsignedLongNumberProperty) { p.Coerce = &v }
-}
-
 // WithUnsignedLongNumberDocValues sets whether doc values are enabled.
 func WithUnsignedLongNumberDocValues(v bool) UnsignedLongNumberPropertyOption {
 	return func(p *types.UnsignedLongNumberProperty) { p.DocValues = &v }
@@ -1031,11 +1016,6 @@ func WithShapeDocValues(v bool) ShapePropertyOption {
 	return func(p *types.ShapeProperty) { p.DocValues = &v }
 }
 
-// WithShapeStore sets whether the field value is stored.
-func WithShapeStore(v bool) ShapePropertyOption {
-	return func(p *types.ShapeProperty) { p.Store = &v }
-}
-
 // ---------------------------------------------------------------------------
 // Point
 // ---------------------------------------------------------------------------
@@ -1329,11 +1309,6 @@ func WithObjectEnabled(v bool) ObjectPropertyOption {
 	return func(p *types.ObjectProperty) { p.Enabled = &v }
 }
 
-// WithObjectStore sets whether the field value is stored.
-func WithObjectStore(v bool) ObjectPropertyOption {
-	return func(p *types.ObjectProperty) { p.Store = &v }
-}
-
 // ---------------------------------------------------------------------------
 // Nested
 // ---------------------------------------------------------------------------
@@ -1368,11 +1343,6 @@ func WithNestedIncludeInParent(v bool) NestedPropertyOption {
 // WithNestedIncludeInRoot sets whether to include in root.
 func WithNestedIncludeInRoot(v bool) NestedPropertyOption {
 	return func(p *types.NestedProperty) { p.IncludeInRoot = &v }
-}
-
-// WithNestedStore sets whether the field value is stored.
-func WithNestedStore(v bool) NestedPropertyOption {
-	return func(p *types.NestedProperty) { p.Store = &v }
 }
 
 // ---------------------------------------------------------------------------
@@ -1486,11 +1456,6 @@ func WithPassthroughObjectEnabled(v bool) PassthroughObjectPropertyOption {
 // WithPassthroughObjectPriority sets the priority.
 func WithPassthroughObjectPriority(v int) PassthroughObjectPropertyOption {
 	return func(p *types.PassthroughObjectProperty) { p.Priority = &v }
-}
-
-// WithPassthroughObjectStore sets whether the field value is stored.
-func WithPassthroughObjectStore(v bool) PassthroughObjectPropertyOption {
-	return func(p *types.PassthroughObjectProperty) { p.Store = &v }
 }
 
 // WithPassthroughObjectTimeSeriesDimension sets whether this is a time series dimension.
@@ -1678,16 +1643,6 @@ func NewVersionProperty(opts ...VersionPropertyOption) *types.VersionProperty {
 		opt(prop)
 	}
 	return prop
-}
-
-// WithVersionDocValues sets whether doc values are enabled.
-func WithVersionDocValues(v bool) VersionPropertyOption {
-	return func(p *types.VersionProperty) { p.DocValues = &v }
-}
-
-// WithVersionStore sets whether the field value is stored.
-func WithVersionStore(v bool) VersionPropertyOption {
-	return func(p *types.VersionProperty) { p.Store = &v }
 }
 
 // ---------------------------------------------------------------------------

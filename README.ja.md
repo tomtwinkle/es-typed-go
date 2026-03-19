@@ -494,7 +494,7 @@ params := query.NewSearch().
 
 ### プロパティビルダー（インデックスマッピング）
 
-型安全な Functional-option コンストラクタでインデックスマッピングを定義します。
+型安全な Functional-option コンストラクタでインデックスマッピングを定義します。全 53 種類のプロパティ型とそのオプションの一覧は、[プロパティリファレンス](docs/property-reference.ja.md)を参照してください。
 
 ```go
 import (
@@ -762,7 +762,13 @@ esv9/              Elasticsearch v9 ラッパー（esv8 のミラー）
   query/           v9 用クエリ、ソート、アグリゲーションビルダー
   generator/       v9 API カバレッジテスト用コードジェネレーター
 cmd/estyped/       CLI ツール：ES マッピングから型付き Field 定数を生成
+docs/              リファレンスドキュメント
 ```
+
+## ドキュメント
+
+- [Property Reference](docs/property-reference.md) — All property types and their functional options (English)
+- [プロパティリファレンス](docs/property-reference.ja.md) — 全プロパティ型とオプションの一覧（日本語）
 
 ## 必要要件
 

@@ -311,18 +311,18 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
 
-	createReq := corecreate.Request(mustMarshal(t, map[string]any{"status": "pending"}))
-	_, err := client.Create(ctx, idx, "ubq-1", &createReq)
+	docs := []map[string]any{{"status": "pending"}}
+	req := bulkOps(idx, docs...)
+	_, err := client.Bulk(ctx, &req)
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
 	// YELLOW shards of other parallel tests.
-	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
+	_, err = client.IndexRefresh(ctx, estype.Index(idx))
+	assert.NilError(t, err)
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	src := "ctx._source.status = 'done'"
 	res, err := client.UpdateByQuery(ctx, idx, &updatebyquery.Request{
-		Query:  &matchAll,
-		Script: &types.Script{Source: &src},
+		Query: &matchAll,
 	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)

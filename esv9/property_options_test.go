@@ -41,14 +41,10 @@ func TestNewConstantKeywordProperty_Options(t *testing.T) {
 func TestNewWildcardProperty_Options(t *testing.T) {
 	t.Parallel()
 	prop := esv9.NewWildcardProperty(
-		esv9.WithWildcardDocValues(false),
 		esv9.WithWildcardNullValue(""),
-		esv9.WithWildcardStore(true),
 	)
 	assert.Assert(t, prop != nil)
-	assert.Equal(t, false, *prop.DocValues)
 	assert.Equal(t, "", *prop.NullValue)
-	assert.Equal(t, true, *prop.Store)
 }
 
 func TestNewTextProperty_Options(t *testing.T) {
@@ -189,7 +185,6 @@ func TestNewShortNumberProperty_Options(t *testing.T) {
 			esv9.WithShortNumberNullValue(0),
 		)
 		assert.Assert(t, prop != nil)
-		assert.Equal(t, true, *prop.Coerce)
 		assert.Equal(t, false, *prop.DocValues)
 		assert.Equal(t, true, *prop.IgnoreMalformed)
 		assert.Equal(t, false, *prop.Index)
@@ -219,7 +214,6 @@ func TestNewByteNumberProperty_Options(t *testing.T) {
 			esv9.WithByteNumberNullValue(nullVal),
 		)
 		assert.Assert(t, prop != nil)
-		assert.Equal(t, true, *prop.Coerce)
 		assert.Equal(t, false, *prop.DocValues)
 		assert.Equal(t, true, *prop.IgnoreMalformed)
 		assert.Equal(t, false, *prop.Index)
@@ -266,7 +260,6 @@ func TestNewFloatNumberProperty_Options(t *testing.T) {
 			esv9.WithFloatNumberNullValue(nullVal),
 		)
 		assert.Assert(t, prop != nil)
-		assert.Equal(t, true, *prop.Coerce)
 		assert.Equal(t, false, *prop.DocValues)
 		assert.Equal(t, true, *prop.IgnoreMalformed)
 		assert.Equal(t, false, *prop.Index)
@@ -296,7 +289,6 @@ func TestNewHalfFloatNumberProperty_Options(t *testing.T) {
 			esv9.WithHalfFloatNumberNullValue(nullVal),
 		)
 		assert.Assert(t, prop != nil)
-		assert.Equal(t, true, *prop.Coerce)
 		assert.Equal(t, false, *prop.DocValues)
 		assert.Equal(t, true, *prop.IgnoreMalformed)
 		assert.Equal(t, false, *prop.Index)
@@ -318,7 +310,6 @@ func TestNewUnsignedLongNumberProperty_Options(t *testing.T) {
 		t.Parallel()
 		var nullVal uint64 = 0
 		prop := esv9.NewUnsignedLongNumberProperty(
-			esv9.WithUnsignedLongNumberCoerce(true),
 			esv9.WithUnsignedLongNumberDocValues(false),
 			esv9.WithUnsignedLongNumberIgnoreMalformed(true),
 			esv9.WithUnsignedLongNumberIndex(false),
@@ -326,7 +317,6 @@ func TestNewUnsignedLongNumberProperty_Options(t *testing.T) {
 			esv9.WithUnsignedLongNumberNullValue(nullVal),
 		)
 		assert.Assert(t, prop != nil)
-		assert.Equal(t, true, *prop.Coerce)
 		assert.Equal(t, false, *prop.DocValues)
 		assert.Equal(t, true, *prop.IgnoreMalformed)
 		assert.Equal(t, false, *prop.Index)
@@ -444,14 +434,12 @@ func TestNewShapeProperty_Options(t *testing.T) {
 			esv9.WithShapeIgnoreMalformed(true),
 			esv9.WithShapeIgnoreZValue(false),
 			esv9.WithShapeDocValues(false),
-			esv9.WithShapeStore(true),
 		)
 		assert.Assert(t, prop != nil)
 		assert.Equal(t, true, *prop.Coerce)
 		assert.Equal(t, true, *prop.IgnoreMalformed)
 		assert.Equal(t, false, *prop.IgnoreZValue)
 		assert.Equal(t, false, *prop.DocValues)
-		assert.Equal(t, true, *prop.Store)
 	})
 }
 
@@ -624,22 +612,17 @@ func TestNewIpRangeProperty_Options(t *testing.T) {
 
 func TestNewObjectProperty_Options(t *testing.T) {
 	t.Parallel()
-	prop := esv9.NewObjectProperty(
-		esv9.WithObjectStore(true),
-	)
+	prop := esv9.NewObjectProperty()
 	assert.Assert(t, prop != nil)
-	assert.Equal(t, true, *prop.Store)
 }
 
 func TestNewNestedProperty_Options(t *testing.T) {
 	t.Parallel()
 	prop := esv9.NewNestedProperty(
 		esv9.WithNestedEnabled(false),
-		esv9.WithNestedStore(true),
 	)
 	assert.Assert(t, prop != nil)
 	assert.Equal(t, false, *prop.Enabled)
-	assert.Equal(t, true, *prop.Store)
 }
 
 func TestNewFlattenedProperty_Options(t *testing.T) {
@@ -689,7 +672,6 @@ func TestNewPassthroughObjectProperty_Options(t *testing.T) {
 			}),
 			esv9.WithPassthroughObjectEnabled(false),
 			esv9.WithPassthroughObjectPriority(10),
-			esv9.WithPassthroughObjectStore(true),
 			esv9.WithPassthroughObjectTimeSeriesDimension(true),
 		)
 		assert.Assert(t, prop != nil)
@@ -697,7 +679,6 @@ func TestNewPassthroughObjectProperty_Options(t *testing.T) {
 		assert.Assert(t, ok)
 		assert.Equal(t, false, *prop.Enabled)
 		assert.Equal(t, 10, *prop.Priority)
-		assert.Equal(t, true, *prop.Store)
 		assert.Equal(t, true, *prop.TimeSeriesDimension)
 	})
 }
@@ -789,17 +770,6 @@ func TestNewVersionProperty_Options(t *testing.T) {
 		t.Parallel()
 		prop := esv9.NewVersionProperty()
 		assert.Assert(t, prop != nil)
-	})
-
-	t.Run("with options", func(t *testing.T) {
-		t.Parallel()
-		prop := esv9.NewVersionProperty(
-			esv9.WithVersionDocValues(false),
-			esv9.WithVersionStore(true),
-		)
-		assert.Assert(t, prop != nil)
-		assert.Equal(t, false, *prop.DocValues)
-		assert.Equal(t, true, *prop.Store)
 	})
 }
 
