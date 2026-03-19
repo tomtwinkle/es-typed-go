@@ -228,8 +228,8 @@ func toPascalCase(path string) string {
 	parts := strings.Split(path, ".")
 	var result []string
 	for _, part := range parts {
-		subParts := strings.Split(part, "_")
-		for _, sp := range subParts {
+		subParts := strings.SplitSeq(part, "_")
+		for sp := range subParts {
 			if sp == "" {
 				continue
 			}
@@ -411,16 +411,16 @@ func goFieldJSONName(field *ast.Field) string {
 // and "" when no json tag is present or when the tag name is empty (e.g. ",omitempty").
 func jsonTagKey(raw string) string {
 	const prefix = `json:"`
-	idx := strings.Index(raw, prefix)
-	if idx < 0 {
+	_, after, ok := strings.Cut(raw, prefix)
+	if !ok {
 		return ""
 	}
-	rest := raw[idx+len(prefix):]
-	end := strings.IndexByte(rest, '"')
-	if end < 0 {
+	rest := after
+	before, _, ok := strings.Cut(rest, "\"")
+	if !ok {
 		return ""
 	}
-	name, _, _ := strings.Cut(rest[:end], ",")
+	name, _, _ := strings.Cut(before, ",")
 	return name
 }
 
@@ -631,7 +631,7 @@ func pascalToSnake(s string) string {
 			result = append(result, '_')
 		}
 		if c >= 'A' && c <= 'Z' {
-			result = append(result, c + 32) // to lower
+			result = append(result, c+32) // to lower
 		} else {
 			result = append(result, c)
 		}

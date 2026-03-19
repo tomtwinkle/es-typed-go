@@ -15,12 +15,11 @@ import (
 func TestESClientSpec_InterfaceCompleteness(t *testing.T) {
 	t.Parallel()
 
-	specType := reflect.TypeOf((*esv8.ESClientSpec)(nil)).Elem()
-	clientType := reflect.TypeOf((*esv8.ESClient)(nil)).Elem()
+	specType := reflect.TypeFor[esv8.ESClientSpec]()
+	clientType := reflect.TypeFor[esv8.ESClient]()
 
 	// ESClientSpec must embed ESClient — every ESClient method must appear in ESClientSpec.
-	for i := 0; i < clientType.NumMethod(); i++ {
-		m := clientType.Method(i)
+	for m := range clientType.Methods() {
 		_, ok := specType.MethodByName(m.Name)
 		assert.Assert(t, ok, "ESClientSpec is missing ESClient method %q", m.Name)
 	}
@@ -38,7 +37,7 @@ func TestESClientSpec_InterfaceCompleteness(t *testing.T) {
 func TestESClientSpec_SpecMethodsPresent(t *testing.T) {
 	t.Parallel()
 
-	specType := reflect.TypeOf((*esv8.ESClientSpec)(nil)).Elem()
+	specType := reflect.TypeFor[esv8.ESClientSpec]()
 
 	// Methods to verify — covers core ops, indices, cluster, tasks, cat, etc.
 	wantMethods := []string{
@@ -167,7 +166,7 @@ func TestESClientSpec_SpecMethodsPresent(t *testing.T) {
 func TestNewClient_ImplementsESClientSpec(t *testing.T) {
 	t.Parallel()
 
-	specType := reflect.TypeOf((*esv8.ESClientSpec)(nil)).Elem()
+	specType := reflect.TypeFor[esv8.ESClientSpec]()
 	// NewClient returns ESClient; ESClientSpec extends it, so any concrete
 	// implementation that satisfies ESClient but NOT ESClientSpec would fail here.
 	// The compile-time guard in esclient_spec.go ensures this too.

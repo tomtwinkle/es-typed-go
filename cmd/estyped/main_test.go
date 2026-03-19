@@ -632,11 +632,11 @@ func TestPascalToSnake(t *testing.T) {
 		input string
 		want  string
 	}{
-		"single_word":   {input: "Text", want: "text"},
-		"single_lower":  {input: "Keyword", want: "keyword"},
-		"two_words":     {input: "DenseVector", want: "dense_vector"},
-		"three_words":   {input: "RankFeatures", want: "rank_features"},
-		"all_lower":     {input: "nested", want: "nested"},
+		"single_word":  {input: "Text", want: "text"},
+		"single_lower": {input: "Keyword", want: "keyword"},
+		"two_words":    {input: "DenseVector", want: "dense_vector"},
+		"three_words":  {input: "RankFeatures", want: "rank_features"},
+		"all_lower":    {input: "nested", want: "nested"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -655,13 +655,13 @@ func TestPropertyCallTypeName(t *testing.T) {
 		src  string // a Go expression that is the Fun part of a CallExpr
 		want string
 	}{
-		"ident_text":     {src: "NewTextProperty", want: "text"},
-		"ident_keyword":  {src: "NewKeywordProperty", want: "keyword"},
-		"ident_nested":   {src: "NewNestedProperty", want: "nested"},
-		"ident_dense":    {src: "NewDenseVectorProperty", want: "dense_vector"},
-		"not_new":        {src: "MakeTextProperty", want: ""},
-		"not_property":   {src: "NewTextField", want: ""},
-		"empty_middle":   {src: "NewProperty", want: ""},
+		"ident_text":    {src: "NewTextProperty", want: "text"},
+		"ident_keyword": {src: "NewKeywordProperty", want: "keyword"},
+		"ident_nested":  {src: "NewNestedProperty", want: "nested"},
+		"ident_dense":   {src: "NewDenseVectorProperty", want: "dense_vector"},
+		"not_new":       {src: "MakeTextProperty", want: ""},
+		"not_property":  {src: "NewTextField", want: ""},
+		"empty_middle":  {src: "NewProperty", want: ""},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {

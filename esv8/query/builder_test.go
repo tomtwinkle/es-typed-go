@@ -42,4 +42,3 @@ func TestBoolQueryBuilder_MinimumShouldMatch(t *testing.T) {
 	assert.Assert(t, len(bq.Should) == 2)
 	assert.Equal(t, 1, bq.MinimumShouldMatch)
 }
-
