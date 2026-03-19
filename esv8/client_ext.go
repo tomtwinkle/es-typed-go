@@ -394,7 +394,9 @@ func (c *esClient) DeletePipeline(ctx context.Context, id estype.Pipeline) (*ing
 // ---------------------------------------------------------------------------
 
 func (c *esClient) EsqlQuery(ctx context.Context, query estype.ESQLQuery, opts ...EsqlQueryOption) (esql_query.Response, error) {
-	r := c.typedClient.Esql.Query()
+	req := esql_query.NewRequest()
+	req.Query = query.String()
+	r := c.typedClient.Esql.Query().Request(req)
 	for _, opt := range opts {
 		opt(r)
 	}
