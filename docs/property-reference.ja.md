@@ -111,7 +111,6 @@ esv8.NewWildcardProperty(opts ...WildcardPropertyOption) *types.WildcardProperty
 | オプション | パラメータ | 説明 |
 |-----------|-----------|------|
 | `WithWildcardIgnoreAbove` | `v int` | 最大文字列長 |
-| `WithWildcardDocValues` | `v bool` | doc values を有効にするか |
 | `WithWildcardNullValue` | `v string` | `null` の代替値 |
 
 ### NewMatchOnlyTextProperty
@@ -782,9 +781,7 @@ esv9.NewExponentialHistogramProperty(opts ...ExponentialHistogramPropertyOption)
 esv8.NewVersionProperty(opts ...VersionPropertyOption) *types.VersionProperty
 ```
 
-| オプション | パラメータ | 説明 |
-|-----------|-----------|------|
-| `WithVersionDocValues` | `v bool` | doc values を有効にするか |
+オプションなし。
 
 ### NewAggregateMetricDoubleProperty
 

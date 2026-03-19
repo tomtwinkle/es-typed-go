@@ -41,11 +41,9 @@ func TestNewConstantKeywordProperty_Options(t *testing.T) {
 func TestNewWildcardProperty_Options(t *testing.T) {
 	t.Parallel()
 	prop := esv8.NewWildcardProperty(
-		esv8.WithWildcardDocValues(false),
 		esv8.WithWildcardNullValue(""),
 	)
 	assert.Assert(t, prop != nil)
-	assert.Equal(t, false, *prop.DocValues)
 	assert.Equal(t, "", *prop.NullValue)
 }
 
@@ -772,15 +770,6 @@ func TestNewVersionProperty_Options(t *testing.T) {
 		t.Parallel()
 		prop := esv8.NewVersionProperty()
 		assert.Assert(t, prop != nil)
-	})
-
-	t.Run("with options", func(t *testing.T) {
-		t.Parallel()
-		prop := esv8.NewVersionProperty(
-			esv8.WithVersionDocValues(false),
-		)
-		assert.Assert(t, prop != nil)
-		assert.Equal(t, false, *prop.DocValues)
 	})
 }
 

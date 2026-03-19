@@ -932,7 +932,6 @@ func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
 			"type": esv8.NewConstantKeywordProperty(),
 			"tags": esv8.NewWildcardProperty(
 				esv8.WithWildcardIgnoreAbove(512),
-				esv8.WithWildcardDocValues(true),
 				esv8.WithWildcardNullValue(""),
 			),
 			"name": esv8.NewCompletionProperty(
@@ -1277,9 +1276,7 @@ func TestIntegration_AllPropertyMappings_Special(t *testing.T) {
 			"status": esv8.NewHistogramProperty(
 				esv8.WithHistogramIgnoreMalformed(true),
 			),
-			"category": esv8.NewVersionProperty(
-				esv8.WithVersionDocValues(true),
-			),
+			"category": esv8.NewVersionProperty(),
 			"tags": esv8.NewDenseVectorProperty(
 				esv8.WithDenseVectorDims(3),
 				esv8.WithDenseVectorIndex(false),

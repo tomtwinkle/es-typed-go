@@ -345,11 +345,6 @@ func WithWildcardIgnoreAbove(v int) WildcardPropertyOption {
 	return func(p *WildcardProperty) { p.IgnoreAbove = &v }
 }
 
-// WithWildcardDocValues sets whether doc values are enabled.
-func WithWildcardDocValues(v bool) WildcardPropertyOption {
-	return func(p *WildcardProperty) { p.DocValues = &v }
-}
-
 // WithWildcardNullValue sets the null value for the field.
 func WithWildcardNullValue(v string) WildcardPropertyOption {
 	return func(p *WildcardProperty) { p.NullValue = &v }
@@ -2291,11 +2286,6 @@ func NewVersionProperty(opts ...VersionPropertyOption) VersionProperty {
 		opt(&p)
 	}
 	return p
-}
-
-// WithVersionDocValues sets whether doc values are enabled.
-func WithVersionDocValues(v bool) VersionPropertyOption {
-	return func(p *VersionProperty) { p.DocValues = &v }
 }
 
 // WithVersionStore sets whether the field value is stored.

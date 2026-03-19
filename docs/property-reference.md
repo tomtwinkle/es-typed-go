@@ -111,7 +111,6 @@ esv8.NewWildcardProperty(opts ...WildcardPropertyOption) *types.WildcardProperty
 | Option | Parameter | Description |
 |--------|-----------|-------------|
 | `WithWildcardIgnoreAbove` | `v int` | Maximum string length |
-| `WithWildcardDocValues` | `v bool` | Whether doc values are enabled |
 | `WithWildcardNullValue` | `v string` | Value substituted for `null` |
 
 ### NewMatchOnlyTextProperty
@@ -782,9 +781,7 @@ Software version string with semantic version ordering.
 esv8.NewVersionProperty(opts ...VersionPropertyOption) *types.VersionProperty
 ```
 
-| Option | Parameter | Description |
-|--------|-----------|-------------|
-| `WithVersionDocValues` | `v bool` | Whether doc values are enabled |
+No options.
 
 ### NewAggregateMetricDoubleProperty
 
