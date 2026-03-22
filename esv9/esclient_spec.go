@@ -14,51 +14,18 @@ import (
 	autoscaling_get_autoscaling_capacity "github.com/elastic/go-elasticsearch/v9/typedapi/autoscaling/getautoscalingcapacity"
 	autoscaling_get_autoscaling_policy "github.com/elastic/go-elasticsearch/v9/typedapi/autoscaling/getautoscalingpolicy"
 	autoscaling_put_autoscaling_policy "github.com/elastic/go-elasticsearch/v9/typedapi/autoscaling/putautoscalingpolicy"
-	cat_aliases "github.com/elastic/go-elasticsearch/v9/typedapi/cat/aliases"
-	cat_allocation "github.com/elastic/go-elasticsearch/v9/typedapi/cat/allocation"
-	cat_circuit_breaker "github.com/elastic/go-elasticsearch/v9/typedapi/cat/circuitbreaker"
-	cat_component_templates "github.com/elastic/go-elasticsearch/v9/typedapi/cat/componenttemplates"
-	cat_count "github.com/elastic/go-elasticsearch/v9/typedapi/cat/count"
-	cat_fielddata "github.com/elastic/go-elasticsearch/v9/typedapi/cat/fielddata"
-	cat_health "github.com/elastic/go-elasticsearch/v9/typedapi/cat/health"
-	cat_help "github.com/elastic/go-elasticsearch/v9/typedapi/cat/help"
-	cat_indices "github.com/elastic/go-elasticsearch/v9/typedapi/cat/indices"
-	cat_master "github.com/elastic/go-elasticsearch/v9/typedapi/cat/master"
-	cat_ml_datafeeds "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mldatafeeds"
-	cat_ml_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mldataframeanalytics"
-	cat_ml_jobs "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mljobs"
-	cat_ml_trained_models "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mltrainedmodels"
-	cat_nodeattrs "github.com/elastic/go-elasticsearch/v9/typedapi/cat/nodeattrs"
-	cat_nodes "github.com/elastic/go-elasticsearch/v9/typedapi/cat/nodes"
-	cat_pending_tasks "github.com/elastic/go-elasticsearch/v9/typedapi/cat/pendingtasks"
-	cat_plugins "github.com/elastic/go-elasticsearch/v9/typedapi/cat/plugins"
-	cat_recovery "github.com/elastic/go-elasticsearch/v9/typedapi/cat/recovery"
-	cat_repositories "github.com/elastic/go-elasticsearch/v9/typedapi/cat/repositories"
-	cat_segments "github.com/elastic/go-elasticsearch/v9/typedapi/cat/segments"
-	cat_shards "github.com/elastic/go-elasticsearch/v9/typedapi/cat/shards"
-	cat_snapshots "github.com/elastic/go-elasticsearch/v9/typedapi/cat/snapshots"
-	cat_tasks "github.com/elastic/go-elasticsearch/v9/typedapi/cat/tasks"
-	cat_templates "github.com/elastic/go-elasticsearch/v9/typedapi/cat/templates"
-	cat_thread_pool "github.com/elastic/go-elasticsearch/v9/typedapi/cat/threadpool"
-	cat_transforms "github.com/elastic/go-elasticsearch/v9/typedapi/cat/transforms"
 	ccr_delete_auto_follow_pattern "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/deleteautofollowpattern"
-	ccr_follow "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/follow"
 	ccr_follow_info "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/followinfo"
-	ccr_follow_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/followstats"
 	ccr_forget_follower "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/forgetfollower"
 	ccr_get_auto_follow_pattern "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/getautofollowpattern"
 	ccr_pause_auto_follow_pattern "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/pauseautofollowpattern"
-	ccr_pause_follow "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/pausefollow"
 	ccr_put_auto_follow_pattern "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/putautofollowpattern"
 	ccr_resume_auto_follow_pattern "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/resumeautofollowpattern"
-	ccr_resume_follow "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/resumefollow"
 	ccr_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/stats"
-	ccr_unfollow "github.com/elastic/go-elasticsearch/v9/typedapi/ccr/unfollow"
 	cluster_allocation_explain "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/allocationexplain"
 	cluster_delete_component_template "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/deletecomponenttemplate"
 	cluster_get_component_template "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/getcomponenttemplate"
 	cluster_get_settings "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/getsettings"
-	cluster_health "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/health"
 	cluster_info "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/info"
 	cluster_pending_tasks "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/pendingtasks"
 	cluster_put_component_template "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/putcomponenttemplate"
@@ -101,14 +68,9 @@ import (
 	connector_update_scheduling "github.com/elastic/go-elasticsearch/v9/typedapi/connector/updatescheduling"
 	connector_update_service_type "github.com/elastic/go-elasticsearch/v9/typedapi/connector/updateservicetype"
 	connector_update_status "github.com/elastic/go-elasticsearch/v9/typedapi/connector/updatestatus"
-	core_bulk "github.com/elastic/go-elasticsearch/v9/typedapi/core/bulk"
 	core_capabilities "github.com/elastic/go-elasticsearch/v9/typedapi/core/capabilities"
-	core_clear_scroll "github.com/elastic/go-elasticsearch/v9/typedapi/core/clearscroll"
-	core_close_point_in_time "github.com/elastic/go-elasticsearch/v9/typedapi/core/closepointintime"
-	core_count "github.com/elastic/go-elasticsearch/v9/typedapi/core/count"
 	core_create "github.com/elastic/go-elasticsearch/v9/typedapi/core/create"
 	core_delete "github.com/elastic/go-elasticsearch/v9/typedapi/core/delete"
-	core_delete_by_query "github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyquery"
 	core_delete_by_query_rethrottle "github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyqueryrethrottle"
 	core_delete_script "github.com/elastic/go-elasticsearch/v9/typedapi/core/deletescript"
 	core_explain "github.com/elastic/go-elasticsearch/v9/typedapi/core/explain"
@@ -121,24 +83,19 @@ import (
 	core_health_report "github.com/elastic/go-elasticsearch/v9/typedapi/core/healthreport"
 	core_index "github.com/elastic/go-elasticsearch/v9/typedapi/core/index"
 	core_knn_search "github.com/elastic/go-elasticsearch/v9/typedapi/core/knnsearch"
-	core_mget "github.com/elastic/go-elasticsearch/v9/typedapi/core/mget"
-	core_msearch "github.com/elastic/go-elasticsearch/v9/typedapi/core/msearch"
 	core_msearch_template "github.com/elastic/go-elasticsearch/v9/typedapi/core/msearchtemplate"
 	core_mtermvectors "github.com/elastic/go-elasticsearch/v9/typedapi/core/mtermvectors"
-	core_open_point_in_time "github.com/elastic/go-elasticsearch/v9/typedapi/core/openpointintime"
 	core_put_script "github.com/elastic/go-elasticsearch/v9/typedapi/core/putscript"
 	core_rank_eval "github.com/elastic/go-elasticsearch/v9/typedapi/core/rankeval"
 	core_reindex_rethrottle "github.com/elastic/go-elasticsearch/v9/typedapi/core/reindexrethrottle"
 	core_render_search_template "github.com/elastic/go-elasticsearch/v9/typedapi/core/rendersearchtemplate"
 	core_scripts_painless_execute "github.com/elastic/go-elasticsearch/v9/typedapi/core/scriptspainlessexecute"
-	core_scroll "github.com/elastic/go-elasticsearch/v9/typedapi/core/scroll"
 	core_search_mvt "github.com/elastic/go-elasticsearch/v9/typedapi/core/searchmvt"
 	core_search_shards "github.com/elastic/go-elasticsearch/v9/typedapi/core/searchshards"
 	core_search_template "github.com/elastic/go-elasticsearch/v9/typedapi/core/searchtemplate"
 	core_terms_enum "github.com/elastic/go-elasticsearch/v9/typedapi/core/termsenum"
 	core_termvectors "github.com/elastic/go-elasticsearch/v9/typedapi/core/termvectors"
 	core_update "github.com/elastic/go-elasticsearch/v9/typedapi/core/update"
-	core_update_by_query "github.com/elastic/go-elasticsearch/v9/typedapi/core/updatebyquery"
 	core_update_by_query_rethrottle "github.com/elastic/go-elasticsearch/v9/typedapi/core/updatebyqueryrethrottle"
 	dangling_indices_delete_dangling_index "github.com/elastic/go-elasticsearch/v9/typedapi/danglingindices/deletedanglingindex"
 	dangling_indices_import_dangling_index "github.com/elastic/go-elasticsearch/v9/typedapi/danglingindices/importdanglingindex"
@@ -161,7 +118,6 @@ import (
 	esql_get_view "github.com/elastic/go-elasticsearch/v9/typedapi/esql/getview"
 	esql_list_queries "github.com/elastic/go-elasticsearch/v9/typedapi/esql/listqueries"
 	esql_put_view "github.com/elastic/go-elasticsearch/v9/typedapi/esql/putview"
-	esql_query "github.com/elastic/go-elasticsearch/v9/typedapi/esql/query"
 	features_get_features "github.com/elastic/go-elasticsearch/v9/typedapi/features/getfeatures"
 	features_reset_features "github.com/elastic/go-elasticsearch/v9/typedapi/features/resetfeatures"
 	fleet_delete_secret "github.com/elastic/go-elasticsearch/v9/typedapi/fleet/deletesecret"
@@ -246,7 +202,6 @@ import (
 	indices_simulate_index_template "github.com/elastic/go-elasticsearch/v9/typedapi/indices/simulateindextemplate"
 	indices_simulate_template "github.com/elastic/go-elasticsearch/v9/typedapi/indices/simulatetemplate"
 	indices_split "github.com/elastic/go-elasticsearch/v9/typedapi/indices/split"
-	indices_stats "github.com/elastic/go-elasticsearch/v9/typedapi/indices/stats"
 	indices_update_aliases "github.com/elastic/go-elasticsearch/v9/typedapi/indices/updatealiases"
 	indices_validate_query "github.com/elastic/go-elasticsearch/v9/typedapi/indices/validatequery"
 	inference_chat_completion_unified "github.com/elastic/go-elasticsearch/v9/typedapi/inference/chatcompletionunified"
@@ -310,16 +265,13 @@ import (
 	migration_get_feature_upgrade_status "github.com/elastic/go-elasticsearch/v9/typedapi/migration/getfeatureupgradestatus"
 	migration_post_feature_upgrade "github.com/elastic/go-elasticsearch/v9/typedapi/migration/postfeatureupgrade"
 	ml_clear_trained_model_deployment_cache "github.com/elastic/go-elasticsearch/v9/typedapi/ml/cleartrainedmodeldeploymentcache"
-	ml_close_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/closejob"
 	ml_delete_calendar "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletecalendar"
 	ml_delete_calendar_event "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletecalendarevent"
 	ml_delete_calendar_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletecalendarjob"
-	ml_delete_datafeed "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletedatafeed"
 	ml_delete_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletedataframeanalytics"
 	ml_delete_expired_data "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deleteexpireddata"
 	ml_delete_filter "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletefilter"
 	ml_delete_forecast "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deleteforecast"
-	ml_delete_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletejob"
 	ml_delete_model_snapshot "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletemodelsnapshot"
 	ml_delete_trained_model "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletetrainedmodel"
 	ml_delete_trained_model_alias "github.com/elastic/go-elasticsearch/v9/typedapi/ml/deletetrainedmodelalias"
@@ -332,13 +284,11 @@ import (
 	ml_get_calendar_events "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getcalendarevents"
 	ml_get_calendars "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getcalendars"
 	ml_get_categories "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getcategories"
-	ml_get_datafeeds "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getdatafeeds"
 	ml_get_datafeed_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getdatafeedstats"
 	ml_get_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getdataframeanalytics"
 	ml_get_data_frame_analytics_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getdataframeanalyticsstats"
 	ml_get_filters "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getfilters"
 	ml_get_influencers "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getinfluencers"
-	ml_get_jobs "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getjobs"
 	ml_get_job_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getjobstats"
 	ml_get_memory_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getmemorystats"
 	ml_get_model_snapshots "github.com/elastic/go-elasticsearch/v9/typedapi/ml/getmodelsnapshots"
@@ -349,17 +299,14 @@ import (
 	ml_get_trained_models_stats "github.com/elastic/go-elasticsearch/v9/typedapi/ml/gettrainedmodelsstats"
 	ml_infer_trained_model "github.com/elastic/go-elasticsearch/v9/typedapi/ml/infertrainedmodel"
 	ml_info "github.com/elastic/go-elasticsearch/v9/typedapi/ml/info"
-	ml_open_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/openjob"
 	ml_post_calendar_events "github.com/elastic/go-elasticsearch/v9/typedapi/ml/postcalendarevents"
 	ml_post_data "github.com/elastic/go-elasticsearch/v9/typedapi/ml/postdata"
 	ml_preview_datafeed "github.com/elastic/go-elasticsearch/v9/typedapi/ml/previewdatafeed"
 	ml_preview_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/ml/previewdataframeanalytics"
 	ml_put_calendar "github.com/elastic/go-elasticsearch/v9/typedapi/ml/putcalendar"
 	ml_put_calendar_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/putcalendarjob"
-	ml_put_datafeed "github.com/elastic/go-elasticsearch/v9/typedapi/ml/putdatafeed"
 	ml_put_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/ml/putdataframeanalytics"
 	ml_put_filter "github.com/elastic/go-elasticsearch/v9/typedapi/ml/putfilter"
-	ml_put_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/putjob"
 	ml_put_trained_model "github.com/elastic/go-elasticsearch/v9/typedapi/ml/puttrainedmodel"
 	ml_put_trained_model_alias "github.com/elastic/go-elasticsearch/v9/typedapi/ml/puttrainedmodelalias"
 	ml_put_trained_model_definition_part "github.com/elastic/go-elasticsearch/v9/typedapi/ml/puttrainedmodeldefinitionpart"
@@ -367,10 +314,8 @@ import (
 	ml_reset_job "github.com/elastic/go-elasticsearch/v9/typedapi/ml/resetjob"
 	ml_revert_model_snapshot "github.com/elastic/go-elasticsearch/v9/typedapi/ml/revertmodelsnapshot"
 	ml_set_upgrade_mode "github.com/elastic/go-elasticsearch/v9/typedapi/ml/setupgrademode"
-	ml_start_datafeed "github.com/elastic/go-elasticsearch/v9/typedapi/ml/startdatafeed"
 	ml_start_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/ml/startdataframeanalytics"
 	ml_start_trained_model_deployment "github.com/elastic/go-elasticsearch/v9/typedapi/ml/starttrainedmodeldeployment"
-	ml_stop_datafeed "github.com/elastic/go-elasticsearch/v9/typedapi/ml/stopdatafeed"
 	ml_stop_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/ml/stopdataframeanalytics"
 	ml_stop_trained_model_deployment "github.com/elastic/go-elasticsearch/v9/typedapi/ml/stoptrainedmodeldeployment"
 	ml_update_datafeed "github.com/elastic/go-elasticsearch/v9/typedapi/ml/updatedatafeed"
@@ -533,9 +478,7 @@ import (
 	synonyms_get_synonyms_sets "github.com/elastic/go-elasticsearch/v9/typedapi/synonyms/getsynonymssets"
 	synonyms_put_synonym "github.com/elastic/go-elasticsearch/v9/typedapi/synonyms/putsynonym"
 	synonyms_put_synonym_rule "github.com/elastic/go-elasticsearch/v9/typedapi/synonyms/putsynonymrule"
-	tasks_cancel "github.com/elastic/go-elasticsearch/v9/typedapi/tasks/cancel"
 	tasks_get "github.com/elastic/go-elasticsearch/v9/typedapi/tasks/get"
-	tasks_list "github.com/elastic/go-elasticsearch/v9/typedapi/tasks/list"
 	text_structure_find_field_structure "github.com/elastic/go-elasticsearch/v9/typedapi/textstructure/findfieldstructure"
 	text_structure_find_message_structure "github.com/elastic/go-elasticsearch/v9/typedapi/textstructure/findmessagestructure"
 	text_structure_find_structure "github.com/elastic/go-elasticsearch/v9/typedapi/textstructure/findstructure"
@@ -591,94 +534,24 @@ type ESClientSpec interface {
 	AutoscalingGetAutoscalingPolicy(ctx context.Context, name string) (*autoscaling_get_autoscaling_policy.Response, error)
 	// AutoscalingPutAutoscalingPolicy wraps the Elasticsearch spec endpoint autoscaling.put_autoscaling_policy.
 	AutoscalingPutAutoscalingPolicy(ctx context.Context, name string, req *autoscaling_put_autoscaling_policy.Request) (*autoscaling_put_autoscaling_policy.Response, error)
-	// Bulk wraps the Elasticsearch spec endpoint bulk.
-	Bulk(ctx context.Context, req *core_bulk.Request) (*core_bulk.Response, error)
 	// Capabilities wraps the Elasticsearch spec endpoint capabilities.
 	Capabilities(ctx context.Context) (*core_capabilities.Response, error)
-	// CatAliases wraps the Elasticsearch spec endpoint cat.aliases.
-	CatAliases(ctx context.Context) (cat_aliases.Response, error)
-	// CatAllocation wraps the Elasticsearch spec endpoint cat.allocation.
-	CatAllocation(ctx context.Context) (cat_allocation.Response, error)
-	// CatCircuitBreaker wraps the Elasticsearch spec endpoint cat.circuit_breaker.
-	CatCircuitBreaker(ctx context.Context) (cat_circuit_breaker.Response, error)
-	// CatComponentTemplates wraps the Elasticsearch spec endpoint cat.component_templates.
-	CatComponentTemplates(ctx context.Context) (cat_component_templates.Response, error)
-	// CatCount wraps the Elasticsearch spec endpoint cat.count.
-	CatCount(ctx context.Context, req *cat_count.Request) (cat_count.Response, error)
-	// CatFielddata wraps the Elasticsearch spec endpoint cat.fielddata.
-	CatFielddata(ctx context.Context) (cat_fielddata.Response, error)
-	// CatHealth wraps the Elasticsearch spec endpoint cat.health.
-	CatHealth(ctx context.Context) (cat_health.Response, error)
-	// CatHelp wraps the Elasticsearch spec endpoint cat.help.
-	CatHelp(ctx context.Context) (*cat_help.Response, error)
-	// CatIndices wraps the Elasticsearch spec endpoint cat.indices.
-	CatIndices(ctx context.Context) (cat_indices.Response, error)
-	// CatMaster wraps the Elasticsearch spec endpoint cat.master.
-	CatMaster(ctx context.Context) (cat_master.Response, error)
-	// CatMlDataFrameAnalytics wraps the Elasticsearch spec endpoint cat.ml_data_frame_analytics.
-	CatMlDataFrameAnalytics(ctx context.Context) (cat_ml_data_frame_analytics.Response, error)
-	// CatMlDatafeeds wraps the Elasticsearch spec endpoint cat.ml_datafeeds.
-	CatMlDatafeeds(ctx context.Context) (cat_ml_datafeeds.Response, error)
-	// CatMlJobs wraps the Elasticsearch spec endpoint cat.ml_jobs.
-	CatMlJobs(ctx context.Context) (cat_ml_jobs.Response, error)
-	// CatMlTrainedModels wraps the Elasticsearch spec endpoint cat.ml_trained_models.
-	CatMlTrainedModels(ctx context.Context) (cat_ml_trained_models.Response, error)
-	// CatNodeattrs wraps the Elasticsearch spec endpoint cat.nodeattrs.
-	CatNodeattrs(ctx context.Context) (cat_nodeattrs.Response, error)
-	// CatNodes wraps the Elasticsearch spec endpoint cat.nodes.
-	CatNodes(ctx context.Context) (cat_nodes.Response, error)
-	// CatPendingTasks wraps the Elasticsearch spec endpoint cat.pending_tasks.
-	CatPendingTasks(ctx context.Context) (cat_pending_tasks.Response, error)
-	// CatPlugins wraps the Elasticsearch spec endpoint cat.plugins.
-	CatPlugins(ctx context.Context) (cat_plugins.Response, error)
-	// CatRecovery wraps the Elasticsearch spec endpoint cat.recovery.
-	CatRecovery(ctx context.Context) (cat_recovery.Response, error)
-	// CatRepositories wraps the Elasticsearch spec endpoint cat.repositories.
-	CatRepositories(ctx context.Context) (cat_repositories.Response, error)
-	// CatSegments wraps the Elasticsearch spec endpoint cat.segments.
-	CatSegments(ctx context.Context) (cat_segments.Response, error)
-	// CatShards wraps the Elasticsearch spec endpoint cat.shards.
-	CatShards(ctx context.Context) (cat_shards.Response, error)
-	// CatSnapshots wraps the Elasticsearch spec endpoint cat.snapshots.
-	CatSnapshots(ctx context.Context) (cat_snapshots.Response, error)
-	// CatTasks wraps the Elasticsearch spec endpoint cat.tasks.
-	CatTasks(ctx context.Context) (cat_tasks.Response, error)
-	// CatTemplates wraps the Elasticsearch spec endpoint cat.templates.
-	CatTemplates(ctx context.Context) (cat_templates.Response, error)
-	// CatThreadPool wraps the Elasticsearch spec endpoint cat.thread_pool.
-	CatThreadPool(ctx context.Context) (cat_thread_pool.Response, error)
-	// CatTransforms wraps the Elasticsearch spec endpoint cat.transforms.
-	CatTransforms(ctx context.Context) (cat_transforms.Response, error)
 	// CcrDeleteAutoFollowPattern wraps the Elasticsearch spec endpoint ccr.delete_auto_follow_pattern.
 	CcrDeleteAutoFollowPattern(ctx context.Context, name string) (*ccr_delete_auto_follow_pattern.Response, error)
-	// CcrFollow wraps the Elasticsearch spec endpoint ccr.follow.
-	CcrFollow(ctx context.Context, index string, req *ccr_follow.Request) (*ccr_follow.Response, error)
 	// CcrFollowInfo wraps the Elasticsearch spec endpoint ccr.follow_info.
 	CcrFollowInfo(ctx context.Context, index string) (*ccr_follow_info.Response, error)
-	// CcrFollowStats wraps the Elasticsearch spec endpoint ccr.follow_stats.
-	CcrFollowStats(ctx context.Context, index string) (*ccr_follow_stats.Response, error)
 	// CcrForgetFollower wraps the Elasticsearch spec endpoint ccr.forget_follower.
 	CcrForgetFollower(ctx context.Context, index string, req *ccr_forget_follower.Request) (*ccr_forget_follower.Response, error)
 	// CcrGetAutoFollowPattern wraps the Elasticsearch spec endpoint ccr.get_auto_follow_pattern.
 	CcrGetAutoFollowPattern(ctx context.Context) (*ccr_get_auto_follow_pattern.Response, error)
 	// CcrPauseAutoFollowPattern wraps the Elasticsearch spec endpoint ccr.pause_auto_follow_pattern.
 	CcrPauseAutoFollowPattern(ctx context.Context, name string) (*ccr_pause_auto_follow_pattern.Response, error)
-	// CcrPauseFollow wraps the Elasticsearch spec endpoint ccr.pause_follow.
-	CcrPauseFollow(ctx context.Context, index string) (*ccr_pause_follow.Response, error)
 	// CcrPutAutoFollowPattern wraps the Elasticsearch spec endpoint ccr.put_auto_follow_pattern.
 	CcrPutAutoFollowPattern(ctx context.Context, name string, req *ccr_put_auto_follow_pattern.Request) (*ccr_put_auto_follow_pattern.Response, error)
 	// CcrResumeAutoFollowPattern wraps the Elasticsearch spec endpoint ccr.resume_auto_follow_pattern.
 	CcrResumeAutoFollowPattern(ctx context.Context, name string) (*ccr_resume_auto_follow_pattern.Response, error)
-	// CcrResumeFollow wraps the Elasticsearch spec endpoint ccr.resume_follow.
-	CcrResumeFollow(ctx context.Context, index string, req *ccr_resume_follow.Request) (*ccr_resume_follow.Response, error)
 	// CcrStats wraps the Elasticsearch spec endpoint ccr.stats.
 	CcrStats(ctx context.Context) (*ccr_stats.Response, error)
-	// CcrUnfollow wraps the Elasticsearch spec endpoint ccr.unfollow.
-	CcrUnfollow(ctx context.Context, index string) (*ccr_unfollow.Response, error)
-	// ClearScroll wraps the Elasticsearch spec endpoint clear_scroll.
-	ClearScroll(ctx context.Context, req *core_clear_scroll.Request) (*core_clear_scroll.Response, error)
-	// ClosePointInTime wraps the Elasticsearch spec endpoint close_point_in_time.
-	ClosePointInTime(ctx context.Context, req *core_close_point_in_time.Request) (*core_close_point_in_time.Response, error)
 	// ClusterAllocationExplain wraps the Elasticsearch spec endpoint cluster.allocation_explain.
 	ClusterAllocationExplain(ctx context.Context, req *cluster_allocation_explain.Request) (*cluster_allocation_explain.Response, error)
 	// ClusterDeleteComponentTemplate wraps the Elasticsearch spec endpoint cluster.delete_component_template.
@@ -691,8 +564,6 @@ type ESClientSpec interface {
 	ClusterGetComponentTemplate(ctx context.Context) (*cluster_get_component_template.Response, error)
 	// ClusterGetSettings wraps the Elasticsearch spec endpoint cluster.get_settings.
 	ClusterGetSettings(ctx context.Context) (*cluster_get_settings.Response, error)
-	// ClusterHealth wraps the Elasticsearch spec endpoint cluster.health.
-	ClusterHealth(ctx context.Context) (*cluster_health.Response, error)
 	// ClusterInfo wraps the Elasticsearch spec endpoint cluster.info.
 	ClusterInfo(ctx context.Context, target string) (*cluster_info.Response, error)
 	// ClusterPendingTasks wraps the Elasticsearch spec endpoint cluster.pending_tasks.
@@ -779,8 +650,6 @@ type ESClientSpec interface {
 	ConnectorUpdateServiceType(ctx context.Context, connectorid string, req *connector_update_service_type.Request) (*connector_update_service_type.Response, error)
 	// ConnectorUpdateStatus wraps the Elasticsearch spec endpoint connector.update_status.
 	ConnectorUpdateStatus(ctx context.Context, connectorid string, req *connector_update_status.Request) (*connector_update_status.Response, error)
-	// Count wraps the Elasticsearch spec endpoint count.
-	Count(ctx context.Context, req *core_count.Request) (*core_count.Response, error)
 	// Create wraps the Elasticsearch spec endpoint create.
 	Create(ctx context.Context, index string, id string, req *core_create.Request) (*core_create.Response, error)
 	// DanglingIndicesDeleteDanglingIndex wraps the Elasticsearch spec endpoint dangling_indices.delete_dangling_index.
@@ -791,8 +660,6 @@ type ESClientSpec interface {
 	DanglingIndicesListDanglingIndices(ctx context.Context) (*dangling_indices_list_dangling_indices.Response, error)
 	// Delete wraps the Elasticsearch spec endpoint delete.
 	Delete(ctx context.Context, index string, id string) (*core_delete.Response, error)
-	// DeleteByQuery wraps the Elasticsearch spec endpoint delete_by_query.
-	DeleteByQuery(ctx context.Context, index string, req *core_delete_by_query.Request) (*core_delete_by_query.Response, error)
 	// DeleteByQueryRethrottle wraps the Elasticsearch spec endpoint delete_by_query_rethrottle.
 	DeleteByQueryRethrottle(ctx context.Context, taskid string) (*core_delete_by_query_rethrottle.Response, error)
 	// DeleteScript wraps the Elasticsearch spec endpoint delete_script.
@@ -833,8 +700,6 @@ type ESClientSpec interface {
 	EsqlListQueries(ctx context.Context) (*esql_list_queries.Response, error)
 	// EsqlPutView wraps the Elasticsearch spec endpoint esql.put_view.
 	EsqlPutView(ctx context.Context, name string, req *esql_put_view.Request) (*esql_put_view.Response, error)
-	// EsqlQuery wraps the Elasticsearch spec endpoint esql.query.
-	EsqlQuery(ctx context.Context, req *esql_query.Request) (esql_query.Response, error)
 	// Exists wraps the Elasticsearch spec endpoint exists.
 	Exists(ctx context.Context, index string, id string) (bool, error)
 	// ExistsSource wraps the Elasticsearch spec endpoint exists_source.
@@ -1033,8 +898,6 @@ type ESClientSpec interface {
 	IndicesSimulateTemplate(ctx context.Context, req *indices_simulate_template.Request) (*indices_simulate_template.Response, error)
 	// IndicesSplit wraps the Elasticsearch spec endpoint indices.split.
 	IndicesSplit(ctx context.Context, index string, target string, req *indices_split.Request) (*indices_split.Response, error)
-	// IndicesStats wraps the Elasticsearch spec endpoint indices.stats.
-	IndicesStats(ctx context.Context) (*indices_stats.Response, error)
 	// IndicesUpdateAliases wraps the Elasticsearch spec endpoint indices.update_aliases.
 	IndicesUpdateAliases(ctx context.Context, req *indices_update_aliases.Request) (*indices_update_aliases.Response, error)
 	// IndicesValidateQuery wraps the Elasticsearch spec endpoint indices.validate_query.
@@ -1173,8 +1036,6 @@ type ESClientSpec interface {
 	LogstashGetPipeline(ctx context.Context) (logstash_get_pipeline.Response, error)
 	// LogstashPutPipeline wraps the Elasticsearch spec endpoint logstash.put_pipeline.
 	LogstashPutPipeline(ctx context.Context, id string, req *logstash_put_pipeline.Request) (bool, error)
-	// Mget wraps the Elasticsearch spec endpoint mget.
-	Mget(ctx context.Context, req *core_mget.Request) (*core_mget.Response, error)
 	// MigrationDeprecations wraps the Elasticsearch spec endpoint migration.deprecations.
 	MigrationDeprecations(ctx context.Context) (*migration_deprecations.Response, error)
 	// MigrationGetFeatureUpgradeStatus wraps the Elasticsearch spec endpoint migration.get_feature_upgrade_status.
@@ -1183,8 +1044,6 @@ type ESClientSpec interface {
 	MigrationPostFeatureUpgrade(ctx context.Context) (*migration_post_feature_upgrade.Response, error)
 	// MlClearTrainedModelDeploymentCache wraps the Elasticsearch spec endpoint ml.clear_trained_model_deployment_cache.
 	MlClearTrainedModelDeploymentCache(ctx context.Context, modelid string) (*ml_clear_trained_model_deployment_cache.Response, error)
-	// MlCloseJob wraps the Elasticsearch spec endpoint ml.close_job.
-	MlCloseJob(ctx context.Context, jobid string, req *ml_close_job.Request) (*ml_close_job.Response, error)
 	// MlDeleteCalendar wraps the Elasticsearch spec endpoint ml.delete_calendar.
 	MlDeleteCalendar(ctx context.Context, calendarid string) (*ml_delete_calendar.Response, error)
 	// MlDeleteCalendarEvent wraps the Elasticsearch spec endpoint ml.delete_calendar_event.
@@ -1193,16 +1052,12 @@ type ESClientSpec interface {
 	MlDeleteCalendarJob(ctx context.Context, calendarid string, jobid string) (*ml_delete_calendar_job.Response, error)
 	// MlDeleteDataFrameAnalytics wraps the Elasticsearch spec endpoint ml.delete_data_frame_analytics.
 	MlDeleteDataFrameAnalytics(ctx context.Context, id string) (*ml_delete_data_frame_analytics.Response, error)
-	// MlDeleteDatafeed wraps the Elasticsearch spec endpoint ml.delete_datafeed.
-	MlDeleteDatafeed(ctx context.Context, datafeedid string) (*ml_delete_datafeed.Response, error)
 	// MlDeleteExpiredData wraps the Elasticsearch spec endpoint ml.delete_expired_data.
 	MlDeleteExpiredData(ctx context.Context, req *ml_delete_expired_data.Request) (*ml_delete_expired_data.Response, error)
 	// MlDeleteFilter wraps the Elasticsearch spec endpoint ml.delete_filter.
 	MlDeleteFilter(ctx context.Context, filterid string) (*ml_delete_filter.Response, error)
 	// MlDeleteForecast wraps the Elasticsearch spec endpoint ml.delete_forecast.
 	MlDeleteForecast(ctx context.Context, jobid string) (*ml_delete_forecast.Response, error)
-	// MlDeleteJob wraps the Elasticsearch spec endpoint ml.delete_job.
-	MlDeleteJob(ctx context.Context, jobid string) (*ml_delete_job.Response, error)
 	// MlDeleteModelSnapshot wraps the Elasticsearch spec endpoint ml.delete_model_snapshot.
 	MlDeleteModelSnapshot(ctx context.Context, jobid string, snapshotid string) (*ml_delete_model_snapshot.Response, error)
 	// MlDeleteTrainedModel wraps the Elasticsearch spec endpoint ml.delete_trained_model.
@@ -1233,16 +1088,12 @@ type ESClientSpec interface {
 	MlGetDataFrameAnalyticsStats(ctx context.Context) (*ml_get_data_frame_analytics_stats.Response, error)
 	// MlGetDatafeedStats wraps the Elasticsearch spec endpoint ml.get_datafeed_stats.
 	MlGetDatafeedStats(ctx context.Context) (*ml_get_datafeed_stats.Response, error)
-	// MlGetDatafeeds wraps the Elasticsearch spec endpoint ml.get_datafeeds.
-	MlGetDatafeeds(ctx context.Context) (*ml_get_datafeeds.Response, error)
 	// MlGetFilters wraps the Elasticsearch spec endpoint ml.get_filters.
 	MlGetFilters(ctx context.Context) (*ml_get_filters.Response, error)
 	// MlGetInfluencers wraps the Elasticsearch spec endpoint ml.get_influencers.
 	MlGetInfluencers(ctx context.Context, jobid string, req *ml_get_influencers.Request) (*ml_get_influencers.Response, error)
 	// MlGetJobStats wraps the Elasticsearch spec endpoint ml.get_job_stats.
 	MlGetJobStats(ctx context.Context) (*ml_get_job_stats.Response, error)
-	// MlGetJobs wraps the Elasticsearch spec endpoint ml.get_jobs.
-	MlGetJobs(ctx context.Context) (*ml_get_jobs.Response, error)
 	// MlGetMemoryStats wraps the Elasticsearch spec endpoint ml.get_memory_stats.
 	MlGetMemoryStats(ctx context.Context) (*ml_get_memory_stats.Response, error)
 	// MlGetModelSnapshotUpgradeStats wraps the Elasticsearch spec endpoint ml.get_model_snapshot_upgrade_stats.
@@ -1261,8 +1112,6 @@ type ESClientSpec interface {
 	MlInferTrainedModel(ctx context.Context, modelid string, req *ml_infer_trained_model.Request) (*ml_infer_trained_model.Response, error)
 	// MlInfo wraps the Elasticsearch spec endpoint ml.info.
 	MlInfo(ctx context.Context) (*ml_info.Response, error)
-	// MlOpenJob wraps the Elasticsearch spec endpoint ml.open_job.
-	MlOpenJob(ctx context.Context, jobid string, req *ml_open_job.Request) (*ml_open_job.Response, error)
 	// MlPostCalendarEvents wraps the Elasticsearch spec endpoint ml.post_calendar_events.
 	MlPostCalendarEvents(ctx context.Context, calendarid string, req *ml_post_calendar_events.Request) (*ml_post_calendar_events.Response, error)
 	// MlPostData wraps the Elasticsearch spec endpoint ml.post_data.
@@ -1277,12 +1126,8 @@ type ESClientSpec interface {
 	MlPutCalendarJob(ctx context.Context, calendarid string, jobid string) (*ml_put_calendar_job.Response, error)
 	// MlPutDataFrameAnalytics wraps the Elasticsearch spec endpoint ml.put_data_frame_analytics.
 	MlPutDataFrameAnalytics(ctx context.Context, id string, req *ml_put_data_frame_analytics.Request) (*ml_put_data_frame_analytics.Response, error)
-	// MlPutDatafeed wraps the Elasticsearch spec endpoint ml.put_datafeed.
-	MlPutDatafeed(ctx context.Context, datafeedid string, req *ml_put_datafeed.Request) (*ml_put_datafeed.Response, error)
 	// MlPutFilter wraps the Elasticsearch spec endpoint ml.put_filter.
 	MlPutFilter(ctx context.Context, filterid string, req *ml_put_filter.Request) (*ml_put_filter.Response, error)
-	// MlPutJob wraps the Elasticsearch spec endpoint ml.put_job.
-	MlPutJob(ctx context.Context, jobid string, req *ml_put_job.Request) (*ml_put_job.Response, error)
 	// MlPutTrainedModel wraps the Elasticsearch spec endpoint ml.put_trained_model.
 	MlPutTrainedModel(ctx context.Context, modelid string, req *ml_put_trained_model.Request) (*ml_put_trained_model.Response, error)
 	// MlPutTrainedModelAlias wraps the Elasticsearch spec endpoint ml.put_trained_model_alias.
@@ -1299,14 +1144,10 @@ type ESClientSpec interface {
 	MlSetUpgradeMode(ctx context.Context) (*ml_set_upgrade_mode.Response, error)
 	// MlStartDataFrameAnalytics wraps the Elasticsearch spec endpoint ml.start_data_frame_analytics.
 	MlStartDataFrameAnalytics(ctx context.Context, id string, req *ml_start_data_frame_analytics.Request) (*ml_start_data_frame_analytics.Response, error)
-	// MlStartDatafeed wraps the Elasticsearch spec endpoint ml.start_datafeed.
-	MlStartDatafeed(ctx context.Context, datafeedid string, req *ml_start_datafeed.Request) (*ml_start_datafeed.Response, error)
 	// MlStartTrainedModelDeployment wraps the Elasticsearch spec endpoint ml.start_trained_model_deployment.
 	MlStartTrainedModelDeployment(ctx context.Context, modelid string, req *ml_start_trained_model_deployment.Request) (*ml_start_trained_model_deployment.Response, error)
 	// MlStopDataFrameAnalytics wraps the Elasticsearch spec endpoint ml.stop_data_frame_analytics.
 	MlStopDataFrameAnalytics(ctx context.Context, id string, req *ml_stop_data_frame_analytics.Request) (*ml_stop_data_frame_analytics.Response, error)
-	// MlStopDatafeed wraps the Elasticsearch spec endpoint ml.stop_datafeed.
-	MlStopDatafeed(ctx context.Context, datafeedid string, req *ml_stop_datafeed.Request) (*ml_stop_datafeed.Response, error)
 	// MlStopTrainedModelDeployment wraps the Elasticsearch spec endpoint ml.stop_trained_model_deployment.
 	MlStopTrainedModelDeployment(ctx context.Context, modelid string, req *ml_stop_trained_model_deployment.Request) (*ml_stop_trained_model_deployment.Response, error)
 	// MlUpdateDataFrameAnalytics wraps the Elasticsearch spec endpoint ml.update_data_frame_analytics.
@@ -1329,8 +1170,6 @@ type ESClientSpec interface {
 	MlValidateDetector(ctx context.Context, req *ml_validate_detector.Request) (*ml_validate_detector.Response, error)
 	// MonitoringBulk wraps the Elasticsearch spec endpoint monitoring.bulk.
 	MonitoringBulk(ctx context.Context, req *monitoring_bulk.Request) (*monitoring_bulk.Response, error)
-	// Msearch wraps the Elasticsearch spec endpoint msearch.
-	Msearch(ctx context.Context, req *core_msearch.Request) (*core_msearch.Response, error)
 	// MsearchTemplate wraps the Elasticsearch spec endpoint msearch_template.
 	MsearchTemplate(ctx context.Context, req *core_msearch_template.Request) (*core_msearch_template.Response, error)
 	// Mtermvectors wraps the Elasticsearch spec endpoint mtermvectors.
@@ -1349,8 +1188,6 @@ type ESClientSpec interface {
 	NodesStats(ctx context.Context) (*nodes_stats.Response, error)
 	// NodesUsage wraps the Elasticsearch spec endpoint nodes.usage.
 	NodesUsage(ctx context.Context) (*nodes_usage.Response, error)
-	// OpenPointInTime wraps the Elasticsearch spec endpoint open_point_in_time.
-	OpenPointInTime(ctx context.Context, index string, keepAlive string, req *core_open_point_in_time.Request) (*core_open_point_in_time.Response, error)
 	// Ping wraps the Elasticsearch spec endpoint ping.
 	Ping(ctx context.Context) (bool, error)
 	// ProfilingFlamegraph wraps the Elasticsearch spec endpoint profiling.flamegraph.
@@ -1415,8 +1252,6 @@ type ESClientSpec interface {
 	RollupStopJob(ctx context.Context, id string) (*rollup_stop_job.Response, error)
 	// ScriptsPainlessExecute wraps the Elasticsearch spec endpoint scripts_painless_execute.
 	ScriptsPainlessExecute(ctx context.Context, req *core_scripts_painless_execute.Request) (*core_scripts_painless_execute.Response, error)
-	// Scroll wraps the Elasticsearch spec endpoint scroll.
-	Scroll(ctx context.Context, req *core_scroll.Request) (*core_scroll.Response, error)
 	// SearchApplicationDelete wraps the Elasticsearch spec endpoint search_application.delete.
 	SearchApplicationDelete(ctx context.Context, name string) (*search_application_delete.Response, error)
 	// SearchApplicationDeleteBehavioralAnalytics wraps the Elasticsearch spec endpoint search_application.delete_behavioral_analytics.
@@ -1667,12 +1502,8 @@ type ESClientSpec interface {
 	SynonymsPutSynonym(ctx context.Context, id string, req *synonyms_put_synonym.Request) (*synonyms_put_synonym.Response, error)
 	// SynonymsPutSynonymRule wraps the Elasticsearch spec endpoint synonyms.put_synonym_rule.
 	SynonymsPutSynonymRule(ctx context.Context, setid string, ruleid string, req *synonyms_put_synonym_rule.Request) (*synonyms_put_synonym_rule.Response, error)
-	// TasksCancel wraps the Elasticsearch spec endpoint tasks.cancel.
-	TasksCancel(ctx context.Context) (*tasks_cancel.Response, error)
 	// TasksGet wraps the Elasticsearch spec endpoint tasks.get.
 	TasksGet(ctx context.Context, taskid string) (*tasks_get.Response, error)
-	// TasksList wraps the Elasticsearch spec endpoint tasks.list.
-	TasksList(ctx context.Context) (*tasks_list.Response, error)
 	// TermsEnum wraps the Elasticsearch spec endpoint terms_enum.
 	TermsEnum(ctx context.Context, index string, req *core_terms_enum.Request) (*core_terms_enum.Response, error)
 	// Termvectors wraps the Elasticsearch spec endpoint termvectors.
@@ -1713,8 +1544,6 @@ type ESClientSpec interface {
 	TransformUpgradeTransforms(ctx context.Context) (*transform_upgrade_transforms.Response, error)
 	// Update wraps the Elasticsearch spec endpoint update.
 	Update(ctx context.Context, index string, id string, req *core_update.Request) (*core_update.Response, error)
-	// UpdateByQuery wraps the Elasticsearch spec endpoint update_by_query.
-	UpdateByQuery(ctx context.Context, index string, req *core_update_by_query.Request) (*core_update_by_query.Response, error)
 	// UpdateByQueryRethrottle wraps the Elasticsearch spec endpoint update_by_query_rethrottle.
 	UpdateByQueryRethrottle(ctx context.Context, taskid string) (*core_update_by_query_rethrottle.Response, error)
 	// WatcherAckWatch wraps the Elasticsearch spec endpoint watcher.ack_watch.

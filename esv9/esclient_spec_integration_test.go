@@ -13,7 +13,6 @@ import (
 	corebulk "github.com/elastic/go-elasticsearch/v9/typedapi/core/bulk"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/clearscroll"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/closepointintime"
-	"github.com/elastic/go-elasticsearch/v9/typedapi/core/count"
 	corecreate "github.com/elastic/go-elasticsearch/v9/typedapi/core/create"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyquery"
 	coreindex "github.com/elastic/go-elasticsearch/v9/typedapi/core/index"
@@ -101,7 +100,9 @@ func TestIntegration_Spec_ClusterHealth(t *testing.T) {
 	client := newSpecClient(t)
 	ctx := context.Background()
 
-	res, err := client.ClusterHealth(ctx)
+	idx := uniqueSpecIndex(t, client)
+
+	res, err := client.ClusterHealth(ctx, estype.Index(idx))
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	assert.Assert(t, res.ClusterName != "", "cluster name should not be empty")
@@ -230,7 +231,7 @@ func TestIntegration_Spec_Bulk(t *testing.T) {
 		)
 	}
 
-	res, err := client.Bulk(ctx, &req)
+	res, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	assert.Assert(t, !res.Errors, "bulk should complete without errors")
@@ -246,11 +247,11 @@ func TestIntegration_Spec_Count(t *testing.T) {
 	// Index 3 docs via Bulk
 	docs := []map[string]any{{"n": 0}, {"n": 1}, {"n": 2}}
 	req := bulkOps(idx, docs...)
-	_, err := client.Bulk(ctx, &req)
+	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	_, _ = client.IndicesRefresh(ctx)
 
-	countRes, err := client.Count(ctx, &count.Request{})
+	countRes, err := client.Count(ctx, estype.Alias(idx))
 	assert.NilError(t, err)
 	assert.Assert(t, countRes != nil)
 	assert.Assert(t, countRes.Count >= 3,
@@ -272,13 +273,14 @@ func TestIntegration_Spec_Mget(t *testing.T) {
 	_, _ = client.IndicesRefresh(ctx)
 
 	ptr := func(s string) *string { return &s }
-	res, err := client.Mget(ctx, &mget.Request{
+	mgetReq := mget.Request{
 		Docs: []types.MgetOperation{
 			{Index_: ptr(idx), Id_: "mget-doc-1"},
 			{Index_: ptr(idx), Id_: "mget-doc-2"},
 			{Index_: ptr(idx), Id_: "mget-doc-3"},
 		},
-	})
+	}
+	res, err := client.Mget(ctx, estype.Alias(idx), func(r *mget.Mget) { r.Request(&mgetReq) })
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	assert.Assert(t, len(res.Docs) == 3, "expected 3 mget docs, got %d", len(res.Docs))
@@ -292,14 +294,15 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 
 	docs := []map[string]any{{"tag": "delete-me"}, {"tag": "delete-me"}, {"tag": "delete-me"}}
 	req := bulkOps(idx, docs...)
-	_, err := client.Bulk(ctx, &req)
+	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
 	// YELLOW shards of other parallel tests.
 	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	res, err := client.DeleteByQuery(ctx, idx, &deletebyquery.Request{Query: &matchAll})
+	dbqReq := deletebyquery.Request{Query: &matchAll}
+	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) { r.Request(&dbqReq) })
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	t.Logf("DeleteByQuery deleted %d documents", res.Deleted)
@@ -313,7 +316,7 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 
 	docs := []map[string]any{{"status": "pending"}}
 	req := bulkOps(idx, docs...)
-	_, err := client.Bulk(ctx, &req)
+	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
 	// YELLOW shards of other parallel tests when running against ES 9.
@@ -321,9 +324,8 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	assert.NilError(t, err)
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	res, err := client.UpdateByQuery(ctx, idx, &updatebyquery.Request{
-		Query: &matchAll,
-	})
+	ubqReq := updatebyquery.Request{Query: &matchAll}
+	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) { r.Request(&ubqReq) })
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	t.Logf("UpdateByQuery updated %d documents", res.Updated)
@@ -338,7 +340,7 @@ func TestIntegration_Spec_ScrollAndClear(t *testing.T) {
 	// Index docs via bulk
 	docs := []map[string]any{{"s": 0}, {"s": 1}, {"s": 2}, {"s": 3}, {"s": 4}}
 	req := bulkOps(idx, docs...)
-	_, err := client.Bulk(ctx, &req)
+	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	_, _ = client.IndicesRefresh(ctx)
 
@@ -356,9 +358,8 @@ func TestIntegration_Spec_ScrollAndClear(t *testing.T) {
 	t.Logf("SearchWithRequest returned %d hits", scrollRes.Hits.Total.Value)
 
 	// Attempt ClearScroll with _all – this is a fire-and-forget cleanup.
-	clearRes, err := client.ClearScroll(ctx, &clearscroll.Request{
-		ScrollId: []string{"_all"},
-	})
+	clearReq := clearscroll.Request{ScrollId: []string{"_all"}}
+	clearRes, err := client.ClearScroll(ctx, func(r *clearscroll.ClearScroll) { r.Request(&clearReq) })
 	// _all may return an error if there are no open scroll contexts; we accept either.
 	if err == nil {
 		assert.Assert(t, clearRes != nil)
@@ -366,10 +367,8 @@ func TestIntegration_Spec_ScrollAndClear(t *testing.T) {
 
 	// Test Scroll method itself – calling it with an invalid ID tests the method
 	// path and returns a 404/not-found error from ES.
-	_, scrollErr := client.Scroll(ctx, &scroll.Request{
-		ScrollId: "invalid_scroll_id_for_test",
-		Scroll:   "1m",
-	})
+	scrollReq := scroll.Request{ScrollId: "invalid_scroll_id_for_test", Scroll: "1m"}
+	_, scrollErr := client.Scroll(ctx, func(r *scroll.Scroll) { r.Request(&scrollReq) })
 	// We expect an error (ES rejects an unknown scroll_id), but NOT a panic.
 	assert.Assert(t, scrollErr != nil, "Scroll with invalid ID should return an error")
 	t.Logf("Scroll with invalid ID returned expected error: %v", scrollErr)
@@ -387,14 +386,15 @@ func TestIntegration_Spec_PointInTime(t *testing.T) {
 	_, _ = client.IndicesRefresh(ctx)
 
 	// Open PIT – keepAlive is now a required positional parameter.
-	pitRes, err := client.OpenPointInTime(ctx, idx, "1m", nil)
+	pitRes, err := client.OpenPointInTime(ctx, estype.Index(idx), estype.KeepAlive("1m"))
 	assert.NilError(t, err)
 	assert.Assert(t, pitRes != nil)
 	assert.Assert(t, pitRes.Id != "", "PIT id should not be empty")
 	t.Logf("Opened PIT: %s", pitRes.Id)
 
 	// Close PIT
-	closeRes, err := client.ClosePointInTime(ctx, &closepointintime.Request{Id: pitRes.Id})
+	closePITReq := closepointintime.Request{Id: pitRes.Id}
+	closeRes, err := client.ClosePointInTime(ctx, func(r *closepointintime.ClosePointInTime) { r.Request(&closePITReq) })
 	assert.NilError(t, err)
 	assert.Assert(t, closeRes != nil)
 	assert.Assert(t, closeRes.Succeeded, "PIT close should succeed")
@@ -424,18 +424,9 @@ func TestIntegration_Spec_CatIndices(t *testing.T) {
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
 
-	res, err := client.CatIndices(ctx)
+	res, err := client.CatIndices(ctx, estype.Index(idx))
 	assert.NilError(t, err)
-	assert.Assert(t, res != nil)
-
-	found := false
-	for _, entry := range res {
-		if entry.Index != nil && *entry.Index == idx {
-			found = true
-			break
-		}
-	}
-	assert.Assert(t, found, "newly created index %q should appear in CatIndices", idx)
+	assert.Assert(t, len(res) > 0, "CatIndices should return at least one entry for index %q", idx)
 }
 
 func TestIntegration_Spec_IndicesRefresh(t *testing.T) {
