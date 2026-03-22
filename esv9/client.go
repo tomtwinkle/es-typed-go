@@ -396,6 +396,11 @@ func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID string, tim
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
+	taskIDStr, err := taskIDToString(taskID)
+	if err != nil {
+		return err
+	}
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 
@@ -404,9 +409,9 @@ func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID string, tim
 		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for task completion: %w", ctx.Err())
 		case <-ticker.C:
-			res, err := c.typedClient.Tasks.Get(taskID).Do(ctx)
+			res, err := c.typedClient.Tasks.Get(taskIDStr).Do(ctx)
 			if err != nil {
-				return fmt.Errorf("failed to get task status for task ID %s: %w", taskID, err)
+				return fmt.Errorf("failed to get task status for task ID %s: %w", taskIDStr, err)
 			}
 			if res.Completed {
 				if res.Error != nil {
@@ -415,15 +420,45 @@ func (c *esClient) WaitForTaskCompletion(ctx context.Context, taskID string, tim
 						reason = *res.Error.Reason
 					}
 					return fmt.Errorf("task %s completed with error: type=%s, reason=%s",
-						taskID, res.Error.Type, reason)
+						taskIDStr, res.Error.Type, reason)
 				}
 				c.logger.InfoContext(ctx, "Task completed successfully",
-					slog.String("task_id", taskID))
+					slog.String("task_id", taskIDStr))
 				return nil
 			}
 			c.logger.InfoContext(ctx, "Waiting for task to complete...",
-				slog.String("task_id", taskID))
+				slog.String("task_id", taskIDStr))
 		}
+	}
+}
+
+// taskIDToString converts a task ID to its string representation.
+func taskIDToString(taskID any) (string, error) {
+	switch v := taskID.(type) {
+	case string:
+		return v, nil
+	case int:
+		return fmt.Sprintf("%d", v), nil
+	case int8:
+		return fmt.Sprintf("%d", v), nil
+	case int16:
+		return fmt.Sprintf("%d", v), nil
+	case int32:
+		return fmt.Sprintf("%d", v), nil
+	case int64:
+		return fmt.Sprintf("%d", v), nil
+	case uint:
+		return fmt.Sprintf("%d", v), nil
+	case uint8:
+		return fmt.Sprintf("%d", v), nil
+	case uint16:
+		return fmt.Sprintf("%d", v), nil
+	case uint32:
+		return fmt.Sprintf("%d", v), nil
+	case uint64:
+		return fmt.Sprintf("%d", v), nil
+	default:
+		return "", fmt.Errorf("unsupported task ID type: %T", v)
 	}
 }
 
