@@ -237,18 +237,6 @@ func WithTextPositionIncrementGap(v int) TextPropertyOption {
 	return func(p *types.TextProperty) { p.PositionIncrementGap = &v }
 }
 
-// WithTextRawKeyword adds a "keyword" multi-field to the text property
-// for exact-match queries alongside full-text search.
-// ignoreAbove specifies the maximum string length for the keyword sub-field.
-func WithTextRawKeyword(ignoreAbove int) TextPropertyOption {
-	return func(p *types.TextProperty) {
-		if p.Fields == nil {
-			p.Fields = make(map[string]types.Property)
-		}
-		p.Fields["keyword"] = NewKeywordProperty(WithKeywordIgnoreAbove(ignoreAbove))
-	}
-}
-
 // WithTextFields sets the multi-fields for the text property.
 func WithTextFields(fields map[string]types.Property) TextPropertyOption {
 	return func(p *types.TextProperty) { p.Fields = fields }

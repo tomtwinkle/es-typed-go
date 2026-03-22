@@ -54,7 +54,6 @@ esv8.NewTextProperty(opts ...TextPropertyOption) *types.TextProperty
 | `WithTextSimilarity` | `v string` | 類似度アルゴリズム（例：`"BM25"`） |
 | `WithTextIndexPhrases` | `v bool` | 2 語の組み合わせをインデックスするか |
 | `WithTextPositionIncrementGap` | `v int` | 配列値間の疑似トークン位置数 |
-| `WithTextRawKeyword` | `ignoreAbove int` | 指定した `ignore_above` で `.keyword` サブフィールドを追加 |
 | `WithTextFields` | `fields map[string]types.Property` | カスタムマルチフィールドを設定 |
 
 ### NewKeywordProperty

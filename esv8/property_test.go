@@ -118,7 +118,9 @@ func TestNewTextProperty(t *testing.T) {
 
 	t.Run("with raw keyword", func(t *testing.T) {
 		t.Parallel()
-		prop := esv8.NewTextProperty(esv8.WithTextRawKeyword(256))
+		prop := esv8.NewTextProperty(esv8.WithTextFields(map[string]types.Property{
+			"keyword": esv8.NewKeywordProperty(esv8.WithKeywordIgnoreAbove(256)),
+		}))
 		assert.Assert(t, prop != nil)
 		assert.Assert(t, prop.Fields != nil)
 		_, ok := prop.Fields["keyword"]

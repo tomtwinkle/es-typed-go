@@ -507,7 +507,9 @@ mappings := &types.TypeMapping{
 	Properties: map[string]types.Property{
 		"title": esv8.NewTextProperty(
 			esv8.WithTextAnalyzer("standard"),
-			esv8.WithTextRawKeyword(256),  // Adds a .keyword sub-field
+			esv8.WithTextFields(map[string]types.Property{
+				"keyword": esv8.NewKeywordProperty(esv8.WithKeywordIgnoreAbove(256)),
+			}), // Adds a .keyword sub-field
 		),
 		"status": esv8.NewKeywordProperty(),
 		"price": esv8.NewIntegerNumberProperty(

@@ -905,9 +905,9 @@ func TestIntegration_AllPropertyMappings_TextFamily(t *testing.T) {
 				esv9.WithTextSimilarity("BM25"),
 				esv9.WithTextIndexPhrases(false),
 				esv9.WithTextPositionIncrementGap(100),
-				esv9.WithTextRawKeyword(256),
 				esv9.WithTextFields(map[string]types.Property{
-					"raw": esv9.NewKeywordProperty(esv9.WithKeywordIgnoreAbove(256)),
+					"keyword": esv9.NewKeywordProperty(esv9.WithKeywordIgnoreAbove(256)),
+					"raw":     esv9.NewKeywordProperty(esv9.WithKeywordIgnoreAbove(256)),
 				}),
 			),
 			"status": esv9.NewKeywordProperty(
