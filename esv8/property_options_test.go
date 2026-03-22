@@ -82,7 +82,9 @@ func TestNewTextProperty_Options(t *testing.T) {
 		t.Parallel()
 		// Use a manually created property with nil Fields to exercise the make() branch.
 		p := &types.TextProperty{}
-		esv8.WithTextRawKeyword(256)(p)
+		esv8.WithTextFields(map[string]types.Property{
+			"keyword": esv8.NewKeywordProperty(esv8.WithKeywordIgnoreAbove(256)),
+		})(p)
 		assert.Assert(t, p.Fields != nil)
 		_, ok := p.Fields["keyword"]
 		assert.Assert(t, ok)

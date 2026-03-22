@@ -42,7 +42,7 @@ estype/           Core shared types
   alias.go        estype.Alias — distinct string type for alias names
   date_format.go  All built-in ES date format constants + JoinDateFormats()
   mapping.go      ParseMapping() — parses ES mapping JSON into []MappingField
-  property.go     RawKeyword struct (shared between v8/v9 property wrappers)
+  property_mapping.go  MappingProperty interface and typed mapping property definitions
 
 esv8/             Elasticsearch v8 wrapper
   esclient.go     ESClient interface (curated operations, uses estype.Index/Alias)

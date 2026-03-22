@@ -54,7 +54,6 @@ esv8.NewTextProperty(opts ...TextPropertyOption) *types.TextProperty
 | `WithTextSimilarity` | `v string` | Sets the similarity algorithm (e.g. `"BM25"`) |
 | `WithTextIndexPhrases` | `v bool` | Whether two-term word combinations are indexed |
 | `WithTextPositionIncrementGap` | `v int` | Number of fake term positions between array values |
-| `WithTextRawKeyword` | `ignoreAbove int` | Adds a `.keyword` sub-field with the given `ignore_above` |
 | `WithTextFields` | `fields map[string]types.Property` | Sets custom multi-fields |
 
 ### NewKeywordProperty
