@@ -160,7 +160,7 @@ type ESClient interface {
 	// DeleteIndex deletes the specified index.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-delete-index.html
-	DeleteIndex(ctx context.Context, indexName estype.Index) (*idxdelete.Response, error)
+	DeleteIndex(ctx context.Context, indexName estype.Index, opts ...DeleteIndexOption) (*idxdelete.Response, error)
 
 	// IndexExists reports whether the specified index exists.
 	//
@@ -200,17 +200,17 @@ type ESClient interface {
 	// CreateDocument indexes (creates or replaces) a document in the alias and waits for refresh.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
-	CreateDocument(ctx context.Context, aliasName estype.Alias, id string, document any) (*coreidx.Response, error)
+	CreateDocument(ctx context.Context, aliasName estype.Alias, id string, document any, opts ...CreateDocumentOption) (*coreidx.Response, error)
 
 	// GetDocument retrieves a document from the alias by its ID.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
-	GetDocument(ctx context.Context, aliasName estype.Alias, id string) (*coreget.Response, error)
+	GetDocument(ctx context.Context, aliasName estype.Alias, id string, opts ...GetDocumentOption) (*coreget.Response, error)
 
 	// DeleteDocument deletes a document from the index by its ID.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html
-	DeleteDocument(ctx context.Context, indexName estype.Index, id string) (*coredelete.Response, error)
+	DeleteDocument(ctx context.Context, indexName estype.Index, id string, opts ...DeleteDocumentOption) (*coredelete.Response, error)
 
 	// UpdateDocument partially updates a document in the index.
 	//
@@ -352,12 +352,12 @@ type ESClient interface {
 	// ClearCache clears the caches of one or more indices.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-clearcache.html
-	ClearCache(ctx context.Context, indexName estype.Index) (*indices_clear_cache.Response, error)
+	ClearCache(ctx context.Context, indexName estype.Index, opts ...ClearCacheOption) (*indices_clear_cache.Response, error)
 
 	// ForceMerge forces a merge on the shards of one or more indices.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-forcemerge.html
-	ForceMerge(ctx context.Context, indexName estype.Index) (*indices_forcemerge.Response, error)
+	ForceMerge(ctx context.Context, indexName estype.Index, opts ...ForceMergeOption) (*indices_forcemerge.Response, error)
 
 	// Rollover rolls an alias over to a new index when the existing index meets a condition.
 	//
@@ -367,7 +367,7 @@ type ESClient interface {
 	// IndicesStats returns statistics for the specified index.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-stats.html
-	IndicesStats(ctx context.Context, indexName estype.Index) (*indices_stats.Response, error)
+	IndicesStats(ctx context.Context, indexName estype.Index, opts ...IndicesStatsOption) (*indices_stats.Response, error)
 
 	// ---------------------------------------------------------------------------
 	// Cluster API
@@ -376,7 +376,7 @@ type ESClient interface {
 	// ClusterHealth returns the health status of the specified index.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster-health.html
-	ClusterHealth(ctx context.Context, indexName estype.Index) (*cluster_health.Response, error)
+	ClusterHealth(ctx context.Context, indexName estype.Index, opts ...ClusterHealthOption) (*cluster_health.Response, error)
 
 	// ---------------------------------------------------------------------------
 	// Index Template API
@@ -489,7 +489,7 @@ type ESClient interface {
 	// ExplainLifecycle returns the current lifecycle status for one or more indices.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/ilm-explain-lifecycle.html
-	ExplainLifecycle(ctx context.Context, indexName estype.Index) (*ilm_explain_lifecycle.Response, error)
+	ExplainLifecycle(ctx context.Context, indexName estype.Index, opts ...ExplainLifecycleOption) (*ilm_explain_lifecycle.Response, error)
 
 	// ---------------------------------------------------------------------------
 	// Ingest Pipeline API
@@ -593,7 +593,7 @@ type ESClient interface {
 	// MlGetJobs returns configuration information for anomaly detection jobs.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/ml-get-job.html
-	MlGetJobs(ctx context.Context, jobId estype.MLJobID) (*ml_get_jobs.Response, error)
+	MlGetJobs(ctx context.Context, jobId estype.MLJobID, opts ...MlGetJobsOption) (*ml_get_jobs.Response, error)
 
 	// MlDeleteJob deletes an anomaly detection job.
 	//
@@ -618,7 +618,7 @@ type ESClient interface {
 	// MlGetDatafeeds returns configuration information for datafeeds.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/ml-get-datafeed.html
-	MlGetDatafeeds(ctx context.Context, datafeedId estype.DatafeedID) (*ml_get_datafeeds.Response, error)
+	MlGetDatafeeds(ctx context.Context, datafeedId estype.DatafeedID, opts ...MlGetDatafeedsOption) (*ml_get_datafeeds.Response, error)
 
 	// MlDeleteDatafeed deletes a datafeed.
 	//
@@ -676,7 +676,7 @@ type ESClient interface {
 	// GetTransform returns configuration information for transforms.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/get-transform.html
-	GetTransform(ctx context.Context, transformId estype.TransformID) (*transform_get_transform.Response, error)
+	GetTransform(ctx context.Context, transformId estype.TransformID, opts ...GetTransformOption) (*transform_get_transform.Response, error)
 
 	// DeleteTransform deletes a transform.
 	//

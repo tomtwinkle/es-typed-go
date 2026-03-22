@@ -103,8 +103,12 @@ func (c *esClient) CreateIndex(
 	return c.typedClient.Indices.Create(indexName.String()).Request(req).Do(ctx)
 }
 
-func (c *esClient) DeleteIndex(ctx context.Context, indexName estype.Index) (*idxdelete.Response, error) {
-	return c.typedClient.Indices.Delete(indexName.String()).Do(ctx)
+func (c *esClient) DeleteIndex(ctx context.Context, indexName estype.Index, opts ...DeleteIndexOption) (*idxdelete.Response, error) {
+	r := c.typedClient.Indices.Delete(indexName.String())
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r.Do(ctx)
 }
 
 func (c *esClient) IndexExists(ctx context.Context, indexName estype.Index) (bool, error) {
@@ -228,21 +232,35 @@ func (c *esClient) CreateDocument(
 	aliasName estype.Alias,
 	id string,
 	document any,
+	opts ...CreateDocumentOption,
 ) (*coreidx.Response, error) {
 	// Set Refresh to WaitFor so the document is visible immediately after the call returns.
-	return c.typedClient.Index(aliasName.String()).Id(id).Document(document).Refresh(refresh.Waitfor).Do(ctx)
+	r := c.typedClient.Index(aliasName.String()).Id(id).Document(document).Refresh(refresh.Waitfor)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r.Do(ctx)
 }
 
 func (c *esClient) GetDocument(
 	ctx context.Context,
 	aliasName estype.Alias,
 	id string,
+	opts ...GetDocumentOption,
 ) (*coreget.Response, error) {
-	return c.typedClient.Get(aliasName.String(), id).Do(ctx)
+	r := c.typedClient.Get(aliasName.String(), id)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r.Do(ctx)
 }
 
-func (c *esClient) DeleteDocument(ctx context.Context, indexName estype.Index, id string) (*coredelete.Response, error) {
-	return c.typedClient.Delete(indexName.String(), id).Do(ctx)
+func (c *esClient) DeleteDocument(ctx context.Context, indexName estype.Index, id string, opts ...DeleteDocumentOption) (*coredelete.Response, error) {
+	r := c.typedClient.Delete(indexName.String(), id)
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r.Do(ctx)
 }
 
 func (c *esClient) UpdateDocument(ctx context.Context, indexName estype.Index, id string, req *update.Request) (*update.Response, error) {

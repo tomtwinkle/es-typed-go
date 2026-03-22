@@ -6,6 +6,7 @@ import (
 	coreidx "github.com/elastic/go-elasticsearch/v9/typedapi/core/index"
 	core_bulk "github.com/elastic/go-elasticsearch/v9/typedapi/core/bulk"
 	core_delete_by_query "github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyquery"
+	core_clear_scroll "github.com/elastic/go-elasticsearch/v9/typedapi/core/clearscroll"
 	core_scroll "github.com/elastic/go-elasticsearch/v9/typedapi/core/scroll"
 	core_update_by_query "github.com/elastic/go-elasticsearch/v9/typedapi/core/updatebyquery"
 	cluster_health "github.com/elastic/go-elasticsearch/v9/typedapi/cluster/health"
@@ -122,6 +123,14 @@ func WithBulkTimeout(t string) BulkOption {
 // WithScrollId sets the scroll ID for a Scroll request.
 func WithScrollId(id string) ScrollOption {
 	return func(r *core_scroll.Scroll) { r.ScrollId(id) }
+}
+
+// ClearScroll options
+
+// WithClearScrollId sets the scroll ID(s) to clear for a ClearScroll request.
+// Pass "_all" to clear all active scroll contexts.
+func WithClearScrollId(ids ...string) ClearScrollOption {
+	return func(r *core_clear_scroll.ClearScroll) { r.ScrollId(ids...) }
 }
 
 // UpdateByQuery options
