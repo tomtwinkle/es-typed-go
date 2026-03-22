@@ -185,8 +185,12 @@ func (c *esClient) DeleteByQuery(ctx context.Context, indexName estype.Index, op
 // Index Management API
 // ---------------------------------------------------------------------------
 
-func (c *esClient) GetMapping(ctx context.Context, indexName estype.Index) (indices_get_mapping.Response, error) {
-	return c.typedClient.Indices.GetMapping().Index(indexName.String()).Do(ctx)
+func (c *esClient) GetMapping(ctx context.Context, indexName estype.Index, opts ...GetMappingOption) (indices_get_mapping.Response, error) {
+	b := c.typedClient.Indices.GetMapping().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) PutMapping(ctx context.Context, indexName estype.Index, opts ...PutMappingOption) (*indices_put_mapping.Response, error) {
@@ -197,8 +201,12 @@ func (c *esClient) PutMapping(ctx context.Context, indexName estype.Index, opts 
 	return r.Do(ctx)
 }
 
-func (c *esClient) GetSettings(ctx context.Context, indexName estype.Index) (indices_get_settings.Response, error) {
-	return c.typedClient.Indices.GetSettings().Index(indexName.String()).Do(ctx)
+func (c *esClient) GetSettings(ctx context.Context, indexName estype.Index, opts ...GetSettingsOption) (indices_get_settings.Response, error) {
+	b := c.typedClient.Indices.GetSettings().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) PutSettings(ctx context.Context, indexName estype.Index, opts ...PutSettingsOption) (*indices_put_settings.Response, error) {
@@ -209,24 +217,44 @@ func (c *esClient) PutSettings(ctx context.Context, indexName estype.Index, opts
 	return r.Do(ctx)
 }
 
-func (c *esClient) OpenIndex(ctx context.Context, indexName estype.Index) (*indices_open.Response, error) {
-	return c.typedClient.Indices.Open(indexName.String()).Do(ctx)
+func (c *esClient) OpenIndex(ctx context.Context, indexName estype.Index, opts ...OpenIndexOption) (*indices_open.Response, error) {
+	b := c.typedClient.Indices.Open(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) CloseIndex(ctx context.Context, indexName estype.Index) (*indices_close.Response, error) {
-	return c.typedClient.Indices.Close(indexName.String()).Do(ctx)
+func (c *esClient) CloseIndex(ctx context.Context, indexName estype.Index, opts ...CloseIndexOption) (*indices_close.Response, error) {
+	b := c.typedClient.Indices.Close(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) Flush(ctx context.Context, indexName estype.Index) (*indices_flush.Response, error) {
-	return c.typedClient.Indices.Flush().Index(indexName.String()).Do(ctx)
+func (c *esClient) Flush(ctx context.Context, indexName estype.Index, opts ...FlushOption) (*indices_flush.Response, error) {
+	b := c.typedClient.Indices.Flush().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) ClearCache(ctx context.Context, indexName estype.Index) (*indices_clear_cache.Response, error) {
-	return c.typedClient.Indices.ClearCache().Index(indexName.String()).Do(ctx)
+func (c *esClient) ClearCache(ctx context.Context, indexName estype.Index, opts ...ClearCacheOption) (*indices_clear_cache.Response, error) {
+	b := c.typedClient.Indices.ClearCache().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) ForceMerge(ctx context.Context, indexName estype.Index) (*indices_forcemerge.Response, error) {
-	return c.typedClient.Indices.Forcemerge().Index(indexName.String()).Do(ctx)
+func (c *esClient) ForceMerge(ctx context.Context, indexName estype.Index, opts ...ForceMergeOption) (*indices_forcemerge.Response, error) {
+	b := c.typedClient.Indices.Forcemerge().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) Rollover(ctx context.Context, aliasName estype.Alias, opts ...RolloverOption) (*indices_rollover.Response, error) {
@@ -237,16 +265,24 @@ func (c *esClient) Rollover(ctx context.Context, aliasName estype.Alias, opts ..
 	return r.Do(ctx)
 }
 
-func (c *esClient) IndicesStats(ctx context.Context, indexName estype.Index) (*indices_stats.Response, error) {
-	return c.typedClient.Indices.Stats().Index(indexName.String()).Do(ctx)
+func (c *esClient) IndicesStats(ctx context.Context, indexName estype.Index, opts ...IndicesStatsOption) (*indices_stats.Response, error) {
+	b := c.typedClient.Indices.Stats().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
 // Cluster API
 // ---------------------------------------------------------------------------
 
-func (c *esClient) ClusterHealth(ctx context.Context, indexName estype.Index) (*cluster_health.Response, error) {
-	return c.typedClient.Cluster.Health().Index(indexName.String()).Do(ctx)
+func (c *esClient) ClusterHealth(ctx context.Context, indexName estype.Index, opts ...ClusterHealthOption) (*cluster_health.Response, error) {
+	b := c.typedClient.Cluster.Health().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -261,28 +297,48 @@ func (c *esClient) PutIndexTemplate(ctx context.Context, name estype.Template, o
 	return r.Do(ctx)
 }
 
-func (c *esClient) GetIndexTemplate(ctx context.Context, name estype.Template) (*indices_get_index_template.Response, error) {
-	return c.typedClient.Indices.GetIndexTemplate().Name(name.String()).Do(ctx)
+func (c *esClient) GetIndexTemplate(ctx context.Context, name estype.Template, opts ...GetIndexTemplateOption) (*indices_get_index_template.Response, error) {
+	b := c.typedClient.Indices.GetIndexTemplate().Name(name.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) DeleteIndexTemplate(ctx context.Context, name estype.Template) (*indices_delete_index_template.Response, error) {
-	return c.typedClient.Indices.DeleteIndexTemplate(name.String()).Do(ctx)
+func (c *esClient) DeleteIndexTemplate(ctx context.Context, name estype.Template, opts ...DeleteIndexTemplateOption) (*indices_delete_index_template.Response, error) {
+	b := c.typedClient.Indices.DeleteIndexTemplate(name.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) ExistsIndexTemplate(ctx context.Context, name estype.Template) (bool, error) {
-	return c.typedClient.Indices.ExistsIndexTemplate(name.String()).Do(ctx)
+func (c *esClient) ExistsIndexTemplate(ctx context.Context, name estype.Template, opts ...ExistsIndexTemplateOption) (bool, error) {
+	b := c.typedClient.Indices.ExistsIndexTemplate(name.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
 // Alias API
 // ---------------------------------------------------------------------------
 
-func (c *esClient) GetAlias(ctx context.Context, aliasName estype.Alias) (indices_get_alias.Response, error) {
-	return c.typedClient.Indices.GetAlias().Name(aliasName.String()).Do(ctx)
+func (c *esClient) GetAlias(ctx context.Context, aliasName estype.Alias, opts ...GetAliasOption) (indices_get_alias.Response, error) {
+	b := c.typedClient.Indices.GetAlias().Name(aliasName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) DeleteAlias(ctx context.Context, indexName estype.Index, aliasName estype.Alias) (*indices_delete_alias.Response, error) {
-	return c.typedClient.Indices.DeleteAlias(indexName.String(), aliasName.String()).Do(ctx)
+func (c *esClient) DeleteAlias(ctx context.Context, indexName estype.Index, aliasName estype.Alias, opts ...DeleteAliasOption) (*indices_delete_alias.Response, error) {
+	b := c.typedClient.Indices.DeleteAlias(indexName.String(), aliasName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -297,8 +353,12 @@ func (c *esClient) TasksList(ctx context.Context, opts ...TasksListOption) (*tas
 	return r.Do(ctx)
 }
 
-func (c *esClient) TasksCancel(ctx context.Context, taskID estype.TaskID) (*tasks_cancel.Response, error) {
-	return c.typedClient.Tasks.Cancel().TaskId(taskID.String()).Do(ctx)
+func (c *esClient) TasksCancel(ctx context.Context, taskID estype.TaskID, opts ...TasksCancelOption) (*tasks_cancel.Response, error) {
+	b := c.typedClient.Tasks.Cancel().TaskId(taskID.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -341,12 +401,20 @@ func (c *esClient) CreateDataStream(ctx context.Context, name estype.DataStream)
 	return c.typedClient.Indices.CreateDataStream(name.String()).Do(ctx)
 }
 
-func (c *esClient) GetDataStream(ctx context.Context, name estype.DataStream) (*indices_get_data_stream.Response, error) {
-	return c.typedClient.Indices.GetDataStream().Name(name.String()).Do(ctx)
+func (c *esClient) GetDataStream(ctx context.Context, name estype.DataStream, opts ...GetDataStreamOption) (*indices_get_data_stream.Response, error) {
+	b := c.typedClient.Indices.GetDataStream().Name(name.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) DeleteDataStream(ctx context.Context, name estype.DataStream) (*indices_delete_data_stream.Response, error) {
-	return c.typedClient.Indices.DeleteDataStream(name.String()).Do(ctx)
+func (c *esClient) DeleteDataStream(ctx context.Context, name estype.DataStream, opts ...DeleteDataStreamOption) (*indices_delete_data_stream.Response, error) {
+	b := c.typedClient.Indices.DeleteDataStream(name.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -361,12 +429,20 @@ func (c *esClient) PutLifecycle(ctx context.Context, policy estype.Policy, opts 
 	return r.Do(ctx)
 }
 
-func (c *esClient) GetLifecycle(ctx context.Context, policy estype.Policy) (ilm_get_lifecycle.Response, error) {
-	return c.typedClient.Ilm.GetLifecycle().Policy(policy.String()).Do(ctx)
+func (c *esClient) GetLifecycle(ctx context.Context, policy estype.Policy, opts ...GetLifecycleOption) (ilm_get_lifecycle.Response, error) {
+	b := c.typedClient.Ilm.GetLifecycle().Policy(policy.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) ExplainLifecycle(ctx context.Context, indexName estype.Index) (*ilm_explain_lifecycle.Response, error) {
-	return c.typedClient.Ilm.ExplainLifecycle(indexName.String()).Do(ctx)
+func (c *esClient) ExplainLifecycle(ctx context.Context, indexName estype.Index, opts ...ExplainLifecycleOption) (*ilm_explain_lifecycle.Response, error) {
+	b := c.typedClient.Ilm.ExplainLifecycle(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -381,12 +457,20 @@ func (c *esClient) PutPipeline(ctx context.Context, id estype.Pipeline, opts ...
 	return r.Do(ctx)
 }
 
-func (c *esClient) GetPipeline(ctx context.Context, id estype.Pipeline) (ingest_get_pipeline.Response, error) {
-	return c.typedClient.Ingest.GetPipeline().Id(id.String()).Do(ctx)
+func (c *esClient) GetPipeline(ctx context.Context, id estype.Pipeline, opts ...GetPipelineOption) (ingest_get_pipeline.Response, error) {
+	b := c.typedClient.Ingest.GetPipeline().Id(id.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) DeletePipeline(ctx context.Context, id estype.Pipeline) (*ingest_delete_pipeline.Response, error) {
-	return c.typedClient.Ingest.DeletePipeline(id.String()).Do(ctx)
+func (c *esClient) DeletePipeline(ctx context.Context, id estype.Pipeline, opts ...DeletePipelineOption) (*ingest_delete_pipeline.Response, error) {
+	b := c.typedClient.Ingest.DeletePipeline(id.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -471,12 +555,20 @@ func (c *esClient) PutInference(ctx context.Context, inferenceId estype.Inferenc
 	return r.Do(ctx)
 }
 
-func (c *esClient) GetInference(ctx context.Context, inferenceId estype.InferenceID) (*inference_get.Response, error) {
-	return c.typedClient.Inference.Get().InferenceId(inferenceId.String()).Do(ctx)
+func (c *esClient) GetInference(ctx context.Context, inferenceId estype.InferenceID, opts ...GetInferenceOption) (*inference_get.Response, error) {
+	b := c.typedClient.Inference.Get().InferenceId(inferenceId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) DeleteInference(ctx context.Context, inferenceId estype.InferenceID) (*inference_delete.Response, error) {
-	return c.typedClient.Inference.Delete(inferenceId.String()).Do(ctx)
+func (c *esClient) DeleteInference(ctx context.Context, inferenceId estype.InferenceID, opts ...DeleteInferenceOption) (*inference_delete.Response, error) {
+	b := c.typedClient.Inference.Delete(inferenceId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) Inference(ctx context.Context, inferenceId estype.InferenceID, opts ...InferenceOption) (*inference_inference.Response, error) {
@@ -499,12 +591,20 @@ func (c *esClient) MlPutJob(ctx context.Context, jobId estype.MLJobID, opts ...M
 	return r.Do(ctx)
 }
 
-func (c *esClient) MlGetJobs(ctx context.Context, jobId estype.MLJobID) (*ml_get_jobs.Response, error) {
-	return c.typedClient.Ml.GetJobs().JobId(jobId.String()).Do(ctx)
+func (c *esClient) MlGetJobs(ctx context.Context, jobId estype.MLJobID, opts ...MlGetJobsOption) (*ml_get_jobs.Response, error) {
+	b := c.typedClient.Ml.GetJobs().JobId(jobId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) MlDeleteJob(ctx context.Context, jobId estype.MLJobID) (*ml_delete_job.Response, error) {
-	return c.typedClient.Ml.DeleteJob(jobId.String()).Do(ctx)
+func (c *esClient) MlDeleteJob(ctx context.Context, jobId estype.MLJobID, opts ...MlDeleteJobOption) (*ml_delete_job.Response, error) {
+	b := c.typedClient.Ml.DeleteJob(jobId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) MlOpenJob(ctx context.Context, jobId estype.MLJobID, opts ...MlOpenJobOption) (*ml_open_job.Response, error) {
@@ -531,12 +631,20 @@ func (c *esClient) MlPutDatafeed(ctx context.Context, datafeedId estype.Datafeed
 	return r.Do(ctx)
 }
 
-func (c *esClient) MlGetDatafeeds(ctx context.Context, datafeedId estype.DatafeedID) (*ml_get_datafeeds.Response, error) {
-	return c.typedClient.Ml.GetDatafeeds().DatafeedId(datafeedId.String()).Do(ctx)
+func (c *esClient) MlGetDatafeeds(ctx context.Context, datafeedId estype.DatafeedID, opts ...MlGetDatafeedsOption) (*ml_get_datafeeds.Response, error) {
+	b := c.typedClient.Ml.GetDatafeeds().DatafeedId(datafeedId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) MlDeleteDatafeed(ctx context.Context, datafeedId estype.DatafeedID) (*ml_delete_datafeed.Response, error) {
-	return c.typedClient.Ml.DeleteDatafeed(datafeedId.String()).Do(ctx)
+func (c *esClient) MlDeleteDatafeed(ctx context.Context, datafeedId estype.DatafeedID, opts ...MlDeleteDatafeedOption) (*ml_delete_datafeed.Response, error) {
+	b := c.typedClient.Ml.DeleteDatafeed(datafeedId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) MlStartDatafeed(ctx context.Context, datafeedId estype.DatafeedID, opts ...MlStartDatafeedOption) (*ml_start_datafeed.Response, error) {
@@ -567,8 +675,12 @@ func (c *esClient) CcrFollow(ctx context.Context, followerIndex estype.Index, op
 	return r.Do(ctx)
 }
 
-func (c *esClient) CcrPauseFollow(ctx context.Context, followerIndex estype.Index) (*ccr_pause_follow.Response, error) {
-	return c.typedClient.Ccr.PauseFollow(followerIndex.String()).Do(ctx)
+func (c *esClient) CcrPauseFollow(ctx context.Context, followerIndex estype.Index, opts ...CcrPauseFollowOption) (*ccr_pause_follow.Response, error) {
+	b := c.typedClient.Ccr.PauseFollow(followerIndex.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) CcrResumeFollow(ctx context.Context, followerIndex estype.Index, opts ...CcrResumeFollowOption) (*ccr_resume_follow.Response, error) {
@@ -579,12 +691,20 @@ func (c *esClient) CcrResumeFollow(ctx context.Context, followerIndex estype.Ind
 	return r.Do(ctx)
 }
 
-func (c *esClient) CcrUnfollow(ctx context.Context, followerIndex estype.Index) (*ccr_unfollow.Response, error) {
-	return c.typedClient.Ccr.Unfollow(followerIndex.String()).Do(ctx)
+func (c *esClient) CcrUnfollow(ctx context.Context, followerIndex estype.Index, opts ...CcrUnfollowOption) (*ccr_unfollow.Response, error) {
+	b := c.typedClient.Ccr.Unfollow(followerIndex.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) CcrFollowStats(ctx context.Context, followerIndex estype.Index) (*ccr_follow_stats.Response, error) {
-	return c.typedClient.Ccr.FollowStats(followerIndex.String()).Do(ctx)
+func (c *esClient) CcrFollowStats(ctx context.Context, followerIndex estype.Index, opts ...CcrFollowStatsOption) (*ccr_follow_stats.Response, error) {
+	b := c.typedClient.Ccr.FollowStats(followerIndex.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
@@ -599,40 +719,72 @@ func (c *esClient) PutTransform(ctx context.Context, transformId estype.Transfor
 	return r.Do(ctx)
 }
 
-func (c *esClient) GetTransform(ctx context.Context, transformId estype.TransformID) (*transform_get_transform.Response, error) {
-	return c.typedClient.Transform.GetTransform().TransformId(transformId.String()).Do(ctx)
+func (c *esClient) GetTransform(ctx context.Context, transformId estype.TransformID, opts ...GetTransformOption) (*transform_get_transform.Response, error) {
+	b := c.typedClient.Transform.GetTransform().TransformId(transformId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) DeleteTransform(ctx context.Context, transformId estype.TransformID) (*transform_delete_transform.Response, error) {
-	return c.typedClient.Transform.DeleteTransform(transformId.String()).Do(ctx)
+func (c *esClient) DeleteTransform(ctx context.Context, transformId estype.TransformID, opts ...DeleteTransformOption) (*transform_delete_transform.Response, error) {
+	b := c.typedClient.Transform.DeleteTransform(transformId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) StartTransform(ctx context.Context, transformId estype.TransformID) (*transform_start_transform.Response, error) {
-	return c.typedClient.Transform.StartTransform(transformId.String()).Do(ctx)
+func (c *esClient) StartTransform(ctx context.Context, transformId estype.TransformID, opts ...StartTransformOption) (*transform_start_transform.Response, error) {
+	b := c.typedClient.Transform.StartTransform(transformId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) StopTransform(ctx context.Context, transformId estype.TransformID) (*transform_stop_transform.Response, error) {
-	return c.typedClient.Transform.StopTransform(transformId.String()).Do(ctx)
+func (c *esClient) StopTransform(ctx context.Context, transformId estype.TransformID, opts ...StopTransformOption) (*transform_stop_transform.Response, error) {
+	b := c.typedClient.Transform.StopTransform(transformId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) GetTransformStats(ctx context.Context, transformId estype.TransformID) (*transform_get_transform_stats.Response, error) {
-	return c.typedClient.Transform.GetTransformStats(transformId.String()).Do(ctx)
+func (c *esClient) GetTransformStats(ctx context.Context, transformId estype.TransformID, opts ...GetTransformStatsOption) (*transform_get_transform_stats.Response, error) {
+	b := c.typedClient.Transform.GetTransformStats(transformId.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 // ---------------------------------------------------------------------------
 // Cat API
 // ---------------------------------------------------------------------------
 
-func (c *esClient) CatAliases(ctx context.Context, aliasName estype.Alias) (cat_aliases.Response, error) {
-	return c.typedClient.Cat.Aliases().Name(aliasName.String()).Do(ctx)
+func (c *esClient) CatAliases(ctx context.Context, aliasName estype.Alias, opts ...CatAliasesOption) (cat_aliases.Response, error) {
+	b := c.typedClient.Cat.Aliases().Name(aliasName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) CatIndices(ctx context.Context, indexName estype.Index) (cat_indices.Response, error) {
-	return c.typedClient.Cat.Indices().Index(indexName.String()).Do(ctx)
+func (c *esClient) CatIndices(ctx context.Context, indexName estype.Index, opts ...CatIndicesOption) (cat_indices.Response, error) {
+	b := c.typedClient.Cat.Indices().Index(indexName.String())
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
-func (c *esClient) CatNodes(ctx context.Context) (cat_nodes.Response, error) {
-	return c.typedClient.Cat.Nodes().Do(ctx)
+func (c *esClient) CatNodes(ctx context.Context, opts ...CatNodesOption) (cat_nodes.Response, error) {
+	b := c.typedClient.Cat.Nodes()
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b.Do(ctx)
 }
 
 func (c *esClient) CatAllocation(ctx context.Context, opts ...CatAllocationOption) (cat_allocation.Response, error) {

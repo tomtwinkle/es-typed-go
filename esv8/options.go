@@ -1,18 +1,21 @@
 package esv8
 
 import (
+	cat_aliases "github.com/elastic/go-elasticsearch/v8/typedapi/cat/aliases"
 	cat_allocation "github.com/elastic/go-elasticsearch/v8/typedapi/cat/allocation"
 	cat_component_templates "github.com/elastic/go-elasticsearch/v8/typedapi/cat/componenttemplates"
 	cat_count "github.com/elastic/go-elasticsearch/v8/typedapi/cat/count"
 	cat_fielddata "github.com/elastic/go-elasticsearch/v8/typedapi/cat/fielddata"
 	cat_health "github.com/elastic/go-elasticsearch/v8/typedapi/cat/health"
 	cat_help "github.com/elastic/go-elasticsearch/v8/typedapi/cat/help"
+	cat_indices "github.com/elastic/go-elasticsearch/v8/typedapi/cat/indices"
 	cat_master "github.com/elastic/go-elasticsearch/v8/typedapi/cat/master"
 	cat_ml_data_frame_analytics "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mldataframeanalytics"
 	cat_ml_datafeeds "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mldatafeeds"
 	cat_ml_jobs "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mljobs"
 	cat_ml_trained_models "github.com/elastic/go-elasticsearch/v8/typedapi/cat/mltrainedmodels"
 	cat_nodeattrs "github.com/elastic/go-elasticsearch/v8/typedapi/cat/nodeattrs"
+	cat_nodes "github.com/elastic/go-elasticsearch/v8/typedapi/cat/nodes"
 	cat_pending_tasks "github.com/elastic/go-elasticsearch/v8/typedapi/cat/pendingtasks"
 	cat_plugins "github.com/elastic/go-elasticsearch/v8/typedapi/cat/plugins"
 	cat_recovery "github.com/elastic/go-elasticsearch/v8/typedapi/cat/recovery"
@@ -25,29 +28,64 @@ import (
 	cat_thread_pool "github.com/elastic/go-elasticsearch/v8/typedapi/cat/threadpool"
 	cat_transforms "github.com/elastic/go-elasticsearch/v8/typedapi/cat/transforms"
 	ccr_follow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/follow"
+	ccr_follow_stats "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/followstats"
+	ccr_pause_follow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/pausefollow"
 	ccr_resume_follow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/resumefollow"
+	ccr_unfollow "github.com/elastic/go-elasticsearch/v8/typedapi/ccr/unfollow"
+	cluster_health "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/health"
 	core_bulk "github.com/elastic/go-elasticsearch/v8/typedapi/core/bulk"
 	core_clear_scroll "github.com/elastic/go-elasticsearch/v8/typedapi/core/clearscroll"
 	core_close_point_in_time "github.com/elastic/go-elasticsearch/v8/typedapi/core/closepointintime"
 	core_count "github.com/elastic/go-elasticsearch/v8/typedapi/core/count"
 	core_delete_by_query "github.com/elastic/go-elasticsearch/v8/typedapi/core/deletebyquery"
+	coredelete "github.com/elastic/go-elasticsearch/v8/typedapi/core/delete"
 	core_exists "github.com/elastic/go-elasticsearch/v8/typedapi/core/exists"
+	coreget "github.com/elastic/go-elasticsearch/v8/typedapi/core/get"
+	coreidx "github.com/elastic/go-elasticsearch/v8/typedapi/core/index"
 	core_mget "github.com/elastic/go-elasticsearch/v8/typedapi/core/mget"
 	core_msearch "github.com/elastic/go-elasticsearch/v8/typedapi/core/msearch"
 	core_open_point_in_time "github.com/elastic/go-elasticsearch/v8/typedapi/core/openpointintime"
+	core_reindex "github.com/elastic/go-elasticsearch/v8/typedapi/core/reindex"
 	core_scroll "github.com/elastic/go-elasticsearch/v8/typedapi/core/scroll"
 	core_update_by_query "github.com/elastic/go-elasticsearch/v8/typedapi/core/updatebyquery"
 	esql_query "github.com/elastic/go-elasticsearch/v8/typedapi/esql/query"
+	ilm_explain_lifecycle "github.com/elastic/go-elasticsearch/v8/typedapi/ilm/explainlifecycle"
+	ilm_get_lifecycle "github.com/elastic/go-elasticsearch/v8/typedapi/ilm/getlifecycle"
 	ilm_put_lifecycle "github.com/elastic/go-elasticsearch/v8/typedapi/ilm/putlifecycle"
 	indices_analyze "github.com/elastic/go-elasticsearch/v8/typedapi/indices/analyze"
+	indices_clear_cache "github.com/elastic/go-elasticsearch/v8/typedapi/indices/clearcache"
+	indices_close "github.com/elastic/go-elasticsearch/v8/typedapi/indices/close"
+	indices_delete_alias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/deletealias"
+	indices_delete_data_stream "github.com/elastic/go-elasticsearch/v8/typedapi/indices/deletedatastream"
+	indices_delete_index_template "github.com/elastic/go-elasticsearch/v8/typedapi/indices/deleteindextemplate"
+	indices_exists_index_template "github.com/elastic/go-elasticsearch/v8/typedapi/indices/existsindextemplate"
+	indices_flush "github.com/elastic/go-elasticsearch/v8/typedapi/indices/flush"
+	indices_forcemerge "github.com/elastic/go-elasticsearch/v8/typedapi/indices/forcemerge"
+	indices_get_alias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/getalias"
+	indices_get_data_stream "github.com/elastic/go-elasticsearch/v8/typedapi/indices/getdatastream"
+	indices_get_index_template "github.com/elastic/go-elasticsearch/v8/typedapi/indices/getindextemplate"
+	indices_get_mapping "github.com/elastic/go-elasticsearch/v8/typedapi/indices/getmapping"
+	indices_get_settings "github.com/elastic/go-elasticsearch/v8/typedapi/indices/getsettings"
+	indices_open "github.com/elastic/go-elasticsearch/v8/typedapi/indices/open"
 	indices_put_index_template "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putindextemplate"
 	indices_put_mapping "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putmapping"
 	indices_put_settings "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putsettings"
 	indices_rollover "github.com/elastic/go-elasticsearch/v8/typedapi/indices/rollover"
+	indices_stats "github.com/elastic/go-elasticsearch/v8/typedapi/indices/stats"
+	idxdelete "github.com/elastic/go-elasticsearch/v8/typedapi/indices/delete"
+	idxrefresh "github.com/elastic/go-elasticsearch/v8/typedapi/indices/refresh"
+	inference_delete "github.com/elastic/go-elasticsearch/v8/typedapi/inference/delete"
+	inference_get "github.com/elastic/go-elasticsearch/v8/typedapi/inference/get"
 	inference_inference "github.com/elastic/go-elasticsearch/v8/typedapi/inference/inference"
 	inference_put "github.com/elastic/go-elasticsearch/v8/typedapi/inference/put"
+	ingest_delete_pipeline "github.com/elastic/go-elasticsearch/v8/typedapi/ingest/deletepipeline"
+	ingest_get_pipeline "github.com/elastic/go-elasticsearch/v8/typedapi/ingest/getpipeline"
 	ingest_put_pipeline "github.com/elastic/go-elasticsearch/v8/typedapi/ingest/putpipeline"
 	ml_close_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/closejob"
+	ml_delete_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletedatafeed"
+	ml_delete_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletejob"
+	ml_get_datafeeds "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getdatafeeds"
+	ml_get_jobs "github.com/elastic/go-elasticsearch/v8/typedapi/ml/getjobs"
 	ml_open_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/openjob"
 	ml_put_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putdatafeed"
 	ml_put_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/putjob"
@@ -59,8 +97,14 @@ import (
 	snapshot_create "github.com/elastic/go-elasticsearch/v8/typedapi/snapshot/create"
 	snapshot_create_repository "github.com/elastic/go-elasticsearch/v8/typedapi/snapshot/createrepository"
 	snapshot_restore "github.com/elastic/go-elasticsearch/v8/typedapi/snapshot/restore"
+	tasks_cancel "github.com/elastic/go-elasticsearch/v8/typedapi/tasks/cancel"
 	tasks_list "github.com/elastic/go-elasticsearch/v8/typedapi/tasks/list"
+	transform_delete_transform "github.com/elastic/go-elasticsearch/v8/typedapi/transform/deletetransform"
+	transform_get_transform "github.com/elastic/go-elasticsearch/v8/typedapi/transform/gettransform"
+	transform_get_transform_stats "github.com/elastic/go-elasticsearch/v8/typedapi/transform/gettransformstats"
 	transform_put_transform "github.com/elastic/go-elasticsearch/v8/typedapi/transform/puttransform"
+	transform_start_transform "github.com/elastic/go-elasticsearch/v8/typedapi/transform/starttransform"
+	transform_stop_transform "github.com/elastic/go-elasticsearch/v8/typedapi/transform/stoptransform"
 )
 
 // DocumentExistsOption customises a DocumentExists request.
@@ -246,3 +290,135 @@ type CatThreadPoolOption func(*cat_thread_pool.ThreadPool)
 
 // CatTransformsOption customises a CatTransforms request.
 type CatTransformsOption func(*cat_transforms.Transforms)
+
+// CreateDocumentOption customises a CreateDocument request.
+type CreateDocumentOption func(*coreidx.Index)
+
+// GetDocumentOption customises a GetDocument request.
+type GetDocumentOption func(*coreget.Get)
+
+// DeleteDocumentOption customises a DeleteDocument request.
+type DeleteDocumentOption func(*coredelete.Delete)
+
+// IndexRefreshOption customises an IndexRefresh request.
+type IndexRefreshOption func(*idxrefresh.Refresh)
+
+// DeleteIndexOption customises a DeleteIndex request.
+type DeleteIndexOption func(*idxdelete.Delete)
+
+// ReindexOption customises a Reindex request.
+type ReindexOption func(*core_reindex.Reindex)
+
+// GetMappingOption customises a GetMapping request.
+type GetMappingOption func(*indices_get_mapping.GetMapping)
+
+// GetSettingsOption customises a GetSettings request.
+type GetSettingsOption func(*indices_get_settings.GetSettings)
+
+// OpenIndexOption customises an OpenIndex request.
+type OpenIndexOption func(*indices_open.Open)
+
+// CloseIndexOption customises a CloseIndex request.
+type CloseIndexOption func(*indices_close.Close)
+
+// FlushOption customises a Flush request.
+type FlushOption func(*indices_flush.Flush)
+
+// ClearCacheOption customises a ClearCache request.
+type ClearCacheOption func(*indices_clear_cache.ClearCache)
+
+// ForceMergeOption customises a ForceMerge request.
+type ForceMergeOption func(*indices_forcemerge.Forcemerge)
+
+// IndicesStatsOption customises an IndicesStats request.
+type IndicesStatsOption func(*indices_stats.Stats)
+
+// ClusterHealthOption customises a ClusterHealth request.
+type ClusterHealthOption func(*cluster_health.Health)
+
+// GetIndexTemplateOption customises a GetIndexTemplate request.
+type GetIndexTemplateOption func(*indices_get_index_template.GetIndexTemplate)
+
+// DeleteIndexTemplateOption customises a DeleteIndexTemplate request.
+type DeleteIndexTemplateOption func(*indices_delete_index_template.DeleteIndexTemplate)
+
+// ExistsIndexTemplateOption customises an ExistsIndexTemplate request.
+type ExistsIndexTemplateOption func(*indices_exists_index_template.ExistsIndexTemplate)
+
+// GetAliasOption customises a GetAlias request.
+type GetAliasOption func(*indices_get_alias.GetAlias)
+
+// DeleteAliasOption customises a DeleteAlias request.
+type DeleteAliasOption func(*indices_delete_alias.DeleteAlias)
+
+// TasksCancelOption customises a TasksCancel request.
+type TasksCancelOption func(*tasks_cancel.Cancel)
+
+// GetDataStreamOption customises a GetDataStream request.
+type GetDataStreamOption func(*indices_get_data_stream.GetDataStream)
+
+// DeleteDataStreamOption customises a DeleteDataStream request.
+type DeleteDataStreamOption func(*indices_delete_data_stream.DeleteDataStream)
+
+// GetLifecycleOption customises a GetLifecycle request.
+type GetLifecycleOption func(*ilm_get_lifecycle.GetLifecycle)
+
+// ExplainLifecycleOption customises an ExplainLifecycle request.
+type ExplainLifecycleOption func(*ilm_explain_lifecycle.ExplainLifecycle)
+
+// GetPipelineOption customises a GetPipeline request.
+type GetPipelineOption func(*ingest_get_pipeline.GetPipeline)
+
+// DeletePipelineOption customises a DeletePipeline request.
+type DeletePipelineOption func(*ingest_delete_pipeline.DeletePipeline)
+
+// GetInferenceOption customises a GetInference request.
+type GetInferenceOption func(*inference_get.Get)
+
+// DeleteInferenceOption customises a DeleteInference request.
+type DeleteInferenceOption func(*inference_delete.Delete)
+
+// MlGetJobsOption customises an MlGetJobs request.
+type MlGetJobsOption func(*ml_get_jobs.GetJobs)
+
+// MlDeleteJobOption customises an MlDeleteJob request.
+type MlDeleteJobOption func(*ml_delete_job.DeleteJob)
+
+// MlGetDatafeedsOption customises an MlGetDatafeeds request.
+type MlGetDatafeedsOption func(*ml_get_datafeeds.GetDatafeeds)
+
+// MlDeleteDatafeedOption customises an MlDeleteDatafeed request.
+type MlDeleteDatafeedOption func(*ml_delete_datafeed.DeleteDatafeed)
+
+// CcrPauseFollowOption customises a CcrPauseFollow request.
+type CcrPauseFollowOption func(*ccr_pause_follow.PauseFollow)
+
+// CcrUnfollowOption customises a CcrUnfollow request.
+type CcrUnfollowOption func(*ccr_unfollow.Unfollow)
+
+// CcrFollowStatsOption customises a CcrFollowStats request.
+type CcrFollowStatsOption func(*ccr_follow_stats.FollowStats)
+
+// GetTransformOption customises a GetTransform request.
+type GetTransformOption func(*transform_get_transform.GetTransform)
+
+// DeleteTransformOption customises a DeleteTransform request.
+type DeleteTransformOption func(*transform_delete_transform.DeleteTransform)
+
+// StartTransformOption customises a StartTransform request.
+type StartTransformOption func(*transform_start_transform.StartTransform)
+
+// StopTransformOption customises a StopTransform request.
+type StopTransformOption func(*transform_stop_transform.StopTransform)
+
+// GetTransformStatsOption customises a GetTransformStats request.
+type GetTransformStatsOption func(*transform_get_transform_stats.GetTransformStats)
+
+// CatAliasesOption customises a CatAliases request.
+type CatAliasesOption func(*cat_aliases.Aliases)
+
+// CatIndicesOption customises a CatIndices request.
+type CatIndicesOption func(*cat_indices.Indices)
+
+// CatNodesOption customises a CatNodes request.
+type CatNodesOption func(*cat_nodes.Nodes)
