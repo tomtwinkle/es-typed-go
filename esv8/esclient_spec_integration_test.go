@@ -45,6 +45,14 @@ func newSpecClient(t *testing.T) esv8.ESClientSpec {
 		Addresses: []string{esURL()},
 	})
 	assert.NilError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := client.Info(ctx); err != nil {
+		t.Skipf("skipping integration test: Elasticsearch is unavailable at %s: %v", esURL(), err)
+	}
+
 	return client
 }
 
@@ -77,6 +85,17 @@ func bulkOps(idx string, docs ...map[string]any) corebulk.Request {
 	for _, doc := range docs {
 		req = append(req,
 			map[string]any{"index": map[string]any{"_index": idx}},
+			doc,
+		)
+	}
+	return req
+}
+
+func bulkOpsWithIDs(idx string, docs ...map[string]any) corebulk.Request {
+	var req corebulk.Request
+	for i, doc := range docs {
+		req = append(req,
+			map[string]any{"index": map[string]any{"_index": idx, "_id": fmt.Sprintf("doc-%d", i+1)}},
 			doc,
 		)
 	}
@@ -119,7 +138,7 @@ func TestIntegration_Spec_IndicesCreateDelete(t *testing.T) {
 		_, _ = client.IndicesDelete(cctx, name)
 	})
 
-	// Create with number_of_replicas=0 to keep the cluster GREEN on a single-nodejj
+	// Create with number_of_replicas=0 to keep the cluster GREEN on a single-node
 	// cluster and avoid interference with parallel tests that use UpdateByQuery.
 	zeroReplicas := "0"
 	createRes, err := client.IndicesCreate(ctx, name, &indicescreate.Request{
@@ -291,20 +310,43 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
 
-	docs := []map[string]any{{"tag": "delete-me"}, {"tag": "delete-me"}, {"tag": "delete-me"}}
-	req := bulkOps(idx, docs...)
+	docs := []map[string]any{
+		{"tag": "delete-me"},
+		{"tag": "delete-me"},
+		{"tag": "delete-me"},
+	}
+	req := bulkOpsWithIDs(idx, docs...)
 	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
 	// YELLOW shards of other parallel tests.
-	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
+	_, err = client.IndexRefresh(ctx, estype.Index(idx))
+	assert.NilError(t, err)
+
+	beforeCount, err := client.Count(ctx, estype.Alias(idx))
+	assert.NilError(t, err)
+	assert.Assert(t, beforeCount != nil)
+	assert.Equal(t, beforeCount.Count, int64(3))
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
 	dbqReq := deletebyquery.Request{Query: &matchAll}
-	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) { r.Request(&dbqReq) })
+	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) {
+		r.Request(&dbqReq)
+		r.WaitForCompletion(true)
+	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
-	t.Logf("DeleteByQuery deleted %d documents", res.Deleted)
+	assert.Assert(t, res.Deleted != nil)
+	assert.Equal(t, *res.Deleted, int64(3))
+	t.Logf("DeleteByQuery deleted %d documents", *res.Deleted)
+
+	_, err = client.IndexRefresh(ctx, estype.Index(idx))
+	assert.NilError(t, err)
+
+	afterCount, err := client.Count(ctx, estype.Alias(idx))
+	assert.NilError(t, err)
+	assert.Assert(t, afterCount != nil)
+	assert.Equal(t, afterCount.Count, int64(0))
 }
 
 func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
@@ -313,8 +355,10 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
 
-	docs := []map[string]any{{"status": "pending"}}
-	req := bulkOps(idx, docs...)
+	req := corebulk.Request{
+		map[string]any{"index": map[string]any{"_index": idx, "_id": "update-doc-1"}},
+		map[string]any{"status": "pending"},
+	}
 	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
@@ -323,11 +367,27 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	assert.NilError(t, err)
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	ubqReq := updatebyquery.Request{Query: &matchAll}
-	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) { r.Request(&ubqReq) })
+	inlineScript := `ctx._source.status = "done"`
+	ubqReq := updatebyquery.Request{
+		Query:  &matchAll,
+		Script: &types.Script{Source: &inlineScript},
+	}
+	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) {
+		r.Request(&ubqReq)
+		r.WaitForCompletion(true)
+	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
-	t.Logf("UpdateByQuery updated %d documents", res.Updated)
+	assert.Assert(t, res.Updated != nil)
+	assert.Equal(t, int64(1), *res.Updated)
+
+	getRes, err := client.Get(ctx, idx, "update-doc-1")
+	assert.NilError(t, err)
+	assert.Assert(t, getRes.Found)
+
+	var got map[string]any
+	assert.NilError(t, json.Unmarshal(getRes.Source_, &got))
+	assert.Equal(t, "done", got["status"])
 }
 
 func TestIntegration_Spec_ScrollAndClear(t *testing.T) {

@@ -33,7 +33,7 @@ func esURL() string {
 	if u := os.Getenv("ES_URL"); u != "" {
 		return u
 	}
-	return "http://localhost:9200"
+	return "http://localhost:19200"
 }
 
 func newTestClient(t *testing.T) esv8.ESClient {
@@ -42,6 +42,14 @@ func newTestClient(t *testing.T) esv8.ESClient {
 		Addresses: []string{esURL()},
 	})
 	assert.NilError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := client.Info(ctx); err != nil {
+		t.Skipf("skipping integration test: Elasticsearch is unavailable at %s: %v", esURL(), err)
+	}
+
 	return client
 }
 

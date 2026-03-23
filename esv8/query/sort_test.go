@@ -166,16 +166,21 @@ func TestSortBuilder_Chaining(t *testing.T) {
 func TestSortBuilder_MissingDirectionPattern(t *testing.T) {
 	t.Parallel()
 	// Test the common pattern: ASC -> MissingLast, DESC -> MissingFirst.
-	tests := []struct {
-		name    string
+	tests := map[string]struct {
 		order   sortorder.SortOrder
 		missing string
 	}{
-		{"asc_missing_last", sortorder.Asc, query.MissingLast},
-		{"desc_missing_first", sortorder.Desc, query.MissingFirst},
+		"asc_missing_last": {
+			order:   sortorder.Asc,
+			missing: query.MissingLast,
+		},
+		"desc_missing_first": {
+			order:   sortorder.Desc,
+			missing: query.MissingFirst,
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			sorts := query.NewSort().
 				FieldWithMissing(FieldDate, tt.order, tt.missing).

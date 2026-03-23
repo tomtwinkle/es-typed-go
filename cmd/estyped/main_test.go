@@ -17,23 +17,22 @@ import (
 
 func TestToPascalCase(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		path string
 		want string
 	}{
-		{"simple", "status", "Status"},
-		{"dotted", "items.color", "ItemsColor"},
-		{"multi_field", "title.keyword", "TitleKeyword"},
-		{"underscore", "field_name", "FieldName"},
-		{"deep_nested", "items.color.value", "ItemsColorValue"},
-		{"underscore_and_dot", "field_name.sub_field", "FieldNameSubField"},
-		{"double_underscore", "field__name", "FieldName"},
-		{"leading_underscore", "_field", "Field"},
-		{"trailing_underscore", "field_", "Field"},
+		"simple":              {path: "status", want: "Status"},
+		"dotted":              {path: "items.color", want: "ItemsColor"},
+		"multi_field":         {path: "title.keyword", want: "TitleKeyword"},
+		"underscore":          {path: "field_name", want: "FieldName"},
+		"deep_nested":         {path: "items.color.value", want: "ItemsColorValue"},
+		"underscore_and_dot":  {path: "field_name.sub_field", want: "FieldNameSubField"},
+		"double_underscore":   {path: "field__name", want: "FieldName"},
+		"leading_underscore":  {path: "_field", want: "Field"},
+		"trailing_underscore": {path: "field_", want: "Field"},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := toPascalCase(tt.path)
 			assert.Equal(t, tt.want, got)
@@ -43,23 +42,22 @@ func TestToPascalCase(t *testing.T) {
 
 func TestToStructFieldName(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		path string
 		want string
 	}{
-		{"simple", "status", "Status"},
-		{"dotted", "items.color", "Items_Color"},
-		{"multi_field", "title.keyword", "Title_Keyword"},
-		{"underscore", "field_name", "FieldName"},
-		{"deep_nested", "items.color.value", "Items_Color_Value"},
-		{"underscore_and_dot", "field_name.sub_field", "FieldName_SubField"},
-		{"double_underscore", "field__name", "FieldName"},
-		{"leading_underscore", "_field", "Field"},
-		{"trailing_underscore", "field_", "Field"},
+		"simple":              {path: "status", want: "Status"},
+		"dotted":              {path: "items.color", want: "Items_Color"},
+		"multi_field":         {path: "title.keyword", want: "Title_Keyword"},
+		"underscore":          {path: "field_name", want: "FieldName"},
+		"deep_nested":         {path: "items.color.value", want: "Items_Color_Value"},
+		"underscore_and_dot":  {path: "field_name.sub_field", want: "FieldName_SubField"},
+		"double_underscore":   {path: "field__name", want: "FieldName"},
+		"leading_underscore":  {path: "_field", want: "Field"},
+		"trailing_underscore": {path: "field_", want: "Field"},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := toStructFieldName(tt.path)
 			assert.Equal(t, tt.want, got)
@@ -69,18 +67,17 @@ func TestToStructFieldName(t *testing.T) {
 
 func TestFieldType(t *testing.T) {
 	t.Parallel()
-	tests := []struct {
-		name string
+	tests := map[string]struct {
 		typ  string
 		want string
 	}{
-		{"keyword", "keyword", "keyword"},
-		{"text", "text", "text"},
-		{"nested", "nested", "nested"},
-		{"empty_defaults_to_object", "", "object"},
+		"keyword":                  {typ: "keyword", want: "keyword"},
+		"text":                     {typ: "text", want: "text"},
+		"nested":                   {typ: "nested", want: "nested"},
+		"empty_defaults_to_object": {typ: "", want: "object"},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := fieldType(tt.typ)
 			assert.Equal(t, tt.want, got)

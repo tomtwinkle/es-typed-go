@@ -45,6 +45,14 @@ func newSpecClient(t *testing.T) esv9.ESClientSpec {
 		Addresses: []string{esURL()},
 	})
 	assert.NilError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := client.Info(ctx); err != nil {
+		t.Skipf("skipping integration test: Elasticsearch is unavailable at %s: %v", esURL(), err)
+	}
+
 	return client
 }
 
@@ -305,7 +313,8 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) { r.Request(&dbqReq) })
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
-	t.Logf("DeleteByQuery deleted %d documents", res.Deleted)
+	assert.Assert(t, res.Deleted != nil)
+	t.Logf("DeleteByQuery deleted %d documents", *res.Deleted)
 }
 
 func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
@@ -328,7 +337,8 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) { r.Request(&ubqReq) })
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
-	t.Logf("UpdateByQuery updated %d documents", res.Updated)
+	assert.Assert(t, res.Updated != nil)
+	t.Logf("UpdateByQuery updated %d documents", *res.Updated)
 }
 
 func TestIntegration_Spec_ScrollAndClear(t *testing.T) {

@@ -7,7 +7,7 @@ services:
       discovery.type: single-node
       ES_JAVA_OPTS: "-Xms1g -Xmx1g"
     ports:
-      - "9200:9200"
+      - "19200:9200"
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health"]
       interval: 10s
@@ -24,7 +24,7 @@ services:
       cluster.routing.allocation.disk.threshold_enabled: "false"
       ES_JAVA_OPTS: "-Xms1g -Xmx1g"
     ports:
-      - "9201:9200"
+      - "19201:9200"
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health"]
       interval: 10s
