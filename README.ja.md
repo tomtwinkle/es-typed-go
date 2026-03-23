@@ -63,6 +63,15 @@ go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
 go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
 ```
 
+カスタム lint を含む検証を行う場合は、まずチェッカーをビルドしてから `go vet` に組み込みます。
+
+```bash
+go build -o ./bin/okassertcheck ./tools/okassertcheck
+go vet -vettool=$(pwd)/bin/okassertcheck ./...
+```
+
+このカスタムチェックでは、型アサーションの結果を `ok` で明示的に確認しているかを検証します。特に、map 取得と型アサーションを 1 行でまとめたコードは避け、存在確認と型確認を分けて記述してください。
+
 ## クイックスタート
 
 ### 1. マッピングを定義してフィールド定数を生成する

@@ -25,7 +25,9 @@ func TestTermsValues(t *testing.T) {
 	)
 	assert.Assert(t, q.Terms != nil)
 	assert.Assert(t, q.Terms.TermsQuery != nil)
-	vals, ok := q.Terms.TermsQuery[string(FieldCategory)].([]types.FieldValue)
+	rawVals, ok := q.Terms.TermsQuery[string(FieldCategory)]
+	assert.Assert(t, ok)
+	vals, ok := rawVals.([]types.FieldValue)
 	assert.Assert(t, ok)
 	assert.Assert(t, len(vals) == 3)
 }
@@ -184,7 +186,9 @@ func TestFieldValues_WithTermsValues(t *testing.T) {
 	// Test that FieldValues output is compatible with TermsValues.
 	q := query.TermsValues(FieldTags, query.FieldValues(int32(1), int32(2), int32(3))...)
 	assert.Assert(t, q.Terms != nil)
-	vals, ok := q.Terms.TermsQuery[string(FieldTags)].([]types.FieldValue)
+	rawVals, ok := q.Terms.TermsQuery[string(FieldTags)]
+	assert.Assert(t, ok)
+	vals, ok := rawVals.([]types.FieldValue)
 	assert.Assert(t, ok)
 	assert.Assert(t, len(vals) == 3)
 }

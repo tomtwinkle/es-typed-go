@@ -310,7 +310,10 @@ func parseGoStruct(srcDir, typeName string) ([]fieldEntry, error) {
 func collectStructTypes(f *ast.File, typeMap map[string]*ast.StructType) {
 	for _, decl := range f.Decls {
 		gd, ok := decl.(*ast.GenDecl)
-		if !ok || gd.Tok != token.TYPE {
+		if !ok {
+			continue
+		}
+		if gd.Tok != token.TYPE {
 			continue
 		}
 		for _, spec := range gd.Specs {
@@ -463,7 +466,10 @@ func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[s
 		for _, file := range pkg.Files {
 			for _, decl := range file.Decls {
 				fd, ok := decl.(*ast.FuncDecl)
-				if !ok || fd.Recv == nil || fd.Name.Name != "ESMapping" || fd.Body == nil {
+				if !ok {
+					continue
+				}
+				if fd.Recv == nil || fd.Name.Name != "ESMapping" || fd.Body == nil {
 					continue
 				}
 				for _, recv := range fd.Recv.List {
@@ -495,7 +501,10 @@ func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[s
 func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
 	for _, stmt := range body.List {
 		ret, ok := stmt.(*ast.ReturnStmt)
-		if !ok || len(ret.Results) != 1 {
+		if !ok {
+			continue
+		}
+		if len(ret.Results) != 1 {
 			continue
 		}
 		mappingLit, ok := ret.Results[0].(*ast.CompositeLit)
@@ -509,7 +518,10 @@ func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
 				continue
 			}
 			key, ok := kv.Key.(*ast.Ident)
-			if !ok || key.Name != "Fields" {
+			if !ok {
+				continue
+			}
+			if key.Name != "Fields" {
 				continue
 			}
 			// The value should be a slice composite literal.
@@ -534,8 +546,14 @@ func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
 					}
 					switch fKey.Name {
 					case "Path":
-						if bl, ok := fkv.Value.(*ast.BasicLit); ok && bl.Kind == token.STRING {
+						switch bl := fkv.Value.(type) {
+						case *ast.BasicLit:
+							if bl.Kind != token.STRING {
+								continue
+							}
 							path = strings.Trim(bl.Value, `"`)
+						default:
+							continue
 						}
 					case "Property":
 						esType = propertyValueTypeName(fkv.Value)
@@ -561,19 +579,28 @@ func propertyValueTypeName(expr ast.Expr) string {
 	call, ok := expr.(*ast.CallExpr)
 	if !ok {
 		// Plain string literal fallback.
-		if bl, ok := expr.(*ast.BasicLit); ok && bl.Kind == token.STRING {
-			return strings.Trim(bl.Value, `"`)
+		bl, ok := expr.(*ast.BasicLit)
+		if !ok {
+			return ""
 		}
-		return ""
+		if bl.Kind != token.STRING {
+			return ""
+		}
+		return strings.Trim(bl.Value, `"`)
 	}
 	// Detect FieldType("...") or estype.FieldType("...") conversion calls.
 	if name := fieldTypeFuncName(call.Fun); name == "FieldType" {
-		if len(call.Args) == 1 {
-			if bl, ok := call.Args[0].(*ast.BasicLit); ok && bl.Kind == token.STRING {
-				return strings.Trim(bl.Value, `"`)
-			}
+		if len(call.Args) != 1 {
+			return ""
 		}
-		return ""
+		bl, ok := call.Args[0].(*ast.BasicLit)
+		if !ok {
+			return ""
+		}
+		if bl.Kind != token.STRING {
+			return ""
+		}
+		return strings.Trim(bl.Value, `"`)
 	}
 	// Fall through to constructor call detection.
 	return propertyCallTypeName(call.Fun)

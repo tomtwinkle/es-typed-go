@@ -43,9 +43,12 @@ func TestSortBuilder_FieldWithMissing_Last(t *testing.T) {
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions[string(FieldNameKeyword)]
+	fs, ok := so.SortOptions[string(FieldNameKeyword)]
+	assert.Assert(t, ok)
+	missing, ok := fs.Missing.(string)
+	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Asc, *fs.Order)
-	assert.Equal(t, "_last", fs.Missing.(string))
+	assert.Equal(t, "_last", missing)
 }
 
 func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
@@ -57,9 +60,12 @@ func TestSortBuilder_FieldWithMissing_First(t *testing.T) {
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions[string(FieldDate)]
+	fs, ok := so.SortOptions[string(FieldDate)]
+	assert.Assert(t, ok)
+	missing, ok := fs.Missing.(string)
+	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Desc, *fs.Order)
-	assert.Equal(t, "_first", fs.Missing.(string))
+	assert.Equal(t, "_first", missing)
 }
 
 func TestSortBuilder_FieldNested(t *testing.T) {
@@ -71,7 +77,8 @@ func TestSortBuilder_FieldNested(t *testing.T) {
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions[string(FieldItemsDate)]
+	fs, ok := so.SortOptions[string(FieldItemsDate)]
+	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Asc, *fs.Order)
 	assert.Equal(t, sortmode.Min, *fs.Mode)
 	assert.Assert(t, fs.Nested != nil)
@@ -92,7 +99,8 @@ func TestSortBuilder_FieldCustom(t *testing.T) {
 	assert.Assert(t, len(sorts) == 1)
 	so, ok := sorts[0].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs := so.SortOptions[string(FieldPrice)]
+	fs, ok := so.SortOptions[string(FieldPrice)]
+	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Desc, *fs.Order)
 	assert.Equal(t, sortmode.Max, *fs.Mode)
 }
@@ -159,7 +167,8 @@ func TestSortBuilder_Chaining(t *testing.T) {
 	// Second sort: tiebreaker
 	so2, ok := sorts[1].(types.SortOptions)
 	assert.Assert(t, ok)
-	fs2 := so2.SortOptions[string(FieldId)]
+	fs2, ok := so2.SortOptions[string(FieldId)]
+	assert.Assert(t, ok)
 	assert.Equal(t, sortorder.Asc, *fs2.Order)
 }
 
@@ -190,9 +199,12 @@ func TestSortBuilder_MissingDirectionPattern(t *testing.T) {
 			assert.Assert(t, len(sorts) == 2)
 			so, ok := sorts[0].(types.SortOptions)
 			assert.Assert(t, ok)
-			fs := so.SortOptions[string(FieldDate)]
+			fs, ok := so.SortOptions[string(FieldDate)]
+			assert.Assert(t, ok)
+			missing, ok := fs.Missing.(string)
+			assert.Assert(t, ok)
 			assert.Equal(t, tt.order, *fs.Order)
-			assert.Equal(t, tt.missing, fs.Missing.(string))
+			assert.Equal(t, tt.missing, missing)
 		})
 	}
 }

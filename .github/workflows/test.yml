@@ -23,6 +23,12 @@ jobs:
       - name: Run unit tests
         run: go tool gotestsum --format short-verbose -- -count=1 -parallel=4 -timeout=60s -coverprofile=coverage.out ./...
 
+      - name: Build custom vet analyzer
+        run: go build -o ./bin/okassertcheck ./tools/okassertcheck
+
+      - name: Run go vet with custom analyzer
+        run: go vet -vettool=$(pwd)/bin/okassertcheck ./...
+
       - name: Show coverage summary
         run: go tool cover -func=coverage.out
 

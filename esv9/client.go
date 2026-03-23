@@ -490,12 +490,14 @@ func isElasticsearchError(err error, target **types.ElasticsearchError) bool {
 	// Walk the error chain.
 	e := err
 	for e != nil {
-		if ee, cast := e.(*types.ElasticsearchError); cast {
-			esErr = ee
-			ok = true
-			break
+		ee, cast := e.(*types.ElasticsearchError)
+		if !cast {
+			e = unwrapErr(e)
+			continue
 		}
-		e = unwrapErr(e)
+		esErr = ee
+		ok = true
+		break
 	}
 	if ok && target != nil {
 		*target = esErr
@@ -508,10 +510,11 @@ func unwrapErr(err error) error {
 	type unwrapper interface {
 		Unwrap() error
 	}
-	if u, ok := err.(unwrapper); ok {
-		return u.Unwrap()
+	u, ok := err.(unwrapper)
+	if !ok {
+		return nil
 	}
-	return nil
+	return u.Unwrap()
 }
 
 // schemeFromTransport returns "https" when the transport's connection pool is
@@ -521,10 +524,12 @@ func (c *esClient) schemeFromTransport() string {
 	type urlProvider interface {
 		URLs() []*url.URL
 	}
-	if up, ok := c.typedClient.Transport.(urlProvider); ok {
-		if urls := up.URLs(); len(urls) > 0 && urls[0].Scheme == "https" {
-			return "https"
-		}
+	up, ok := c.typedClient.Transport.(urlProvider)
+	if !ok {
+		return "http"
+	}
+	if urls := up.URLs(); len(urls) > 0 && urls[0].Scheme == "https" {
+		return "https"
 	}
 	return "http"
 }

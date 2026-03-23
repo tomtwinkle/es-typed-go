@@ -63,6 +63,27 @@ This adds an entry to your `go.mod` and lets you invoke the tool with `go tool e
 go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
 ```
 
+## Linting
+
+This repository includes a custom lint check for unsafe type assertions in tests.
+
+Use it together with `go vet`:
+
+```bash
+go build -o ./bin/okassertcheck ./tools/okassertcheck
+go vet -vettool=$(pwd)/bin/okassertcheck ./...
+```
+
+The custom check reports unchecked type assertions in test files and also catches compressed patterns where a map lookup and type assertion are combined into a single expression.
+
+Recommended local validation sequence:
+
+```bash
+go test ./... -short -count=1
+go build -o ./bin/okassertcheck ./tools/okassertcheck
+go vet -vettool=$(pwd)/bin/okassertcheck ./...
+```
+
 ## Quick Start
 
 ### 1. Define your mapping and generate field constants

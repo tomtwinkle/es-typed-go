@@ -530,7 +530,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 	termsAgg, ok := catAgg.(*types.StringTermsAggregate)
 	assert.Assert(t, ok, "expected StringTermsAggregate")
 	buckets, ok := termsAgg.Buckets.([]types.StringTermsBucket)
-	assert.Assert(t, ok)
+	assert.Assert(t, ok, "expected []types.StringTermsBucket")
 	assert.Assert(t, len(buckets) == 3)
 
 	// Find the electronics bucket and verify avg price
@@ -539,7 +539,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 			avgAgg, ok := bucket.Aggregations["avg_price"]
 			assert.Assert(t, ok)
 			avg, ok := avgAgg.(*types.AvgAggregate)
-			assert.Assert(t, ok)
+			assert.Assert(t, ok, "expected *types.AvgAggregate")
 			// avg of 999.99 and 699.99 ≈ 849.99
 			assert.Assert(t, math.Abs(849.99-float64(*avg.Value)) < 0.1)
 		}
@@ -593,9 +593,9 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 	monthAgg, ok := res.Aggregations["by_month"]
 	assert.Assert(t, ok)
 	dateAgg, ok := monthAgg.(*types.DateHistogramAggregate)
-	assert.Assert(t, ok)
+	assert.Assert(t, ok, "expected *types.DateHistogramAggregate")
 	buckets, ok := dateAgg.Buckets.([]types.DateHistogramBucket)
-	assert.Assert(t, ok)
+	assert.Assert(t, ok, "expected []types.DateHistogramBucket")
 	// 6 documents in 6 different months
 	assert.Assert(t, len(buckets) == 6)
 }
@@ -854,7 +854,7 @@ func TestIntegration_Search_Request(t *testing.T) {
 	statsRaw, ok := res.Aggregations["price_stats"]
 	assert.Assert(t, ok)
 	statsAgg, ok := statsRaw.(*types.StatsAggregate)
-	assert.Assert(t, ok)
+	assert.Assert(t, ok, "expected *types.StatsAggregate")
 	assert.Equal(t, int64(2), statsAgg.Count)
 	assert.Assert(t, math.Abs(15.0-float64(*statsAgg.Avg)) < 0.001)
 }

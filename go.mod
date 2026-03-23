@@ -37,5 +37,6 @@ require (
 
 tool (
 	github.com/tomtwinkle/es-typed-go/cmd/estyped
+	golang.org/x/tools/go/analysis/unitchecker
 	gotest.tools/gotestsum
 )
