@@ -265,7 +265,7 @@ func buildQuery() {
 		Build(),
 	)
 
-	_ = q // Use with ESClient.Search() or ESClient.SearchWithRequest()
+	_ = q // Use with esv8.Search[T](...) or client.SearchRaw(...)
 }
 ```
 
@@ -302,7 +302,10 @@ func main() {
 The foundation of es-typed-go is three distinct string types that prevent mix-ups at compile time:
 
 ```go
-import "github.com/tomtwinkle/es-typed-go/estype"
+import (
+	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/estype"
+)
 
 // These are distinct types — you cannot accidentally pass one where another is expected
 var field estype.Field = "status"       // Elasticsearch field name
@@ -310,14 +313,14 @@ var index estype.Index = "my-index"     // Elasticsearch index name
 var alias estype.Alias = "my-alias"     // Elasticsearch alias name
 
 // OK — correct usage
-client.Search(ctx, alias, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchRequest{})
 client.DeleteIndex(ctx, index)
 
 // Compile error — passing Field where Alias is expected
-client.Search(ctx, field, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchRequest{})
 
 // Compile error — passing Index where Alias is expected
-client.Search(ctx, index, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchRequest{})
 ```
 
 ### Query Builders
@@ -429,45 +432,56 @@ sorts := query.NewSort().
 	Build()
 ```
 
-### Aggregation Builder
+### Typed Aggregations
 
 ```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
+import (
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
+)
 
-aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                         // Bucket by category
-	TermsWithSize("top_tags", FieldTags, 20).                                    // Top 20 tags
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).               // Monthly histogram
-	DateHistogramWithFormat("over_time_fmt", FieldDate, "yyyy-MM",
-		calendarinterval.Month).                                                 // With date format
-	Histogram("price_dist", FieldPrice, 50.0).                                   // Numeric histogram
-	Avg("avg_price", FieldPrice).                                                // Average price
-	Max("max_price", FieldPrice).                                                // Maximum price
-	Min("min_price", FieldPrice).                                                // Minimum price
-	Sum("total_price", FieldPrice).                                              // Sum
-	ValueCount("count_status", FieldStatus).                                     // Value count
-	Cardinality("unique_categories", FieldCategory).                             // Distinct count
-	Stats("price_stats", FieldPrice).                                            // Count/min/max/avg/sum
-	Nested("nested_items", FieldItems, query.NewAggregations().                  // Nested aggregation
-		Terms("item_names", estype.Field("items.name")),
-	).
-	Filter("active_only", query.TermValue(FieldStatus, "active"),
-		query.NewAggregations().Avg("avg_price", FieldPrice)).                   // Filter aggregation
-	SubAggregations("by_category", query.NewAggregations().                      // Sub-aggregation
-		Avg("avg_price", FieldPrice),
-	).
-	Build()
+	avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
+	byCategoryAgg := query.StringTermsAgg(
+		"by_category",
+		FieldCategory,
+		query.WithTermsSize(10),        // top 10 categories
+		query.WithSubAggs(avgPriceAgg), // avg price per category
+	)
+
+overTimeAgg := query.DateHistogramAgg(
+	"over_time",
+	FieldDate,
+	calendarinterval.Month,
+)
+
+priceDistAgg := query.HistogramAgg(
+	"price_dist",
+	FieldPrice,
+	50.0, // Numeric histogram interval
+)
+
+statsAgg := query.StatsAgg("price_stats", FieldPrice)
+
+aggs := query.Aggs(
+	byCategoryAgg,
+	overTimeAgg,
+	priceDistAgg,
+	statsAgg,
+)
 ```
 
 ### SearchBuilder
 
-`query.NewSearch()` provides an ActiveRecord-style builder that combines query, sort, aggregations, and pagination into a single `SearchParams` value. Use it instead of assembling search parameters manually.
+`query.NewSearch()` provides an ActiveRecord-style builder that combines query, sort, aggregations, and pagination into a single typed `query.SearchRequest` value.
 
 ```go
 import (
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
+
+byCategoryAgg := query.StringTermsAgg("by_category", FieldCategory)
 
 params := query.NewSearch().
 	Where(
@@ -488,17 +502,24 @@ params := query.NewSearch().
 		ScoreDesc().
 		Build()...,
 	).
-	Aggregation(query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Build(),
-	).
+	Aggregations(query.Aggs(
+		byCategoryAgg,
+	)).
 	Limit(10).
 	Offset(0).
 	Build()
 
-// params.Query, params.Sort, params.Aggregations, params.Size, params.From, etc.
-resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
-	params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+	Query:        params.Query,
+	Sort:         params.Sort,
+	Aggregations: params.Aggregations,
+	Highlight:    params.Highlight,
+	Collapse:     params.Collapse,
+	ScriptFields: params.ScriptFields,
+	TrackTotalHits: params.TrackTotalHits,
+	Size:         params.Size,
+	From:         params.From,
+})
 ```
 
 You can also set the query directly when you have already built a `types.Query`:
@@ -676,15 +697,15 @@ specClient, _ := esv8.NewSpecClient(config)
 - `UpdateDocument(ctx, index, id, req)` — partial update
 
 **Search**
-- `Search(ctx, alias, query, limit, offset, sort, aggs, highlight, collapse, scriptFields)` — execute a search
-- `SearchWithRequest(ctx, alias, req)` — execute a raw `search.Request`
+- `esv8.Search[T](ctx, client, alias, req)` — execute the high-level typed search API
+- `SearchRaw(ctx, alias, req)` — execute a raw `search.Request`
 
 **Reindex**
 - `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — full reindex
 - `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — incremental reindex
 - `WaitForTaskCompletion(ctx, taskID, timeout)` — poll until a task finishes
 
-### Complete Search Example
+### Complete Typed Search Example
 
 ```go
 package main
@@ -693,6 +714,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
@@ -710,8 +732,14 @@ const (
 	FieldPrice    estype.Field = "price"
 )
 
+type Product struct {
+	ID       string  `json:"id"`
+	Status   string  `json:"status"`
+	Category string  `json:"category"`
+	Price    float64 `json:"price"`
+}
+
 func main() {
-	// Create client
 	client, err := esv8.NewClientWithLogger(
 		es8.Config{Addresses: []string{"http://localhost:19200"}},
 		slog.Default(),
@@ -720,7 +748,14 @@ func main() {
 		panic(err)
 	}
 
-	// Build search parameters with SearchBuilder
+	avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
+	byCategoryAgg := query.StringTermsAgg(
+		"by_category",
+		FieldCategory,
+		query.WithTermsSize(10),
+		query.WithSubAggs(avgPriceAgg),
+	)
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Where(
@@ -732,25 +767,52 @@ func main() {
 			ScoreDesc().
 			Build()...,
 		).
-		Aggregation(query.NewAggregations().
-			Terms("by_category", FieldCategory).
-			Avg("avg_price", FieldPrice).
-			Build(),
-		).
+		Aggregations(query.Aggs(
+			byCategoryAgg,
+		)).
 		Limit(10).
 		Offset(0).
 		Build()
 
-	// Execute search
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
-	resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
-		params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+
+	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+		Query:          params.Query,
+		Sort:           params.Sort,
+		Aggregations:   params.Aggregations,
+		Highlight:      params.Highlight,
+		Collapse:       params.Collapse,
+		ScriptFields:   params.ScriptFields,
+		TrackTotalHits: params.TrackTotalHits,
+		Size:           params.Size,
+		From:           params.From,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Total hits: %d\n", resp.Hits.Total.Value)
+	fmt.Printf("Total hits: %d\n", resp.Total)
+	for _, hit := range resp.Hits {
+		fmt.Printf("product=%+v\n", hit.Source)
+	}
+
+	terms := resp.Aggregations.MustStringTerms(byCategoryAgg)
+	for _, bucket := range terms.Buckets() {
+		avg := bucket.Aggregations().MustAvg(avgPriceAgg)
+		if avg.Value() != nil && math.Abs(*avg.Value()) > 0 {
+			fmt.Printf("category=%s avg_price=%.2f\n", bucket.Key(), *avg.Value())
+		}
+	}
+
+	rawResp, err := client.SearchRaw(ctx, alias, (&esv8.SearchRequest{
+		Query: params.Query,
+		Size:  1,
+	}).ToTypedRequest())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("raw took: %d\n", rawResp.Took)
 }
 ```
 

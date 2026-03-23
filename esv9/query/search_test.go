@@ -13,19 +13,23 @@ import (
 
 func TestNewSearch_Empty(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().Build()
+
 	assert.DeepEqual(t, types.Query{}, params.Query)
 	assert.Assert(t, len(params.Sort) == 0)
-	assert.Assert(t, params.Aggregations == nil)
+	assert.Assert(t, params.Aggregations.Build() == nil)
 	assert.Assert(t, params.Highlight == nil)
 	assert.Assert(t, params.Collapse == nil)
 	assert.Assert(t, params.ScriptFields == nil)
+	assert.Assert(t, params.TrackTotalHits == nil)
 	assert.Equal(t, 0, params.Size)
 	assert.Equal(t, 0, params.From)
 }
 
 func TestSearchBuilder_Where(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Build()
@@ -38,6 +42,7 @@ func TestSearchBuilder_Where(t *testing.T) {
 
 func TestSearchBuilder_Where_Multiple(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Where(query.TermValue(FieldType, "document")).
@@ -49,6 +54,7 @@ func TestSearchBuilder_Where_Multiple(t *testing.T) {
 
 func TestSearchBuilder_Must(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Must(query.TermValue(FieldStatus, "active")).
 		Build()
@@ -59,6 +65,7 @@ func TestSearchBuilder_Must(t *testing.T) {
 
 func TestSearchBuilder_Should(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Should(
 			query.MatchPhrase(FieldTitle, "keyword"),
@@ -72,6 +79,7 @@ func TestSearchBuilder_Should(t *testing.T) {
 
 func TestSearchBuilder_MustNot(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		MustNot(query.ExistsField(FieldTags)).
 		Build()
@@ -82,6 +90,7 @@ func TestSearchBuilder_MustNot(t *testing.T) {
 
 func TestSearchBuilder_MinimumShouldMatch(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Should(
 			query.MatchPhrase(FieldTitle, "keyword"),
@@ -97,18 +106,19 @@ func TestSearchBuilder_MinimumShouldMatch(t *testing.T) {
 
 func TestSearchBuilder_QueryOverridesBoolClauses(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Query(types.Query{MatchAll: &types.MatchAllQuery{}}).
 		Build()
 
-	// Query() takes precedence over Where()
 	assert.Assert(t, params.Query.MatchAll != nil)
 	assert.Assert(t, params.Query.Bool == nil)
 }
 
 func TestSearchBuilder_Sort(t *testing.T) {
 	t.Parallel()
+
 	sorts := query.NewSort().
 		Field(FieldDate, sortorder.Desc).
 		Build()
@@ -123,6 +133,7 @@ func TestSearchBuilder_Sort(t *testing.T) {
 
 func TestSearchBuilder_LimitAndOffset(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Limit(20).
 		Offset(40).
@@ -134,26 +145,32 @@ func TestSearchBuilder_LimitAndOffset(t *testing.T) {
 
 func TestSearchBuilder_Aggregation(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Build()
+
+	termsDef := query.StringTermsAgg("by_category", FieldCategory)
+	aggs := query.Aggs(termsDef)
 
 	params := query.NewSearch().
 		Aggregation(aggs).
 		Build()
 
-	assert.Assert(t, params.Aggregations != nil)
-	_, ok := params.Aggregations["by_category"]
+	built := params.Aggregations.Build()
+	assert.Assert(t, built != nil)
+
+	agg, ok := built["by_category"]
 	assert.Assert(t, ok)
+	assert.Assert(t, agg.Terms != nil)
+	assert.Equal(t, string(FieldCategory), *agg.Terms.Field)
 }
 
 func TestSearchBuilder_Highlight(t *testing.T) {
 	t.Parallel()
+
 	h := &types.Highlight{
 		Fields: []map[string]types.HighlightField{
 			{FieldTitle.String(): {}},
 		},
 	}
+
 	params := query.NewSearch().
 		Highlight(h).
 		Build()
@@ -164,6 +181,7 @@ func TestSearchBuilder_Highlight(t *testing.T) {
 
 func TestSearchBuilder_Collapse(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Collapse(&types.FieldCollapse{Field: FieldCategory.String()}).
 		Build()
@@ -174,6 +192,7 @@ func TestSearchBuilder_Collapse(t *testing.T) {
 
 func TestSearchBuilder_ScriptFields(t *testing.T) {
 	t.Parallel()
+
 	source := "doc['price'].value * 2"
 	params := query.NewSearch().
 		ScriptFields(map[string]types.ScriptField{
@@ -187,8 +206,19 @@ func TestSearchBuilder_ScriptFields(t *testing.T) {
 	assert.Equal(t, source, sf.Script.Source)
 }
 
+func TestSearchBuilder_TrackTotalHits(t *testing.T) {
+	t.Parallel()
+
+	params := query.NewSearch().
+		TrackTotalHits(true).
+		Build()
+
+	assert.Equal(t, true, params.TrackTotalHits)
+}
+
 func TestSearchBuilder_CombinedBoolClauses(t *testing.T) {
 	t.Parallel()
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Must(query.MatchPhrase(FieldTitle, "keyword")).
@@ -205,10 +235,9 @@ func TestSearchBuilder_CombinedBoolClauses(t *testing.T) {
 
 func TestSearchBuilder_FullChaining(t *testing.T) {
 	t.Parallel()
-	// Demonstrates the ActiveRecord-style fluent API.
-	aggs := query.NewAggregations().
-		DateHistogram("by_month", FieldDate, calendarinterval.Month).
-		Build()
+
+	dateHistDef := query.DateHistogramAgg("by_month", FieldDate, calendarinterval.Month)
+	aggs := query.Aggs(dateHistDef)
 
 	sorts := query.NewSort().
 		Field(FieldDate, sortorder.Desc).
@@ -226,7 +255,9 @@ func TestSearchBuilder_FullChaining(t *testing.T) {
 		Offset(0).
 		Aggregation(aggs).
 		Highlight(&types.Highlight{
-			Fields: []map[string]types.HighlightField{{FieldTitle.String(): {}}},
+			Fields: []map[string]types.HighlightField{
+				{FieldTitle.String(): {}},
+			},
 		}).
 		Build()
 
@@ -236,14 +267,13 @@ func TestSearchBuilder_FullChaining(t *testing.T) {
 	assert.Assert(t, len(params.Sort) == 2)
 	assert.Equal(t, 10, params.Size)
 	assert.Equal(t, 0, params.From)
-	assert.Assert(t, params.Aggregations != nil)
+	assert.Assert(t, params.Aggregations.Build() != nil)
 	assert.Assert(t, params.Highlight != nil)
 }
 
 func TestSearchBuilder_NoBoolClausesNoQuery(t *testing.T) {
 	t.Parallel()
-	// When no Where/Must/Should/MustNot and no Query() is set,
-	// the resulting query should be a zero-value Query.
+
 	params := query.NewSearch().
 		Limit(10).
 		Build()
