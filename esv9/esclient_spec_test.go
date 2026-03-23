@@ -60,7 +60,7 @@ func TestESClientSpec_SpecMethodsPresent(t *testing.T) {
 		// ILM namespace
 		"IlmGetLifecycle", "IlmPutLifecycle", "IlmDeleteLifecycle",
 		// Already in ESClient
-		"Info", "Search", "Reindex",
+		"Info", "Reindex",
 	}
 
 	missing := make([]string, 0)

@@ -22,8 +22,8 @@ import (
 	cat_help "github.com/elastic/go-elasticsearch/v9/typedapi/cat/help"
 	cat_indices "github.com/elastic/go-elasticsearch/v9/typedapi/cat/indices"
 	cat_master "github.com/elastic/go-elasticsearch/v9/typedapi/cat/master"
-	cat_ml_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mldataframeanalytics"
 	cat_ml_datafeeds "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mldatafeeds"
+	cat_ml_data_frame_analytics "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mldataframeanalytics"
 	cat_ml_jobs "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mljobs"
 	cat_ml_trained_models "github.com/elastic/go-elasticsearch/v9/typedapi/cat/mltrainedmodels"
 	cat_nodeattrs "github.com/elastic/go-elasticsearch/v9/typedapi/cat/nodeattrs"
@@ -50,8 +50,8 @@ import (
 	core_close_point_in_time "github.com/elastic/go-elasticsearch/v9/typedapi/core/closepointintime"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/count"
 	core_count "github.com/elastic/go-elasticsearch/v9/typedapi/core/count"
-	core_delete_by_query "github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyquery"
 	coredelete "github.com/elastic/go-elasticsearch/v9/typedapi/core/delete"
+	core_delete_by_query "github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyquery"
 	coreget "github.com/elastic/go-elasticsearch/v9/typedapi/core/get"
 	coreidx "github.com/elastic/go-elasticsearch/v9/typedapi/core/index"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/info"
@@ -84,9 +84,9 @@ import (
 	indices_get_mapping "github.com/elastic/go-elasticsearch/v9/typedapi/indices/getmapping"
 	indices_get_settings "github.com/elastic/go-elasticsearch/v9/typedapi/indices/getsettings"
 	indices_open "github.com/elastic/go-elasticsearch/v9/typedapi/indices/open"
+	idxputalias "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putalias"
 	indices_put_index_template "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putindextemplate"
 	indices_put_mapping "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putmapping"
-	idxputalias "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putalias"
 	idxputsettings "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putsettings"
 	indices_put_settings "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putsettings"
 	idxrefresh "github.com/elastic/go-elasticsearch/v9/typedapi/indices/refresh"
@@ -217,27 +217,16 @@ type ESClient interface {
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html
 	UpdateDocument(ctx context.Context, indexName estype.Index, id string, req *update.Request) (*update.Response, error)
 
-	// Search executes a search request against the alias.
+	// SearchRaw executes a search using a fully-constructed search.Request.
+	// Use this as the low-level escape hatch beside the high-level Search[T],
+	// SearchDocuments[T], and SearchOne[T] helpers.
+	//
+	// This is intended for advanced scenarios such as kNN search,
+	// point-in-time, search_after, or custom source filtering that are not yet
+	// modeled by SearchParams.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-search.html
-	Search(
-		ctx context.Context,
-		aliasName estype.Alias,
-		query types.Query,
-		limit int,
-		offset int,
-		sort []types.SortCombinations,
-		aggregations map[string]types.Aggregations,
-		highlight *types.Highlight,
-		collapse *types.FieldCollapse,
-		scriptFields map[string]types.ScriptField,
-	) (*search.Response, error)
-
-	// SearchWithRequest executes a search using a fully-constructed search.Request.
-	// Use this for advanced scenarios not covered by the Search helper.
-	//
-	// https://www.elastic.co/guide/en/elasticsearch/reference/current/search-search.html
-	SearchWithRequest(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error)
+	SearchRaw(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error)
 
 	// Reindex copies documents from sourceIndex to destIndex.
 	//

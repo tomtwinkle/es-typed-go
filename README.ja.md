@@ -301,14 +301,14 @@ var index estype.Index = "my-index"     // Elasticsearch インデックス名
 var alias estype.Alias = "my-alias"     // Elasticsearch エイリアス名
 
 // OK — 正しい使い方
-_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchParams{})
 client.DeleteIndex(ctx, index)
 
 // コンパイルエラー — Alias が期待される場所に Field を渡している
-_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchParams{})
 
 // コンパイルエラー — Alias が期待される場所に Index を渡している
-_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchParams{})
 ```
 
 ### クエリビルダー
@@ -460,7 +460,7 @@ aggs := query.Aggs(
 
 ### SearchBuilder
 
-`query.NewSearch()` は、クエリ・ソート・アグリゲーション・ページネーションをひとつの型付き `query.SearchRequest` にまとめる ActiveRecord スタイルのビルダーです。
+`query.NewSearch()` は、クエリ・ソート・アグリゲーション・ページネーションをひとつの型付き `query.SearchParams` にまとめる ActiveRecord スタイルのビルダーです。`Build()` の結果は `query.SearchParams` なので、そのまま `esv8.Search[T](...)` に渡す `esv8.SearchParams` へ写せます。
 
 ```go
 import (
@@ -497,16 +497,15 @@ params := query.NewSearch().
 	Offset(0).
 	Build()
 
-resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
-	Query:          params.Query,
-	Sort:           params.Sort,
-	Aggregations:   params.Aggregations,
-	Highlight:      params.Highlight,
-	Collapse:       params.Collapse,
-	ScriptFields:   params.ScriptFields,
-	TrackTotalHits: params.TrackTotalHits,
-	Size:           params.Size,
-	From:           params.From,
+resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
+	Query:        params.Query,
+	Sort:         params.Sort,
+	Aggregations: params.Aggregations,
+	Highlight:    params.Highlight,
+	Collapse:     params.Collapse,
+	ScriptFields: params.ScriptFields,
+	Size:         params.Size,
+	From:         params.From,
 })
 ```
 
@@ -685,7 +684,7 @@ specClient, _ := esv8.NewSpecClient(config)
 - `UpdateDocument(ctx, index, id, req)` — 部分更新
 
 **検索**
-- `esv8.Search[T](ctx, client, alias, req)` — 高レベルな型付き検索 API を実行
+- `esv8.Search[T](ctx, client, alias, params)` — 高レベルな型付き検索 API を実行
 - `SearchRaw(ctx, alias, req)` — 生の `search.Request` による検索
 
 **再インデックス**
@@ -765,16 +764,15 @@ func main() {
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
 
-	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
-		Query:          params.Query,
-		Sort:           params.Sort,
-		Aggregations:   params.Aggregations,
-		Highlight:      params.Highlight,
-		Collapse:       params.Collapse,
-		ScriptFields:   params.ScriptFields,
-		TrackTotalHits: params.TrackTotalHits,
-		Size:           params.Size,
-		From:           params.From,
+	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
+		Query:        params.Query,
+		Sort:         params.Sort,
+		Aggregations: params.Aggregations,
+		Highlight:    params.Highlight,
+		Collapse:     params.Collapse,
+		ScriptFields: params.ScriptFields,
+		Size:         params.Size,
+		From:         params.From,
 	})
 	if err != nil {
 		panic(err)
@@ -793,10 +791,12 @@ func main() {
 		}
 	}
 
-	rawResp, err := client.SearchRaw(ctx, alias, (&esv8.SearchRequest{
-		Query: params.Query,
-		Size:  1,
-	}).ToTypedRequest())
+	rawReq := search.NewRequest()
+	rawReq.Query = &params.Query
+	rawSize := 1
+	rawReq.Size = &rawSize
+
+	rawResp, err := client.SearchRaw(ctx, alias, rawReq)
 	if err != nil {
 		panic(err)
 	}
@@ -823,6 +823,32 @@ import (
 ```
 
 全てのビルダー、ヘルパー、プロパティコンストラクタは両バージョンで同一のシグネチャを持ちます。`esv8/` への変更は常に `esv9/` にもミラーされます。
+
+高レベルな検索ヘルパーも同様に揃っています。
+
+```go
+// v8
+v8Resp, err := esv8.Search[Product](ctx, v8Client, alias, esv8.SearchParams{
+	Query: params.Query,
+})
+
+// v9
+v9Resp, err := esv9.Search[Product](ctx, v9Client, alias, esv9.SearchParams{
+	Query: params.Query,
+})
+```
+
+便利ヘルパーも同じ考え方で使えます。
+
+```go
+v8Docs, err := esv8.SearchDocuments[Product](ctx, v8Client, alias, esv8.SearchParams{
+	Query: params.Query,
+})
+
+v9Doc, found, err := esv9.SearchOne[Product](ctx, v9Client, alias, esv9.SearchParams{
+	Query: params.Query,
+})
+```
 
 ## リポジトリ構成
 

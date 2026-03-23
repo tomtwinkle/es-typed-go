@@ -13,6 +13,7 @@ import (
 	es9 "github.com/elastic/go-elasticsearch/v9"
 	core_bulk "github.com/elastic/go-elasticsearch/v9/typedapi/core/bulk"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/deletebyquery"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/updatebyquery"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/conflicts"
@@ -106,7 +107,12 @@ func TestIntegration_WithOption_WithRefresh_DocumentImmediatelySearchable(t *tes
 	assert.NilError(t, err)
 
 	// No explicit IndexRefresh call — document must still be searchable.
-	res, err := client.Search(ctx, alias, query.MatchAll(), 10, 0, nil, nil, nil, nil, nil)
+	req := search.NewRequest()
+	q := query.MatchAll()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(1), res.Hits.Total.Value)
 }
@@ -174,7 +180,12 @@ func TestIntegration_WithOption_WithBulkRefresh_BulkDocumentsImmediatelySearchab
 	assert.NilError(t, err)
 
 	// No explicit refresh — all three documents must be findable.
-	res, err := client.Search(ctx, alias, query.MatchAll(), 10, 0, nil, nil, nil, nil, nil)
+	req := search.NewRequest()
+	q := query.MatchAll()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(3), res.Hits.Total.Value)
 }

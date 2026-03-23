@@ -313,14 +313,14 @@ var index estype.Index = "my-index"     // Elasticsearch index name
 var alias estype.Alias = "my-alias"     // Elasticsearch alias name
 
 // OK — correct usage
-_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchParams{})
 client.DeleteIndex(ctx, index)
 
 // Compile error — passing Field where Alias is expected
-_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchParams{})
 
 // Compile error — passing Index where Alias is expected
-_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchParams{})
 ```
 
 ### Query Builders
@@ -472,7 +472,7 @@ aggs := query.Aggs(
 
 ### SearchBuilder
 
-`query.NewSearch()` provides an ActiveRecord-style builder that combines query, sort, aggregations, and pagination into a single typed `query.SearchRequest` value.
+`query.NewSearch()` provides an ActiveRecord-style builder that combines query, sort, aggregations, and pagination into a single `query.SearchParams` value, which you can pass into `esv8.Search[T](...)` by mapping it into `esv8.SearchParams`.
 
 ```go
 import (
@@ -509,14 +509,13 @@ params := query.NewSearch().
 	Offset(0).
 	Build()
 
-resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
 	Query:        params.Query,
 	Sort:         params.Sort,
 	Aggregations: params.Aggregations,
 	Highlight:    params.Highlight,
 	Collapse:     params.Collapse,
 	ScriptFields: params.ScriptFields,
-	TrackTotalHits: params.TrackTotalHits,
 	Size:         params.Size,
 	From:         params.From,
 })
@@ -697,7 +696,7 @@ specClient, _ := esv8.NewSpecClient(config)
 - `UpdateDocument(ctx, index, id, req)` — partial update
 
 **Search**
-- `esv8.Search[T](ctx, client, alias, req)` — execute the high-level typed search API
+- `esv8.Search[T](ctx, client, alias, params)` — execute the high-level search API
 - `SearchRaw(ctx, alias, req)` — execute a raw `search.Request`
 
 **Reindex**
@@ -777,16 +776,15 @@ func main() {
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
 
-	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
-		Query:          params.Query,
-		Sort:           params.Sort,
-		Aggregations:   params.Aggregations,
-		Highlight:      params.Highlight,
-		Collapse:       params.Collapse,
-		ScriptFields:   params.ScriptFields,
-		TrackTotalHits: params.TrackTotalHits,
-		Size:           params.Size,
-		From:           params.From,
+	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
+		Query:        params.Query,
+		Sort:         params.Sort,
+		Aggregations: params.Aggregations,
+		Highlight:    params.Highlight,
+		Collapse:     params.Collapse,
+		ScriptFields: params.ScriptFields,
+		Size:         params.Size,
+		From:         params.From,
 	})
 	if err != nil {
 		panic(err)
@@ -805,10 +803,12 @@ func main() {
 		}
 	}
 
-	rawResp, err := client.SearchRaw(ctx, alias, (&esv8.SearchRequest{
-		Query: params.Query,
-		Size:  1,
-	}).ToTypedRequest())
+	rawReq := search.NewRequest()
+	rawReq.Query = &params.Query
+	rawSize := 1
+	rawReq.Size = &rawSize
+
+	rawResp, err := client.SearchRaw(ctx, alias, rawReq)
 	if err != nil {
 		panic(err)
 	}
@@ -835,6 +835,32 @@ import (
 ```
 
 All builders, helpers, and property constructors have the same signatures across both versions. Changes to `esv8/` are always mirrored in `esv9/`.
+
+The high-level typed search helpers are also aligned:
+
+```go
+// v8
+v8Resp, err := esv8.Search[Product](ctx, v8Client, alias, esv8.SearchParams{
+	Query: params.Query,
+})
+
+// v9
+v9Resp, err := esv9.Search[Product](ctx, v9Client, alias, esv9.SearchParams{
+	Query: params.Query,
+})
+```
+
+The same applies to the convenience helpers:
+
+```go
+v8Docs, err := esv8.SearchDocuments[Product](ctx, v8Client, alias, esv8.SearchParams{
+	Query: params.Query,
+})
+
+v9Doc, found, err := esv9.SearchOne[Product](ctx, v9Client, alias, esv9.SearchParams{
+	Query: params.Query,
+})
+```
 
 ## Repository Structure
 

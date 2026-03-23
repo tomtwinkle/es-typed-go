@@ -394,7 +394,12 @@ func TestIntegration_Search_MatchAll(t *testing.T) {
 	assert.NilError(t, err)
 
 	q := query.MatchAll()
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(5), res.Hits.Total.Value)
 	assert.Equal(t, 5, len(res.Hits.Hits))
@@ -431,7 +436,12 @@ func TestIntegration_Search_TermQuery(t *testing.T) {
 	assert.NilError(t, err)
 
 	q := query.TermValue("category", "electronics")
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(2), res.Hits.Total.Value)
 	assert.Equal(t, 2, len(res.Hits.Hits))
@@ -476,7 +486,12 @@ func TestIntegration_Search_BoolQuery(t *testing.T) {
 		).Build()
 	q := query.BoolQuery(bq)
 
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(1), res.Hits.Total.Value)
 	assert.Equal(t, 1, len(res.Hits.Hits))
@@ -528,7 +543,13 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 	)
 
 	q := query.MatchAll()
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, query.Aggs(byCategoryAgg).Build(), nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	req.Aggregations = query.Aggs(byCategoryAgg).Build()
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 
 	// Verify "by_category" aggregation exists in response
@@ -600,7 +621,13 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 	)
 
 	q := query.MatchAll()
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, query.Aggs(byMonthAgg).Build(), nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	req.Aggregations = query.Aggs(byMonthAgg).Build()
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 
 	monthAgg, ok := res.Aggregations["by_month"]
@@ -780,7 +807,13 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 		},
 	}
 	q := query.MatchAll()
-	res, err := client.Search(ctx, alias, q, 10, 0, []types.SortCombinations{sortField}, nil, nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	req.Sort = []types.SortCombinations{sortField}
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Assert(t, len(res.Hits.Hits) == 3)
 
@@ -817,12 +850,24 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 	q := query.MatchAll()
 
 	// Page 1: first 3
-	res1, err := client.Search(ctx, alias, q, 3, 0, nil, nil, nil, nil, nil)
+	req1 := search.NewRequest()
+	req1.Query = &q
+	size1 := 3
+	req1.Size = &size1
+
+	res1, err := client.SearchRaw(ctx, alias, req1)
 	assert.NilError(t, err)
 	assert.Assert(t, len(res1.Hits.Hits) == 3)
 
 	// Page 2: next 3
-	res2, err := client.Search(ctx, alias, q, 3, 3, nil, nil, nil, nil, nil)
+	req2 := search.NewRequest()
+	req2.Query = &q
+	size2 := 3
+	from2 := 3
+	req2.Size = &size2
+	req2.From = &from2
+
+	res2, err := client.SearchRaw(ctx, alias, req2)
 	assert.NilError(t, err)
 	assert.Assert(t, len(res2.Hits.Hits) == 3)
 }
@@ -858,7 +903,13 @@ func TestIntegration_Search_Request(t *testing.T) {
 
 	priceStatsAgg := query.StatsAgg("price_stats", estype.Field("price"))
 	q := query.TermValue("category", "cat1")
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, query.Aggs(priceStatsAgg).Build(), nil, nil, nil)
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	req.Aggregations = query.Aggs(priceStatsAgg).Build()
+
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(2), res.Hits.Total.Value)
 
@@ -897,7 +948,7 @@ func TestIntegration_SearchRaw(t *testing.T) {
 	req.Query = &types.Query{MatchAll: &matchAll}
 	req.Source_ = true
 
-	res, err := client.SearchWithRequest(ctx, alias, req)
+	res, err := client.SearchRaw(ctx, alias, req)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(5), res.Hits.Total.Value)
 }
