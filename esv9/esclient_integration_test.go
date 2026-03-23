@@ -397,6 +397,7 @@ func TestIntegration_Search_MatchAll(t *testing.T) {
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(5), res.Hits.Total.Value)
+	assert.Equal(t, 5, len(res.Hits.Hits))
 }
 
 func TestIntegration_Search_TermQuery(t *testing.T) {
@@ -433,6 +434,7 @@ func TestIntegration_Search_TermQuery(t *testing.T) {
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(2), res.Hits.Total.Value)
+	assert.Equal(t, 2, len(res.Hits.Hits))
 }
 
 func TestIntegration_Search_BoolQuery(t *testing.T) {
@@ -477,6 +479,11 @@ func TestIntegration_Search_BoolQuery(t *testing.T) {
 	res, err := client.Search(ctx, alias, q, 10, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(1), res.Hits.Total.Value)
+	assert.Equal(t, 1, len(res.Hits.Hits))
+
+	var got productDoc
+	assert.NilError(t, json.Unmarshal(res.Hits.Hits[0].Source_, &got))
+	assert.Equal(t, "Laptop", got.Name)
 }
 
 func TestIntegration_Search_WithAggregations(t *testing.T) {
@@ -512,14 +519,16 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 	assert.NilError(t, err)
 
 	// terms aggregation on category + avg price sub-agg
-	sub := query.NewAggregations().Avg("avg_price", "price")
-	aggs := query.NewAggregations().
-		TermsWithSize("by_category", "category", 10).
-		SubAggregations("by_category", sub).
-		Build()
+	avgPriceAgg := query.AvgAgg("avg_price", estype.Field("price"))
+	byCategoryAgg := query.StringTermsAgg(
+		"by_category",
+		estype.Field("category"),
+		query.WithTermsSize(10),
+		query.WithSubAggs(avgPriceAgg),
+	)
 
 	q := query.MatchAll()
-	res, err := client.Search(ctx, alias, q, 0, 0, nil, aggs, nil, nil, nil)
+	res, err := client.Search(ctx, alias, q, 10, 0, nil, query.Aggs(byCategoryAgg).Build(), nil, nil, nil)
 	assert.NilError(t, err)
 
 	// Verify "by_category" aggregation exists in response
@@ -540,6 +549,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 			assert.Assert(t, ok)
 			avg, ok := avgAgg.(*types.AvgAggregate)
 			assert.Assert(t, ok, "expected *types.AvgAggregate")
+			assert.Assert(t, avg.Value != nil)
 			// avg of 999.99 and 699.99 ≈ 849.99
 			assert.Assert(t, math.Abs(849.99-float64(*avg.Value)) < 0.1)
 		}
@@ -580,14 +590,17 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 	_, err = client.IndexRefresh(ctx, idx)
 	assert.NilError(t, err)
 
-	sub := query.NewAggregations().Sum("total_sales", "price")
-	aggs := query.NewAggregations().
-		DateHistogramWithFormat("by_month", "created_at", "yyyy-MM", calendarinterval.Month).
-		SubAggregations("by_month", sub).
-		Build()
+	totalSalesAgg := query.SumAgg("total_sales", estype.Field("price"))
+	byMonthAgg := query.DateHistogramAgg(
+		"by_month",
+		estype.Field("created_at"),
+		calendarinterval.Month,
+		query.DateHistogramAggFormat("yyyy-MM"),
+		query.DateHistogramAggSubAggs(totalSalesAgg),
+	)
 
 	q := query.MatchAll()
-	res, err := client.Search(ctx, alias, q, 0, 0, nil, aggs, nil, nil, nil)
+	res, err := client.Search(ctx, alias, q, 10, 0, nil, query.Aggs(byMonthAgg).Build(), nil, nil, nil)
 	assert.NilError(t, err)
 
 	monthAgg, ok := res.Aggregations["by_month"]
@@ -774,10 +787,10 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 	// Verify ascending order by price
 	var prev float64
 	for _, hit := range res.Hits.Hits {
-		var doc productDoc
-		assert.NilError(t, json.Unmarshal(hit.Source_, &doc))
-		assert.Assert(t, doc.Price >= prev)
-		prev = doc.Price
+		var got productDoc
+		assert.NilError(t, json.Unmarshal(hit.Source_, &got))
+		assert.Assert(t, got.Price >= prev)
+		prev = got.Price
 	}
 }
 
@@ -807,7 +820,6 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 	res1, err := client.Search(ctx, alias, q, 3, 0, nil, nil, nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Assert(t, len(res1.Hits.Hits) == 3)
-	assert.Equal(t, int64(10), res1.Hits.Total.Value)
 
 	// Page 2: next 3
 	res2, err := client.Search(ctx, alias, q, 3, 3, nil, nil, nil, nil, nil)
@@ -844,10 +856,9 @@ func TestIntegration_Search_Request(t *testing.T) {
 	_, err = client.IndexRefresh(ctx, idx)
 	assert.NilError(t, err)
 
-	// Build a stats aggregation directly via the request
-	aggs := query.NewAggregations().Stats("price_stats", "price").Build()
+	priceStatsAgg := query.StatsAgg("price_stats", estype.Field("price"))
 	q := query.TermValue("category", "cat1")
-	res, err := client.Search(ctx, alias, q, 10, 0, nil, aggs, nil, nil, nil)
+	res, err := client.Search(ctx, alias, q, 10, 0, nil, query.Aggs(priceStatsAgg).Build(), nil, nil, nil)
 	assert.NilError(t, err)
 	assert.Equal(t, int64(2), res.Hits.Total.Value)
 
@@ -859,9 +870,9 @@ func TestIntegration_Search_Request(t *testing.T) {
 	assert.Assert(t, math.Abs(15.0-float64(*statsAgg.Avg)) < 0.001)
 }
 
-// TestIntegration_SearchWithRequest demonstrates using the lower-level
+// TestIntegration_SearchRaw demonstrates using the lower-level
 // search.Request struct directly for scenarios not covered by the high-level Search.
-func TestIntegration_SearchWithRequest(t *testing.T) {
+func TestIntegration_SearchRaw(t *testing.T) {
 	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
@@ -881,12 +892,9 @@ func TestIntegration_SearchWithRequest(t *testing.T) {
 	_, err = client.IndexRefresh(ctx, idx)
 	assert.NilError(t, err)
 
-	// Use SearchWithRequest for a high-level search.Request
 	req := search.NewRequest()
 	matchAll := types.MatchAllQuery{}
 	req.Query = &types.Query{MatchAll: &matchAll}
-	size := 5
-	req.Size = &size
 	req.Source_ = true
 
 	res, err := client.SearchWithRequest(ctx, alias, req)

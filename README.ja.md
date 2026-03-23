@@ -253,7 +253,7 @@ func buildQuery() {
 		Build(),
 	)
 
-	_ = q // ESClient.Search() や ESClient.SearchWithRequest() で使用
+	_ = q // esv8.Search[T](...) や client.SearchRaw(...) で使用
 }
 ```
 
@@ -290,7 +290,10 @@ func main() {
 es-typed-go の基盤は、コンパイル時に取り違えを防止する 3 つの専用文字列型です。
 
 ```go
-import "github.com/tomtwinkle/es-typed-go/estype"
+import (
+	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/estype"
+)
 
 // 各々が固有の型であり、別の型が期待される場所に誤って渡すことはできません
 var field estype.Field = "status"       // Elasticsearch フィールド名
@@ -298,14 +301,14 @@ var index estype.Index = "my-index"     // Elasticsearch インデックス名
 var alias estype.Alias = "my-alias"     // Elasticsearch エイリアス名
 
 // OK — 正しい使い方
-client.Search(ctx, alias, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchRequest{})
 client.DeleteIndex(ctx, index)
 
 // コンパイルエラー — Alias が期待される場所に Field を渡している
-client.Search(ctx, field, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchRequest{})
 
 // コンパイルエラー — Alias が期待される場所に Index を渡している
-client.Search(ctx, index, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchRequest{})
 ```
 
 ### クエリビルダー
@@ -417,45 +420,56 @@ sorts := query.NewSort().
 	Build()
 ```
 
-### アグリゲーションビルダー
+### 型付きアグリゲーション
 
 ```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
+import (
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
+)
 
-aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                         // カテゴリ別バケット
-	TermsWithSize("top_tags", FieldTags, 20).                                    // 上位 20 タグ
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).               // 月別ヒストグラム
-	DateHistogramWithFormat("over_time_fmt", FieldDate, "yyyy-MM",
-		calendarinterval.Month).                                                 // 日付フォーマット付き
-	Histogram("price_dist", FieldPrice, 50.0).                                   // 数値ヒストグラム
-	Avg("avg_price", FieldPrice).                                                // 平均価格
-	Max("max_price", FieldPrice).                                                // 最大価格
-	Min("min_price", FieldPrice).                                                // 最小価格
-	Sum("total_price", FieldPrice).                                              // 合計
-	ValueCount("count_status", FieldStatus).                                     // 値の件数
-	Cardinality("unique_categories", FieldCategory).                             // 近似ユニーク件数
-	Stats("price_stats", FieldPrice).                                            // 件数/最小/最大/平均/合計
-	Nested("nested_items", FieldItems, query.NewAggregations().                  // Nested アグリゲーション
-		Terms("item_names", estype.Field("items.name")),
-	).
-	Filter("active_only", query.TermValue(FieldStatus, "active"),
-		query.NewAggregations().Avg("avg_price", FieldPrice)).                   // フィルターアグリゲーション
-	SubAggregations("by_category", query.NewAggregations().                      // サブアグリゲーション
-		Avg("avg_price", FieldPrice),
-	).
-	Build()
+avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
+byCategoryAgg := query.StringTermsAgg(
+	"by_category",
+	FieldCategory,
+	query.WithTermsSize(10),        // 上位 10 カテゴリ
+	query.WithSubAggs(avgPriceAgg), // カテゴリごとの平均価格
+)
+
+overTimeAgg := query.DateHistogramAgg(
+	"over_time",
+	FieldDate,
+	calendarinterval.Month,
+)
+
+priceDistAgg := query.HistogramAgg(
+	"price_dist",
+	FieldPrice,
+	50.0, // 数値ヒストグラムの間隔
+)
+
+statsAgg := query.StatsAgg("price_stats", FieldPrice)
+
+aggs := query.Aggs(
+	byCategoryAgg,
+	overTimeAgg,
+	priceDistAgg,
+	statsAgg,
+)
 ```
 
 ### SearchBuilder
 
-`query.NewSearch()` は、クエリ・ソート・アグリゲーション・ページネーションをひとつの `SearchParams` にまとめる ActiveRecord スタイルのビルダーです。パラメータを手動で組み立てる代わりに使用します。
+`query.NewSearch()` は、クエリ・ソート・アグリゲーション・ページネーションをひとつの型付き `query.SearchRequest` にまとめる ActiveRecord スタイルのビルダーです。
 
 ```go
 import (
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
+
+byCategoryAgg := query.StringTermsAgg("by_category", FieldCategory)
 
 params := query.NewSearch().
 	Where(
@@ -476,17 +490,24 @@ params := query.NewSearch().
 		ScoreDesc().
 		Build()...,
 	).
-	Aggregation(query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Build(),
-	).
+	Aggregations(query.Aggs(
+		byCategoryAgg,
+	)).
 	Limit(10).
 	Offset(0).
 	Build()
 
-// params.Query, params.Sort, params.Aggregations, params.Size, params.From など
-resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
-	params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+	Query:          params.Query,
+	Sort:           params.Sort,
+	Aggregations:   params.Aggregations,
+	Highlight:      params.Highlight,
+	Collapse:       params.Collapse,
+	ScriptFields:   params.ScriptFields,
+	TrackTotalHits: params.TrackTotalHits,
+	Size:           params.Size,
+	From:           params.From,
+})
 ```
 
 すでに `types.Query` を構築済みの場合は直接セットすることもできます。
@@ -664,15 +685,15 @@ specClient, _ := esv8.NewSpecClient(config)
 - `UpdateDocument(ctx, index, id, req)` — 部分更新
 
 **検索**
-- `Search(ctx, alias, query, limit, offset, sort, aggs, highlight, collapse, scriptFields)` — 検索の実行
-- `SearchWithRequest(ctx, alias, req)` — 生の `search.Request` による検索
+- `esv8.Search[T](ctx, client, alias, req)` — 高レベルな型付き検索 API を実行
+- `SearchRaw(ctx, alias, req)` — 生の `search.Request` による検索
 
 **再インデックス**
 - `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — 全件再インデックス
 - `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — 差分再インデックス
 - `WaitForTaskCompletion(ctx, taskID, timeout)` — タスク完了まで待機
 
-### 検索の完全な実行例
+### 型付き検索の完全な実行例
 
 ```go
 package main
@@ -681,6 +702,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
@@ -698,8 +720,14 @@ const (
 	FieldPrice    estype.Field = "price"
 )
 
+type Product struct {
+	ID       string  `json:"id"`
+	Status   string  `json:"status"`
+	Category string  `json:"category"`
+	Price    float64 `json:"price"`
+}
+
 func main() {
-	// クライアントの作成
 	client, err := esv8.NewClientWithLogger(
 		es8.Config{Addresses: []string{"http://localhost:19200"}},
 		slog.Default(),
@@ -708,7 +736,14 @@ func main() {
 		panic(err)
 	}
 
-	// SearchBuilder で検索パラメータを構築
+	avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
+	byCategoryAgg := query.StringTermsAgg(
+		"by_category",
+		FieldCategory,
+		query.WithTermsSize(10),
+		query.WithSubAggs(avgPriceAgg),
+	)
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Where(
@@ -720,25 +755,52 @@ func main() {
 			ScoreDesc().
 			Build()...,
 		).
-		Aggregation(query.NewAggregations().
-			Terms("by_category", FieldCategory).
-			Avg("avg_price", FieldPrice).
-			Build(),
-		).
+		Aggregations(query.Aggs(
+			byCategoryAgg,
+		)).
 		Limit(10).
 		Offset(0).
 		Build()
 
-	// 検索の実行
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
-	resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
-		params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+
+	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+		Query:          params.Query,
+		Sort:           params.Sort,
+		Aggregations:   params.Aggregations,
+		Highlight:      params.Highlight,
+		Collapse:       params.Collapse,
+		ScriptFields:   params.ScriptFields,
+		TrackTotalHits: params.TrackTotalHits,
+		Size:           params.Size,
+		From:           params.From,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Total hits: %d\n", resp.Hits.Total.Value)
+	fmt.Printf("Total hits: %d\n", resp.Total)
+	for _, hit := range resp.Hits {
+		fmt.Printf("product=%+v\n", hit.Source)
+	}
+
+	terms := resp.Aggregations.MustStringTerms(byCategoryAgg)
+	for _, bucket := range terms.Buckets() {
+		avg := bucket.Aggregations().MustAvg(avgPriceAgg)
+		if avg.Value() != nil && math.Abs(*avg.Value()) > 0 {
+			fmt.Printf("category=%s avg_price=%.2f\n", bucket.Key(), *avg.Value())
+		}
+	}
+
+	rawResp, err := client.SearchRaw(ctx, alias, (&esv8.SearchRequest{
+		Query: params.Query,
+		Size:  1,
+	}).ToTypedRequest())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("raw took: %d\n", rawResp.Took)
 }
 ```
 

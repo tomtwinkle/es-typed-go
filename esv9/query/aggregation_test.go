@@ -11,191 +11,411 @@ import (
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
-func TestNewAggregations_Empty(t *testing.T) {
+func TestAggs_Empty(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Build()
-	assert.Assert(t, len(aggs) == 0)
+
+	aggs := query.Aggs().Build()
+	assert.Assert(t, aggs == nil)
 }
 
-func TestAggregationBuilder_Terms(t *testing.T) {
+func TestStringTermsAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Terms("by_category", FieldCategory).Build()
-	_, ok := aggs["by_category"]
+
+	def := query.StringTermsAgg("by_category", FieldCategory)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_category"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["by_category"].Terms != nil)
-	assert.Equal(t, string(FieldCategory), *aggs["by_category"].Terms.Field)
+	assert.Assert(t, agg.Terms != nil)
+	assert.Equal(t, string(FieldCategory), *agg.Terms.Field)
 }
 
-func TestAggregationBuilder_TermsWithSize(t *testing.T) {
+func TestStringTermsAgg_WithSize(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().TermsWithSize("top10", FieldCategory, 10).Build()
-	_, ok := aggs["top10"]
+
+	def := query.StringTermsAgg("top10", FieldCategory, query.TermsAggSize(10))
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["top10"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["top10"].Terms != nil)
-	assert.Equal(t, string(FieldCategory), *aggs["top10"].Terms.Field)
-	assert.Equal(t, 10, *aggs["top10"].Terms.Size)
+	assert.Assert(t, agg.Terms != nil)
+	assert.Equal(t, string(FieldCategory), *agg.Terms.Field)
+	assert.Equal(t, 10, *agg.Terms.Size)
 }
 
-func TestAggregationBuilder_DateHistogram(t *testing.T) {
+func TestDateHistogramAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().
-		DateHistogram("by_month", FieldDate, calendarinterval.Month).
-		Build()
-	_, ok := aggs["by_month"]
+
+	def := query.DateHistogramAgg("by_month", FieldDate, calendarinterval.Month)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_month"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["by_month"].DateHistogram != nil)
-	assert.Equal(t, string(FieldDate), *aggs["by_month"].DateHistogram.Field)
-	assert.Equal(t, calendarinterval.Month, *aggs["by_month"].DateHistogram.CalendarInterval)
+	assert.Assert(t, agg.DateHistogram != nil)
+	assert.Equal(t, string(FieldDate), *agg.DateHistogram.Field)
+	assert.Equal(t, calendarinterval.Month, *agg.DateHistogram.CalendarInterval)
 }
 
-func TestAggregationBuilder_DateHistogramWithFormat(t *testing.T) {
+func TestDateHistogramAgg_WithFormat(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().
-		DateHistogramWithFormat("by_year", FieldDate, "yyyy", calendarinterval.Year).
-		Build()
-	_, ok := aggs["by_year"]
+
+	def := query.DateHistogramAgg(
+		"by_year",
+		FieldDate,
+		calendarinterval.Year,
+		query.DateHistogramAggFormat("yyyy"),
+	)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_year"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["by_year"].DateHistogram != nil)
-	assert.Equal(t, "yyyy", *aggs["by_year"].DateHistogram.Format)
+	assert.Assert(t, agg.DateHistogram != nil)
+	assert.Equal(t, "yyyy", *agg.DateHistogram.Format)
 }
 
-func TestAggregationBuilder_Histogram(t *testing.T) {
+func TestHistogramAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Histogram("price_ranges", FieldPrice, 100.0).Build()
-	_, ok := aggs["price_ranges"]
+
+	def := query.HistogramAgg("price_ranges", FieldPrice, 100.0)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["price_ranges"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["price_ranges"].Histogram != nil)
-	assert.Equal(t, string(FieldPrice), *aggs["price_ranges"].Histogram.Field)
-	assert.Assert(t, math.Abs(float64(*aggs["price_ranges"].Histogram.Interval)-100.0) < 0.001)
+	assert.Assert(t, agg.Histogram != nil)
+	assert.Equal(t, string(FieldPrice), *agg.Histogram.Field)
+	assert.Assert(t, math.Abs(float64(*agg.Histogram.Interval)-100.0) < 0.001)
 }
 
-func TestAggregationBuilder_Avg(t *testing.T) {
+func TestAvgAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Avg("avg_price", FieldPrice).Build()
-	_, ok := aggs["avg_price"]
+
+	def := query.AvgAgg("avg_price", FieldPrice)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["avg_price"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["avg_price"].Avg != nil)
-	assert.Equal(t, string(FieldPrice), *aggs["avg_price"].Avg.Field)
+	assert.Assert(t, agg.Avg != nil)
+	assert.Equal(t, string(FieldPrice), *agg.Avg.Field)
 }
 
-func TestAggregationBuilder_Max(t *testing.T) {
+func TestMaxAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Max("max_price", FieldPrice).Build()
-	_, ok := aggs["max_price"]
+
+	def := query.MaxAgg("max_price", FieldPrice)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["max_price"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["max_price"].Max != nil)
+	assert.Assert(t, agg.Max != nil)
+	assert.Equal(t, string(FieldPrice), *agg.Max.Field)
 }
 
-func TestAggregationBuilder_Min(t *testing.T) {
+func TestMinAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Min("min_price", FieldPrice).Build()
-	_, ok := aggs["min_price"]
+
+	def := query.MinAgg("min_price", FieldPrice)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["min_price"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["min_price"].Min != nil)
+	assert.Assert(t, agg.Min != nil)
+	assert.Equal(t, string(FieldPrice), *agg.Min.Field)
 }
 
-func TestAggregationBuilder_Sum(t *testing.T) {
+func TestSumAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Sum("sum_value", FieldValue).Build()
-	_, ok := aggs["sum_value"]
+
+	def := query.SumAgg("sum_value", FieldValue)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["sum_value"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["sum_value"].Sum != nil)
-	assert.Equal(t, string(FieldValue), *aggs["sum_value"].Sum.Field)
+	assert.Assert(t, agg.Sum != nil)
+	assert.Equal(t, string(FieldValue), *agg.Sum.Field)
 }
 
-func TestAggregationBuilder_ValueCount(t *testing.T) {
+func TestValueCountAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().ValueCount("order_count", FieldId).Build()
-	_, ok := aggs["order_count"]
+
+	def := query.ValueCountAgg("order_count", FieldId)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["order_count"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["order_count"].ValueCount != nil)
+	assert.Assert(t, agg.ValueCount != nil)
+	assert.Equal(t, string(FieldId), *agg.ValueCount.Field)
 }
 
-func TestAggregationBuilder_Cardinality(t *testing.T) {
+func TestCardinalityAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Cardinality("unique_users", FieldId).Build()
-	_, ok := aggs["unique_users"]
+
+	def := query.CardinalityAgg("unique_users", FieldId)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["unique_users"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["unique_users"].Cardinality != nil)
-	assert.Equal(t, string(FieldId), *aggs["unique_users"].Cardinality.Field)
+	assert.Assert(t, agg.Cardinality != nil)
+	assert.Equal(t, string(FieldId), *agg.Cardinality.Field)
 }
 
-func TestAggregationBuilder_Stats(t *testing.T) {
+func TestStatsAgg_Build(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().Stats("price_stats", FieldPrice).Build()
-	_, ok := aggs["price_stats"]
+
+	def := query.StatsAgg("price_stats", FieldPrice)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["price_stats"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["price_stats"].Stats != nil)
-	assert.Equal(t, string(FieldPrice), *aggs["price_stats"].Stats.Field)
+	assert.Assert(t, agg.Stats != nil)
+	assert.Equal(t, string(FieldPrice), *agg.Stats.Field)
 }
 
-func TestAggregationBuilder_Nested(t *testing.T) {
+func TestStringTermsAgg_WithSubAggs(t *testing.T) {
 	t.Parallel()
-	sub := query.NewAggregations().Avg("avg_price", FieldItemsPrice)
-	aggs := query.NewAggregations().Nested("items_agg", FieldItems, sub).Build()
-	_, ok := aggs["items_agg"]
+
+	avgDef := query.AvgAgg("avg_price", FieldPrice)
+	sumDef := query.SumAgg("sum_value", FieldPrice)
+	def := query.StringTermsAgg(
+		"by_category",
+		FieldCategory,
+		query.TermsAggSubAggs(avgDef, sumDef),
+	)
+
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_category"]
 	assert.Assert(t, ok)
-	assert.Assert(t, aggs["items_agg"].Nested != nil)
-	assert.Equal(t, string(FieldItems), *aggs["items_agg"].Nested.Path)
-	_, ok = aggs["items_agg"].Aggregations["avg_price"]
+	assert.Assert(t, agg.Terms != nil)
+	assert.Assert(t, agg.Aggregations != nil)
+
+	_, ok = agg.Aggregations["avg_price"]
+	assert.Assert(t, ok)
+	_, ok = agg.Aggregations["sum_value"]
 	assert.Assert(t, ok)
 }
 
-func TestAggregationBuilder_Filter(t *testing.T) {
+func TestDateHistogramAgg_WithSubAggs(t *testing.T) {
 	t.Parallel()
-	sub := query.NewAggregations().Avg("avg_price", FieldPrice)
-	filter := types.Query{
-		Term: map[string]types.TermQuery{
-			string(FieldStatus): {Value: "active"},
+
+	avgDef := query.AvgAgg("avg_price", FieldPrice)
+	def := query.DateHistogramAgg(
+		"by_month",
+		FieldDate,
+		calendarinterval.Month,
+		query.DateHistogramAggSubAggs(avgDef),
+	)
+
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_month"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.DateHistogram != nil)
+	assert.Assert(t, agg.Aggregations != nil)
+
+	_, ok = agg.Aggregations["avg_price"]
+	assert.Assert(t, ok)
+}
+
+func TestHistogramAgg_WithSubAggs(t *testing.T) {
+	t.Parallel()
+
+	sumDef := query.SumAgg("sum_value", FieldValue)
+	def := query.HistogramAgg(
+		"price_ranges",
+		FieldPrice,
+		50.0,
+		query.HistogramAggSubAggs(sumDef),
+	)
+
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["price_ranges"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Histogram != nil)
+	assert.Assert(t, agg.Aggregations != nil)
+
+	_, ok = agg.Aggregations["sum_value"]
+	assert.Assert(t, ok)
+}
+
+func TestAggResults_Avg(t *testing.T) {
+	t.Parallel()
+
+	def := query.AvgAgg("avg_price", FieldPrice)
+	value := 42.5
+	raw := map[string]types.Aggregate{
+		"avg_price": &types.AvgAggregate{Value: (*types.Float64)(&value)},
+	}
+
+	res, err := query.NewAggResults(raw).GetAvg(def)
+	assert.NilError(t, err)
+
+	assert.Assert(t, res.Value() != nil)
+	assert.Equal(t, value, *res.Value())
+}
+
+func TestAggResults_Sum(t *testing.T) {
+	t.Parallel()
+
+	def := query.SumAgg("sum_value", FieldValue)
+	value := 100.0
+	raw := map[string]types.Aggregate{
+		"sum_value": &types.SumAggregate{Value: (*types.Float64)(&value)},
+	}
+
+	res, err := query.NewAggResults(raw).GetSum(def)
+	assert.NilError(t, err)
+
+	assert.Assert(t, res.Value() != nil)
+	assert.Equal(t, value, *res.Value())
+}
+
+func TestAggResults_Cardinality(t *testing.T) {
+	t.Parallel()
+
+	def := query.CardinalityAgg("unique_users", FieldId)
+	value := int64(7)
+	raw := map[string]types.Aggregate{
+		"unique_users": &types.CardinalityAggregate{Value: value},
+	}
+
+	res, err := query.NewAggResults(raw).GetCardinality(def)
+	assert.NilError(t, err)
+
+	assert.Assert(t, res.Value() != nil)
+	assert.Equal(t, value, *res.Value())
+}
+
+func TestAggResults_Stats(t *testing.T) {
+	t.Parallel()
+
+	def := query.StatsAgg("price_stats", FieldPrice)
+	min := 10.0
+	max := 50.0
+	avg := 30.0
+	sum := 90.0
+	raw := map[string]types.Aggregate{
+		"price_stats": &types.StatsAggregate{
+			Count: 3,
+			Min:   (*types.Float64)(&min),
+			Max:   (*types.Float64)(&max),
+			Avg:   (*types.Float64)(&avg),
+			Sum:   types.Float64(sum),
 		},
 	}
-	aggs := query.NewAggregations().Filter("active_items", filter, sub).Build()
-	_, ok := aggs["active_items"]
-	assert.Assert(t, ok)
-	assert.Assert(t, aggs["active_items"].Filter != nil)
-	_, ok = aggs["active_items"].Aggregations["avg_price"]
-	assert.Assert(t, ok)
+
+	res, err := query.NewAggResults(raw).GetStats(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, int64(3), res.Count())
+	assert.Assert(t, res.Min() != nil)
+	assert.Assert(t, res.Max() != nil)
+	assert.Assert(t, res.Avg() != nil)
+	assert.Assert(t, res.Sum() != nil)
+	assert.Equal(t, min, *res.Min())
+	assert.Equal(t, max, *res.Max())
+	assert.Equal(t, avg, *res.Avg())
+	assert.Equal(t, sum, *res.Sum())
 }
 
-func TestAggregationBuilder_SubAggregations(t *testing.T) {
+func TestAggResults_StringTerms(t *testing.T) {
 	t.Parallel()
-	sub := query.NewAggregations().Avg("avg_price", FieldPrice).Sum("sum_value", FieldPrice)
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		SubAggregations("by_category", sub).
-		Build()
-	_, ok := aggs["by_category"]
-	assert.Assert(t, ok)
-	_, ok = aggs["by_category"].Aggregations["avg_price"]
-	assert.Assert(t, ok)
-	_, ok = aggs["by_category"].Aggregations["sum_value"]
-	assert.Assert(t, ok)
+
+	avgDef := query.AvgAgg("avg_price", FieldPrice)
+	def := query.StringTermsAgg("by_category", FieldCategory, query.TermsAggSubAggs(avgDef))
+
+	avgValue := 25.0
+	raw := map[string]types.Aggregate{
+		"by_category": &types.StringTermsAggregate{
+			Buckets: []types.StringTermsBucket{
+				{
+					Key:      "a",
+					DocCount: 2,
+					Aggregations: map[string]types.Aggregate{
+						"avg_price": &types.AvgAggregate{Value: (*types.Float64)(&avgValue)},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetStringTerms(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Equal(t, "a", res.Buckets()[0].Key())
+	assert.Equal(t, int64(2), res.Buckets()[0].DocCount())
+
+	avgRes, err := res.Buckets()[0].Aggregations().GetAvg(avgDef)
+	assert.NilError(t, err)
+	assert.Assert(t, avgRes.Value() != nil)
+	assert.Equal(t, avgValue, *avgRes.Value())
 }
 
-func TestAggregationBuilder_SubAggregations_NonExistentParent(t *testing.T) {
+func TestAggResults_DateHistogram(t *testing.T) {
 	t.Parallel()
-	// SubAggregations on a name that was never added should be a no-op.
-	sub := query.NewAggregations().Avg("avg_price", FieldPrice)
-	aggs := query.NewAggregations().
-		SubAggregations("does_not_exist", sub).
-		Build()
-	assert.Assert(t, len(aggs) == 0)
+
+	sumDef := query.SumAgg("sum_value", FieldValue)
+	def := query.DateHistogramAgg(
+		"by_month",
+		FieldDate,
+		calendarinterval.Month,
+		query.DateHistogramAggSubAggs(sumDef),
+	)
+
+	sumValue := 120.0
+	keyAsString := "2026-03-01T00:00:00.000Z"
+	raw := map[string]types.Aggregate{
+		"by_month": &types.DateHistogramAggregate{
+			Buckets: []types.DateHistogramBucket{
+				{
+					Key:         1740787200000,
+					KeyAsString: &keyAsString,
+					DocCount:    4,
+					Aggregations: map[string]types.Aggregate{
+						"sum_value": &types.SumAggregate{Value: (*types.Float64)(&sumValue)},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetDateHistogram(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Equal(t, int64(1740787200000), res.Buckets()[0].Key())
+	assert.Equal(t, keyAsString, res.Buckets()[0].KeyAsString())
+	assert.Equal(t, int64(4), res.Buckets()[0].DocCount())
 }
 
-func TestAggregationBuilder_Chaining(t *testing.T) {
+func TestAggResults_Histogram(t *testing.T) {
 	t.Parallel()
-	// Verify that multiple aggregations can be added in one chain.
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Avg("avg_price", FieldPrice).
-		Max("max_price", FieldPrice).
-		Min("min_price", FieldPrice).
-		Sum("sum_total", FieldValue).
-		Build()
-	assert.Assert(t, len(aggs) == 5)
-	assert.Assert(t, aggs["by_category"].Terms != nil)
-	assert.Assert(t, aggs["avg_price"].Avg != nil)
-	assert.Assert(t, aggs["max_price"].Max != nil)
-	assert.Assert(t, aggs["min_price"].Min != nil)
-	assert.Assert(t, aggs["sum_total"].Sum != nil)
+
+	def := query.HistogramAgg("price_ranges", FieldPrice, 100.0)
+	raw := map[string]types.Aggregate{
+		"price_ranges": &types.HistogramAggregate{
+			Buckets: []types.HistogramBucket{
+				{
+					Key:      100.0,
+					DocCount: 5,
+				},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetHistogram(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Equal(t, 100.0, res.Buckets()[0].Key())
+	assert.Equal(t, int64(5), res.Buckets()[0].DocCount())
+}
+
+func TestAggResults_MissingAggregation(t *testing.T) {
+	t.Parallel()
+
+	def := query.AvgAgg("avg_price", FieldPrice)
+	_, err := query.NewAggResults(nil).GetAvg(def)
+	assert.Assert(t, err != nil)
 }

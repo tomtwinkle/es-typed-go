@@ -244,7 +244,7 @@ func buildQuery() {
 		Build(),
 	)
 
-	_ = q // 用于 ESClient.Search() 或 ESClient.SearchWithRequest()
+	_ = q // 用于 esv8.Search[T](...) 或 client.SearchRaw(...)
 }
 ```
 
@@ -281,7 +281,10 @@ func main() {
 es-typed-go 的基础是三个独立的字符串类型，它们在编译时防止混淆：
 
 ```go
-import "github.com/tomtwinkle/es-typed-go/estype"
+import (
+	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/estype"
+)
 
 // 这些是独立的类型——不能将一种类型误传到期望另一种类型的地方
 var field estype.Field = "status"       // Elasticsearch 字段名
@@ -289,14 +292,14 @@ var index estype.Index = "my-index"     // Elasticsearch 索引名
 var alias estype.Alias = "my-alias"     // Elasticsearch 别名
 
 // OK — 正确用法
-client.Search(ctx, alias, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchRequest{})
 client.DeleteIndex(ctx, index)
 
 // 编译错误 — 在期望 Alias 的位置传入了 Field
-client.Search(ctx, field, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchRequest{})
 
 // 编译错误 — 在期望 Alias 的位置传入了 Index
-client.Search(ctx, index, query, ...)
+_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchRequest{})
 ```
 
 ### 查询构建器
@@ -408,45 +411,56 @@ sorts := query.NewSort().
 	Build()
 ```
 
-### 聚合构建器
+### 类型化聚合
 
 ```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
+import (
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
+)
 
-aggs := query.NewAggregations().
-	Terms("by_category", FieldCategory).                                         // 按类别分桶
-	TermsWithSize("top_tags", FieldTags, 20).                                    // 前 20 个标签
-	DateHistogram("over_time", FieldDate, calendarinterval.Month).               // 按月直方图
-	DateHistogramWithFormat("over_time_fmt", FieldDate, "yyyy-MM",
-		calendarinterval.Month).                                                 // 带日期格式
-	Histogram("price_dist", FieldPrice, 50.0).                                   // 数值直方图
-	Avg("avg_price", FieldPrice).                                                // 平均价格
-	Max("max_price", FieldPrice).                                                // 最高价格
-	Min("min_price", FieldPrice).                                                // 最低价格
-	Sum("total_price", FieldPrice).                                              // 总和
-	ValueCount("count_status", FieldStatus).                                     // 值计数
-	Cardinality("unique_categories", FieldCategory).                             // 近似唯一计数
-	Stats("price_stats", FieldPrice).                                            // 计数/最小/最大/平均/总和
-	Nested("nested_items", FieldItems, query.NewAggregations().                  // Nested 聚合
-		Terms("item_names", estype.Field("items.name")),
-	).
-	Filter("active_only", query.TermValue(FieldStatus, "active"),
-		query.NewAggregations().Avg("avg_price", FieldPrice)).                   // 过滤聚合
-	SubAggregations("by_category", query.NewAggregations().                      // 子聚合
-		Avg("avg_price", FieldPrice),
-	).
-	Build()
+	avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
+	byCategoryAgg := query.StringTermsAgg(
+		"by_category",
+		FieldCategory,
+		query.WithTermsSize(10),        // 前 10 个类别
+		query.WithSubAggs(avgPriceAgg), // 每个类别中的平均价格
+	)
+
+overTimeAgg := query.DateHistogramAgg(
+	"over_time",
+	FieldDate,
+	calendarinterval.Month,
+)
+
+priceDistAgg := query.HistogramAgg(
+	"price_dist",
+	FieldPrice,
+	50.0, // 数值直方图间隔
+)
+
+statsAgg := query.StatsAgg("price_stats", FieldPrice)
+
+aggs := query.Aggs(
+	byCategoryAgg,
+	overTimeAgg,
+	priceDistAgg,
+	statsAgg,
+)
 ```
 
 ### SearchBuilder
 
-`query.NewSearch()` 提供 ActiveRecord 风格的构建器，将查询、排序、聚合和分页合并为单一的 `SearchParams` 值。使用它来代替手动组装搜索参数。
+`query.NewSearch()` 提供 ActiveRecord 风格的构建器，将查询、排序、聚合和分页合并为单一的类型化 `query.SearchRequest` 值。
 
 ```go
 import (
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
+	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
+
+byCategoryAgg := query.StringTermsAgg("by_category", FieldCategory)
 
 params := query.NewSearch().
 	Where(
@@ -467,17 +481,24 @@ params := query.NewSearch().
 		ScoreDesc().
 		Build()...,
 	).
-	Aggregation(query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Build(),
-	).
+	Aggregations(query.Aggs(
+		byCategoryAgg,
+	)).
 	Limit(10).
 	Offset(0).
 	Build()
 
-// params.Query, params.Sort, params.Aggregations, params.Size, params.From 等
-resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
-	params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+	Query:          params.Query,
+	Sort:           params.Sort,
+	Aggregations:   params.Aggregations,
+	Highlight:      params.Highlight,
+	Collapse:       params.Collapse,
+	ScriptFields:   params.ScriptFields,
+	TrackTotalHits: params.TrackTotalHits,
+	Size:           params.Size,
+	From:           params.From,
+})
 ```
 
 如果已经构建好 `types.Query`，也可以直接设置：
@@ -655,15 +676,15 @@ specClient, _ := esv8.NewSpecClient(config)
 - `UpdateDocument(ctx, index, id, req)` — 部分更新
 
 **搜索**
-- `Search(ctx, alias, query, limit, offset, sort, aggs, highlight, collapse, scriptFields)` — 执行搜索
-- `SearchWithRequest(ctx, alias, req)` — 执行原始 `search.Request`
+- `esv8.Search[T](ctx, client, alias, req)` — 执行高层类型化搜索 API
+- `SearchRaw(ctx, alias, req)` — 执行原始 `search.Request`
 
 **重建索引**
 - `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — 全量重建
 - `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — 增量重建
 - `WaitForTaskCompletion(ctx, taskID, timeout)` — 轮询直到任务完成
 
-### 完整的搜索示例
+### 完整的类型化搜索示例
 
 ```go
 package main
@@ -672,6 +693,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
@@ -689,8 +711,14 @@ const (
 	FieldPrice    estype.Field = "price"
 )
 
+type Product struct {
+	ID       string  `json:"id"`
+	Status   string  `json:"status"`
+	Category string  `json:"category"`
+	Price    float64 `json:"price"`
+}
+
 func main() {
-	// 创建客户端
 	client, err := esv8.NewClientWithLogger(
 		es8.Config{Addresses: []string{"http://localhost:19200"}}, // 本地 compose.yaml 的 v8 默认端口
 		slog.Default(),
@@ -699,7 +727,14 @@ func main() {
 		panic(err)
 	}
 
-	// 使用 SearchBuilder 构建搜索参数
+	avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
+	byCategoryAgg := query.StringTermsAgg(
+		"by_category",
+		FieldCategory,
+		query.WithTermsSize(10),
+		query.WithSubAggs(avgPriceAgg),
+	)
+
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
 		Where(
@@ -711,25 +746,52 @@ func main() {
 			ScoreDesc().
 			Build()...,
 		).
-		Aggregation(query.NewAggregations().
-			Terms("by_category", FieldCategory).
-			Avg("avg_price", FieldPrice).
-			Build(),
-		).
+		Aggregations(query.Aggs(
+			byCategoryAgg,
+		)).
 		Limit(10).
 		Offset(0).
 		Build()
 
-	// 执行搜索
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
-	resp, err := client.Search(ctx, alias, params.Query, params.Size, params.From,
-		params.Sort, params.Aggregations, params.Highlight, params.Collapse, params.ScriptFields)
+
+	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
+		Query:          params.Query,
+		Sort:           params.Sort,
+		Aggregations:   params.Aggregations,
+		Highlight:      params.Highlight,
+		Collapse:       params.Collapse,
+		ScriptFields:   params.ScriptFields,
+		TrackTotalHits: params.TrackTotalHits,
+		Size:           params.Size,
+		From:           params.From,
+	})
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Printf("Total hits: %d\n", resp.Hits.Total.Value)
+	fmt.Printf("Total hits: %d\n", resp.Total)
+	for _, hit := range resp.Hits {
+		fmt.Printf("product=%+v\n", hit.Source)
+	}
+
+	terms := resp.Aggregations.MustStringTerms(byCategoryAgg)
+	for _, bucket := range terms.Buckets() {
+		avg := bucket.Aggregations().MustAvg(avgPriceAgg)
+		if avg.Value() != nil && math.Abs(*avg.Value()) > 0 {
+			fmt.Printf("category=%s avg_price=%.2f\n", bucket.Key(), *avg.Value())
+		}
+	}
+
+	rawResp, err := client.SearchRaw(ctx, alias, (&esv8.SearchRequest{
+		Query: params.Query,
+		Size:  1,
+	}).ToTypedRequest())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("raw took: %d\n", rawResp.Took)
 }
 ```
 
