@@ -21,8 +21,8 @@
 //
 //	//go:generate go tool estyped -struct Product -out product_fields.go
 //
-// When the struct (or a pointer to it) implements [estype.ESMappingProvider] by
-// defining an ESMapping() method, the generator reads the returned [estype.Mapping]
+// When the struct (or a pointer to it) implements [estype.MappingProvider] by
+// defining a Mapping() method, the generator reads the returned [estype.Mapping]
 // to determine the Elasticsearch type of each field.  The method body must contain
 // a single return statement with a composite literal; more complex expressions are
 // silently ignored and the field type falls back to "unknown".
@@ -31,15 +31,16 @@
 // property value from a constructor call such as [estype.NewTextProperty] or
 // [estype.NewKeywordProperty], or [estype.FieldType] for a plain type name:
 //
-//	func (Product) ESMapping() estype.Mapping {
-//		return estype.Mapping{
-//			Fields: []estype.MappingField{
-//				{Path: "status", Property: estype.NewKeywordProperty()},
-//				{Path: "title",  Property: estype.NewTextProperty()},
-//				{Path: "price",  Property: estype.FieldType("integer")},
-//			},
+// \tfunc (Product) Mapping() estype.Mapping {
+// \t\treturn estype.Mapping{
+//
+//	\t\t\tFields: []estype.MappingField{
+//					{Path: "status", Property: estype.NewKeywordProperty()},
+//					{Path: "title",  Property: estype.NewTextProperty()},
+//					{Path: "price",  Property: estype.FieldType("integer")},
+//				},
+//			}
 //		}
-//	}
 //
 // There are two output modes:
 //
@@ -47,9 +48,9 @@
 //
 //	estyped -mapping mapping.json -out model.go -package model
 //
-// Struct mode: generates a struct variable so fields are accessed as model.Sample.FieldName.
+// Grouped mode: generates a struct variable so fields are accessed as model.Sample.FieldName.
 //
-//	estyped -mapping mapping.json -out model.go -package model -name Sample
+//	estyped -mapping mapping.json -out model.go -package model -group Sample
 //
 // The mapping JSON can be in either the full Get Mapping API format:
 //
@@ -129,7 +130,7 @@ func main() {
 	filePath := flag.String("file", "", "Go source file for struct lookup (used with -struct; defaults to current directory)")
 	outPath := flag.String("out", "", "output Go file path (required)")
 	pkgName := flag.String("package", "", "Go package name for the generated file (defaults to $GOPACKAGE)")
-	structName := flag.String("name", "", "struct variable name for grouped field access (optional; omit for constant mode)")
+	structName := flag.String("group", "", "group variable name for grouped field access (optional; omit for constant mode)")
 	flag.Parse()
 
 	// When invoked via go:generate, $GOPACKAGE is set automatically.
@@ -274,7 +275,7 @@ func fieldType(t string) string {
 
 // parseGoStruct extracts fieldEntry values from a named Go struct type by reading
 // JSON struct tags from all .go files found in srcDir.  If the struct (or a
-// pointer to it) has an ESMapping() method, its return value is parsed
+// pointer to it) has a Mapping() method, its return value is parsed
 // statically to determine the Elasticsearch type of each field.
 func parseGoStruct(srcDir, typeName string) ([]fieldEntry, error) {
 	fset := token.NewFileSet()
@@ -295,8 +296,8 @@ func parseGoStruct(srcDir, typeName string) ([]fieldEntry, error) {
 		return nil, fmt.Errorf("type %q not found in %s", typeName, srcDir)
 	}
 
-	// Extract ES field types from the optional ESMapping() method.
-	mappingTypes := extractESMappingMethod(pkgs, typeName)
+	// Extract ES field types from the optional Mapping() method.
+	mappingTypes := extractMappingMethod(pkgs, typeName)
 
 	var entries []fieldEntry
 	extractGoStructEntries(typeName, "", typeMap, mappingTypes, &entries)
@@ -332,7 +333,7 @@ func collectStructTypes(f *ast.File, typeMap map[string]*ast.StructType) {
 
 // extractGoStructEntries recursively walks the named struct and appends fieldEntry
 // values for every JSON-visible field.  mappingTypes maps field paths to their
-// Elasticsearch type string; entries from ESMapping() override defaults derived
+// Elasticsearch type string; entries from Mapping() override defaults derived
 // from the Go type.
 func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.StructType, mappingTypes map[string]string, entries *[]fieldEntry) {
 	st, ok := typeMap[typeName]
@@ -365,7 +366,7 @@ func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.Str
 			if isSliceExpr(field.Type) {
 				esType = "nested"
 			}
-			// Allow ESMapping() to override the derived type.
+			// Allow Mapping() to override the derived type.
 			if t, ok := mappingTypes[path]; ok {
 				esType = t
 			}
@@ -379,7 +380,7 @@ func extractGoStructEntries(typeName, prefix string, typeMap map[string]*ast.Str
 			continue
 		}
 
-		// Leaf field — use type from ESMapping() if available, otherwise "unknown".
+		// Leaf field — use type from Mapping() if available, otherwise "unknown".
 		esType := "unknown"
 		if t, ok := mappingTypes[path]; ok {
 			esType = t
@@ -455,12 +456,12 @@ func isSliceExpr(expr ast.Expr) bool {
 	return false
 }
 
-// extractESMappingMethod searches the parsed packages for a method named
-// "ESMapping" with a value or pointer receiver of the given type name.  It
-// parses the method body with [parseESMappingBody] and returns a map from
+// extractMappingMethod searches the parsed packages for a method named
+// "Mapping" with a value or pointer receiver of the given type name.  It
+// parses the method body with [parseMappingBody] and returns a map from
 // field path to Elasticsearch type string.  An empty map is returned when
 // the method is absent or its body cannot be statically analysed.
-func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[string]string {
+func extractMappingMethod(pkgs map[string]*ast.Package, typeName string) map[string]string {
 	fieldTypes := make(map[string]string)
 	for _, pkg := range pkgs {
 		for _, file := range pkg.Files {
@@ -469,14 +470,14 @@ func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[s
 				if !ok {
 					continue
 				}
-				if fd.Recv == nil || fd.Name.Name != "ESMapping" || fd.Body == nil {
+				if fd.Recv == nil || fd.Name.Name != "Mapping" || fd.Body == nil {
 					continue
 				}
 				for _, recv := range fd.Recv.List {
 					if derefTypeName(recv.Type) != typeName {
 						continue
 					}
-					parseESMappingBody(fd.Body, fieldTypes)
+					parseMappingBody(fd.Body, fieldTypes)
 					return fieldTypes
 				}
 			}
@@ -485,8 +486,8 @@ func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[s
 	return fieldTypes
 }
 
-// parseESMappingBody extracts field path→type pairs from the body of an
-// ESMapping() method.  It expects a single return statement whose result is a
+// parseMappingBody extracts field path→type pairs from the body of a
+// Mapping() method.  It expects a single return statement whose result is a
 // composite literal that constructs an estype.Mapping value.
 //
 // The Property field of each MappingField entry is resolved to an ES type name
@@ -498,7 +499,7 @@ func extractESMappingMethod(pkgs map[string]*ast.Package, typeName string) map[s
 //     to snake_case (e.g. "Text" → "text", "DenseVector" → "dense_vector").
 //
 // Any element that cannot be statically resolved is silently skipped.
-func parseESMappingBody(body *ast.BlockStmt, out map[string]string) {
+func parseMappingBody(body *ast.BlockStmt, out map[string]string) {
 	for _, stmt := range body.List {
 		ret, ok := stmt.(*ast.ReturnStmt)
 		if !ok {

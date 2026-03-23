@@ -8,7 +8,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/tomtwinkle/es-typed-go/estype"
-	"github.com/tomtwinkle/es-typed-go/esv9/query"
+	querybuilder "github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
 // SearchParams defines the high-level search input surface.
@@ -78,7 +78,7 @@ type SearchHit[T any] struct {
 type SearchResponse[T any] struct {
 	Total        int64
 	Hits         []SearchHit[T]
-	Aggregations query.AggResults
+	Aggregations querybuilder.AggResults
 	Raw          *search.Response
 }
 
@@ -88,6 +88,12 @@ type SearchClient interface {
 	SearchRaw(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error)
 }
 
+// SearchRequest is the minimal input accepted by Search[T] and related helpers.
+// Both esv9.SearchParams and esv9/query.SearchParams satisfy this interface.
+type SearchRequest interface {
+	ToRequest() *search.Request
+}
+
 // Search executes a high-level search against an alias and decodes each hit's
 // _source into T.
 // Prefer this over SearchRaw for normal application code.
@@ -95,7 +101,7 @@ func Search[T any](
 	ctx context.Context,
 	client SearchClient,
 	aliasName estype.Alias,
-	params SearchParams,
+	params SearchRequest,
 ) (*SearchResponse[T], error) {
 	rawResp, err := client.SearchRaw(ctx, aliasName, params.ToRequest())
 	if err != nil {
@@ -104,7 +110,7 @@ func Search[T any](
 
 	resp := &SearchResponse[T]{
 		Raw:          rawResp,
-		Aggregations: query.NewAggResults(rawResp.Aggregations),
+		Aggregations: querybuilder.NewAggResults(rawResp.Aggregations),
 	}
 
 	if rawResp.Hits.Total != nil {
@@ -156,7 +162,7 @@ func SearchDocuments[T any](
 	ctx context.Context,
 	client SearchClient,
 	aliasName estype.Alias,
-	params SearchParams,
+	params SearchRequest,
 ) ([]T, error) {
 	resp, err := Search[T](ctx, client, aliasName, params)
 	if err != nil {
@@ -168,27 +174,4 @@ func SearchDocuments[T any](
 		docs = append(docs, hit.Source)
 	}
 	return docs, nil
-}
-
-// SearchOne executes Search and returns the first decoded document source plus
-// a boolean indicating whether a hit was found.
-func SearchOne[T any](
-	ctx context.Context,
-	client SearchClient,
-	aliasName estype.Alias,
-	params SearchParams,
-) (T, bool, error) {
-	params.Size = 1
-
-	resp, err := Search[T](ctx, client, aliasName, params)
-	if err != nil {
-		var zero T
-		return zero, false, err
-	}
-	if len(resp.Hits) == 0 {
-		var zero T
-		return zero, false, nil
-	}
-
-	return resp.Hits[0].Source, true, nil
 }

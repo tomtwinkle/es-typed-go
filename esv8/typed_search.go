@@ -8,7 +8,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/tomtwinkle/es-typed-go/estype"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
+	querybuilder "github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
 // SearchParams defines the high-level search input for Search[T].
@@ -26,8 +26,8 @@ type SearchParams struct {
 }
 
 // ToRequest converts SearchParams into a typed Elasticsearch search.Request.
-// It is primarily used internally by Search[T], SearchDocuments[T], and
-// SearchOne[T] to call SearchRaw.
+// It is primarily used internally by Search[T] and SearchDocuments[T] to call
+// SearchRaw.
 func (p SearchParams) ToRequest() *search.Request {
 	req := search.NewRequest()
 
@@ -81,7 +81,7 @@ type SearchHit[T any] struct {
 type SearchResponse[T any] struct {
 	Total        int64
 	Hits         []SearchHit[T]
-	Aggregations query.AggResults
+	Aggregations querybuilder.AggResults
 	Raw          *search.Response
 }
 
@@ -92,15 +92,21 @@ type SearchClient interface {
 	SearchRaw(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error)
 }
 
+// SearchRequest is the minimal input accepted by Search[T] and related helpers.
+// Both esv8.SearchParams and esv8/query.SearchParams satisfy this interface.
+type SearchRequest interface {
+	ToRequest() *search.Request
+}
+
 // Search executes the preferred high-level search flow against an alias.
-// It converts SearchParams into a search.Request, executes SearchRaw, decodes
-// each hit's _source into T, and exposes typed aggregation accessors through
-// SearchResponse[T].
+// It accepts any value that can convert itself into a search.Request,
+// executes SearchRaw, decodes each hit's _source into T, and exposes typed
+// aggregation accessors through SearchResponse[T].
 func Search[T any](
 	ctx context.Context,
 	client SearchClient,
 	aliasName estype.Alias,
-	params SearchParams,
+	params SearchRequest,
 ) (*SearchResponse[T], error) {
 	rawResp, err := client.SearchRaw(ctx, aliasName, params.ToRequest())
 	if err != nil {
@@ -109,7 +115,7 @@ func Search[T any](
 
 	resp := &SearchResponse[T]{
 		Raw:          rawResp,
-		Aggregations: query.NewAggResults(rawResp.Aggregations),
+		Aggregations: querybuilder.NewAggResults(rawResp.Aggregations),
 	}
 
 	if rawResp.Hits.Total != nil {
@@ -162,7 +168,7 @@ func SearchDocuments[T any](
 	ctx context.Context,
 	client SearchClient,
 	aliasName estype.Alias,
-	params SearchParams,
+	params SearchRequest,
 ) ([]T, error) {
 	resp, err := Search[T](ctx, client, aliasName, params)
 	if err != nil {
@@ -174,27 +180,4 @@ func SearchDocuments[T any](
 		docs = append(docs, hit.Source)
 	}
 	return docs, nil
-}
-
-// SearchOne executes Search[T] with Size forced to 1 and returns the first
-// decoded source plus a boolean indicating whether a hit was found.
-func SearchOne[T any](
-	ctx context.Context,
-	client SearchClient,
-	aliasName estype.Alias,
-	params SearchParams,
-) (T, bool, error) {
-	params.Size = 1
-
-	resp, err := Search[T](ctx, client, aliasName, params)
-	if err != nil {
-		var zero T
-		return zero, false, err
-	}
-	if len(resp.Hits) == 0 {
-		var zero T
-		return zero, false, nil
-	}
-
-	return resp.Hits[0].Source, true, nil
 }

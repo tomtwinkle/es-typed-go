@@ -6,873 +6,111 @@
 
 [English](README.md) | **日本語** | [中文](README.zh-CN.md)
 
-[go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 / v9) 向けの型安全な Go ラッパーです。フィールド名のタイポやインデックス/エイリアスの取り違えをコンパイル時に防止します。
+[go-elasticsearch](https://github.com/elastic/go-elasticsearch) (v8 / v9) 向けの型安全な Go ラッパーです。フィールド名のタイポやインデックス / エイリアスの取り違えをコンパイル時に防止します。
 
-## モチベーション
+## このライブラリの目的
 
-### 既存の elasticsearch-go Typed Client の問題点
+Elasticsearch 公式の Go typed client は強力ですが、通常のアプリケーションコードでは次のような課題があります。
 
-公式の [go-elasticsearch](https://github.com/elastic/go-elasticsearch) ライブラリは「typed」クライアントを提供していますが、その名前に反して TypeScript の仕様からの自動生成に過ぎず、実用上いくつかの問題があります。
+- request shape が広く、使い方が分かりにくい
+- 文字列ベースの指定ミスをコンパイル時に防ぎにくい
+- 検索クエリや mapping 定義の記述が冗長になりやすい
 
-1. **直感的でない API** — typed client は TypeScript の定義から機械的に生成されているため、関数シグネチャが分かりにくく、ドキュメントを常に参照しなければ使い方が理解できません。
+`es-typed-go` はその改善のために、次を提供します。
 
-2. **`any` 型の多用** — 検索クエリを構築する際、ほとんどのパラメータ（`FieldValue`、`SortCombinations`、`Missing`、`TermsQueryField` など）が `any` 型として定義されています。そのため、完全に無効なパラメータを渡してもコンパイルエラーにならず、Elasticsearch にクエリを投げて初めて間違いに気付くことになります。
+- `Field` / `Index` / `Alias` の distinct type
+- mapping や Go struct からのフィールド定数生成
+- query / sort / aggregation の fluent builder
+- Elasticsearch property 定義用の functional-option builder
+- `_source` を Go struct にデコードする高レベル検索 helper
 
-3. **トライ＆エラーの繰り返し** — コンパイル時の安全性が欠如しているため、開発者はトライ＆エラーのサイクルを強いられます。コードを書く → クエリを送信 → エラーを読む → 修正 → 繰り返し。多くの場合、typed client を使うより生の JSON を書いた方が楽で速いという状況すら発生します。
+## 主な機能
 
-### es-typed-go が解決すること
-
-本ライブラリは以下の手段で型安全性を導入します。
-
-- **専用の型** — フィールド名（`estype.Field`）、インデックス名（`estype.Index`）、エイリアス名（`estype.Alias`）にそれぞれ固有の型を使用。フィールドが期待される場所にインデックスを渡すとコンパイルエラーになります
-- **コード生成** — Elasticsearch のマッピング JSON から `estyped` CLI が型付きフィールド定数を生成。[sqlc](https://sqlc.dev/) が SQL スキーマから型付き Go コードを生成するのと同様のアプローチです
-- **型安全な Fluent ビルダー** — クエリ、ソート、アグリゲーション用のビルダーが裸の文字列ではなく `estype.Field` を受け取ります
-- **Functional-option コンストラクタ** — 52 種類以上の Elasticsearch プロパティ型すべてに対応し、インデックスマッピングの定義を安全かつ可読性高く記述できます
-
-不正な使用はランタイムの Elasticsearch ではなく、コンパイラが検出します。
-
-## 機能一覧
-
-- **コンパイル時の安全性** — 専用の型（`Field`、`Index`、`Alias`）が取り違えを防止。`MappingProperty` インターフェースがフィールドマッピング定義から `any` を排除
-- **コード生成** — Elasticsearch マッピングから型付きフィールド定数を生成
-- **SearchBuilder** — クエリ・ソート・アグリゲーション・ページネーションをひとつの `SearchParams` にまとめる ActiveRecord スタイルのビルダー
-- **Fluent クエリビルダー** — 型安全な Bool、Term、Match、Range、Nested、Prefix、Wildcard、MultiMatch、FunctionScore クエリなど
-- **アグリゲーションビルダー** — Terms、DateHistogram、Histogram、Avg、Max、Min、Sum、ValueCount、Cardinality、Stats、Nested、Filter
-- **ソートビルダー** — Field、Score、Doc、GeoDistance、Script ソート（Functional option 対応）
-- **プロパティビルダー** — 全 ES プロパティ型に対応した Functional-option コンストラクタ
-- **日付フォーマット定数** — 80 以上の Elasticsearch 組み込み日付フォーマット定数
-- **デュアルバージョン対応** — Elasticsearch v8 と v9 を同一 API で利用可能
+- `estype.Field` / `estype.Index` / `estype.Alias` の型分離
+- `estyped` によるコード生成
+- 型安全な query / sort / aggregation builder
+- Elasticsearch property builder
+- `esv8` / `esv9` 両対応
+- builder が返す search params をそのまま高レベル検索 helper に渡せる設計
 
 ## インストール
+
+ライブラリ本体をインストール:
 
 ```bash
 go get github.com/tomtwinkle/es-typed-go
 ```
 
-コアの `estype` パッケージと `esv8` / `esv9` ラッパーがインストールされます。
-
-`estyped` コード生成 CLI を使用するには、Go ツールとしてインストールします。
+コード生成 CLI を Go tool として追加:
 
 ```bash
 go get -tool github.com/tomtwinkle/es-typed-go/cmd/estyped
 ```
 
-これにより `go.mod` にエントリが追加され、`go tool estyped` でツールを呼び出せます。PATH 上で直接 `estyped` を使えるようにするには、グローバルインストールも可能です。
+実行:
 
 ```bash
-go install github.com/tomtwinkle/es-typed-go/cmd/estyped@latest
+go tool estyped
 ```
 
-カスタム lint を含む検証を行う場合は、まずチェッカーをビルドしてから `go vet` に組み込みます。
-
-```bash
-go build -o ./bin/okassertcheck ./tools/okassertcheck
-go vet -vettool=$(pwd)/bin/okassertcheck ./...
-```
-
-このカスタムチェックでは、型アサーションの結果を `ok` で明示的に確認しているかを検証します。特に、map 取得と型アサーションを 1 行でまとめたコードは避け、存在確認と型確認を分けて記述してください。
-
-## クイックスタート
-
-### 1. マッピングを定義してフィールド定数を生成する
-
-Elasticsearch のマッピングファイルを作成します。
-
-```json
-{
-  "mappings": {
-    "properties": {
-      "title": {
-        "type": "text",
-        "fields": {
-          "keyword": { "type": "keyword" }
-        }
-      },
-      "status": { "type": "keyword" },
-      "price": { "type": "integer" },
-      "category": { "type": "keyword" },
-      "tags": { "type": "keyword" },
-      "date": { "type": "date" },
-      "items": {
-        "type": "nested",
-        "properties": {
-          "name": { "type": "text" },
-          "value": { "type": "integer" }
-        }
-      }
-    }
-  }
-}
-```
-
-Elasticsearch マッピングファイルから型付きフィールド定数を生成します。
-
-```bash
-go tool estyped \
-  -mapping mapping.json \
-  -out esmodel/fields.go \
-  -package esmodel
-```
-
-あるいは、ドキュメントモデルを表す JSON struct tag 付きの Go struct がすでにある場合は、struct ファイルに `//go:generate` ディレクティブを追加することで、その struct から直接生成できます。
-
-```go
-//go:generate go tool estyped -struct Product -out product_fields.go
-
-type Product struct {
-    Status   string   `json:"status"`
-    Title    string   `json:"title"`
-    Category string   `json:"category"`
-    Items    []Item   `json:"items"`
-}
-
-type Item struct {
-    Name  string `json:"name"`
-    Price int    `json:"price"`
-}
-```
-
-各フィールドに正確な ES 型名を伝えるには、struct に `estype.ESMappingProvider` を実装します。実装しない場合、生成されるコメントのフィールド型はすべて `"unknown"` になります。詳細は [ESMappingProvider](#esmappingprovider) を参照してください。
-
-`-struct` を使用する場合、`-package` フラグは `go generate` が自動的に設定する `$GOPACKAGE` がデフォルトになります。`go generate ./...` を実行すると再生成されます。`go install` でグローバルインストール済みの場合は短い形式も使用できます。
-
-```go
-//go:generate estyped -struct Product -out product_fields.go
-```
-
-以下のようなコードが生成されます。
-
-```go
-// Code generated by estyped; DO NOT EDIT.
-package esmodel
-
-import "github.com/tomtwinkle/es-typed-go/estype"
-
-// FieldCategory is the "category" field (type: keyword).
-const FieldCategory estype.Field = "category"
-
-// FieldDate is the "date" field (type: date).
-const FieldDate estype.Field = "date"
-
-// FieldItems is the "items" field (type: nested).
-const FieldItems estype.Field = "items"
-
-// FieldItemsName is the "items.name" field (type: text).
-const FieldItemsName estype.Field = "items.name"
-
-// FieldItemsValue is the "items.value" field (type: integer).
-const FieldItemsValue estype.Field = "items.value"
-
-// FieldPrice is the "price" field (type: integer).
-const FieldPrice estype.Field = "price"
-
-// FieldStatus is the "status" field (type: keyword).
-const FieldStatus estype.Field = "status"
-
-// FieldTags is the "tags" field (type: keyword).
-const FieldTags estype.Field = "tags"
-
-// FieldTitle is the "title" field (type: text).
-const FieldTitle estype.Field = "title"
-
-// FieldTitleKeyword is the "title.keyword" field (type: keyword).
-const FieldTitleKeyword estype.Field = "title.keyword"
-```
-
-構造体モードを使用すると、グループ化されたアクセスも可能です。
-
-```bash
-go tool estyped \
-  -mapping mapping.json \
-  -out esmodel/fields.go \
-  -package esmodel \
-  -name Product
-```
-
-以下のようなコードが生成されます。
-
-```go
-// Code generated by estyped; DO NOT EDIT.
-package esmodel
-
-import "github.com/tomtwinkle/es-typed-go/estype"
-
-// Product provides typed field names for the Elasticsearch index mapping.
-var Product = struct {
-	Category      estype.Field
-	Date          estype.Field
-	Items         estype.Field
-	Items_Name    estype.Field
-	Items_Value   estype.Field
-	Price         estype.Field
-	Status        estype.Field
-	Tags          estype.Field
-	Title         estype.Field
-	Title_Keyword estype.Field
-}{
-	Category:      "category",
-	Date:          "date",
-	Items:         "items",
-	Items_Name:    "items.name",
-	Items_Value:   "items.value",
-	Price:         "price",
-	Status:        "status",
-	Tags:          "tags",
-	Title:         "title",
-	Title_Keyword: "title.keyword",
-}
-```
-
-### 2. 型安全なクエリを構築する
-
-```go
-package main
-
-import (
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-	"github.com/tomtwinkle/es-typed-go/estype"
-)
-
-// 生成されたフィールド定数を使用
-const (
-	FieldStatus   estype.Field = "status"
-	FieldCategory estype.Field = "category"
-	FieldDate     estype.Field = "date"
-	FieldPrice    estype.Field = "price"
-)
-
-func buildQuery() {
-	q := query.BoolQuery(query.NewBoolQuery().
-		Must(
-			query.TermValue(FieldStatus, "active"),
-		).
-		Filter(
-			query.TermsValues(FieldCategory, "electronics", "books"),
-			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-		).
-		Build(),
-	)
-
-	_ = q // esv8.Search[T](...) や client.SearchRaw(...) で使用
-}
-```
-
-### 3. Elasticsearch クライアントを作成する
-
-```go
-package main
-
-import (
-	"log/slog"
-
-	es8 "github.com/elastic/go-elasticsearch/v8"
-	"github.com/tomtwinkle/es-typed-go/esv8"
-)
-
-func main() {
-	client, err := esv8.NewClientWithLogger(
-		es8.Config{
-			Addresses: []string{"http://localhost:19200"},
-		},
-		slog.Default(),
-	)
-	if err != nil {
-		panic(err)
-	}
-	_ = client // 検索、インデックス操作などに使用
-}
-```
-
-## 使い方ガイド
-
-### コア型
-
-es-typed-go の基盤は、コンパイル時に取り違えを防止する 3 つの専用文字列型です。
-
-```go
-import (
-	"github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/estype"
-)
-
-// 各々が固有の型であり、別の型が期待される場所に誤って渡すことはできません
-var field estype.Field = "status"       // Elasticsearch フィールド名
-var index estype.Index = "my-index"     // Elasticsearch インデックス名
-var alias estype.Alias = "my-alias"     // Elasticsearch エイリアス名
-
-// OK — 正しい使い方
-_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchParams{})
-client.DeleteIndex(ctx, index)
-
-// コンパイルエラー — Alias が期待される場所に Field を渡している
-_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchParams{})
-
-// コンパイルエラー — Alias が期待される場所に Index を渡している
-_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchParams{})
-```
-
-### クエリビルダー
-
-#### クエリヘルパー関数
-
-`types.Query` 値を構築するための便利関数です。
-
-```go
-import "github.com/tomtwinkle/es-typed-go/esv8/query"
-
-// Term クエリ
-query.TermValue(FieldStatus, "active")
-query.TermsValues(FieldCategory, "electronics", "books")
-
-// Match クエリ
-query.MatchValue(FieldTitle, "search keyword")
-query.MatchPhrase(FieldTitle, "exact phrase")
-query.MultiMatchQuery("search text", FieldTitle, FieldName)
-
-// Match all / match none
-query.MatchAll()
-query.MatchNone()
-
-// IDs クエリ
-query.IdsQuery("id1", "id2", "id3")
-
-// Prefix / Wildcard クエリ
-query.PrefixValue(FieldTitle, "go")
-query.WildcardValue(FieldTitle, "go*")
-
-// フィールドの存在チェック
-query.ExistsField(FieldStatus)
-query.NotExists(FieldPrice)
-
-// Nested クエリ
-query.NestedFilter(FieldItems,
-	query.TermValue(estype.Field("items.name"), "widget"),
-)
-
-// Range クエリ
-query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31")
-gte, lte := types.Float64(100), types.Float64(500)
-query.NumberRangeQuery(FieldPrice, &gte, &lte)
-
-// Bool ショートカットヘルパー
-query.BoolMust(q1, q2)
-query.BoolFilter(q1, q2)
-query.BoolShould(q1, q2)
-query.BoolMustNot(q1)
-
-// BoolQuery を Query にラップ
-query.BoolQuery(query.NewBoolQuery().
-	Must(
-		query.TermValue(FieldStatus, "active"),
-		query.MatchPhrase(FieldTitle, "search keyword"),
-	).
-	Filter(
-		query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-	).
-	Should(
-		query.TermValue(FieldCategory, "premium"),
-	).
-	MustNot(
-		query.ExistsField(FieldPrice),
-	).
-	MinimumShouldMatch(1).
-	Build(),
-)
-
-// Function score クエリ
-query.FunctionScoreQuery(&types.FunctionScoreQuery{
-	Query: &types.Query{MatchAll: &types.MatchAllQuery{}},
-})
-
-// 型付きスライスを []types.FieldValue に変換（TermsQuery 用）
-ids := query.FieldValues("id1", "id2", "id3")
-query.TermsValues(FieldStatus, ids...)
-```
-
-### ソートビルダー
-
-```go
-import (
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/scriptsorttype"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/distanceunit"
-)
-
-sorts := query.NewSort().
-	Field(FieldDate, sortorder.Desc).                      // 日付の降順ソート
-	Field(FieldPrice, sortorder.Asc).                      // 次に価格の昇順
-	FieldWithMissing(FieldCategory, sortorder.Asc,
-		query.MissingLast).                                // 値なしは最後に配置
-	FieldNested(FieldItems, sortorder.Asc,
-		FieldItems, sortmode.Min).                         // Nested フィールドソート
-	ScoreDesc().                                           // スコアの降順
-	ScoreAsc().                                            // スコアの昇順
-	DocAsc().                                              // インデックス順の昇順
-	DocDesc().                                             // インデックス順の降順
-	GeoDistance(FieldLocation, types.GeoLocation{...},
-		sortorder.Asc,
-		query.WithGeoDistanceUnit(distanceunit.Kilometers),
-		query.WithGeoDistanceIgnoreUnmapped(true)).        // 地理距離ソート（オプション付き）
-	Script(script, scriptsorttype.Number,
-		sortorder.Asc).                                    // スクリプトベースのソート
-	Build()
-```
-
-### 型付きアグリゲーション
-
-```go
-import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-)
-
-avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
-byCategoryAgg := query.StringTermsAgg(
-	"by_category",
-	FieldCategory,
-	query.WithTermsSize(10),        // 上位 10 カテゴリ
-	query.WithSubAggs(avgPriceAgg), // カテゴリごとの平均価格
-)
-
-overTimeAgg := query.DateHistogramAgg(
-	"over_time",
-	FieldDate,
-	calendarinterval.Month,
-)
-
-priceDistAgg := query.HistogramAgg(
-	"price_dist",
-	FieldPrice,
-	50.0, // 数値ヒストグラムの間隔
-)
-
-statsAgg := query.StatsAgg("price_stats", FieldPrice)
-
-aggs := query.Aggs(
-	byCategoryAgg,
-	overTimeAgg,
-	priceDistAgg,
-	statsAgg,
-)
-```
-
-### SearchBuilder
-
-`query.NewSearch()` は、クエリ・ソート・アグリゲーション・ページネーションをひとつの型付き `query.SearchParams` にまとめる ActiveRecord スタイルのビルダーです。`Build()` の結果は `query.SearchParams` なので、そのまま `esv8.Search[T](...)` に渡す `esv8.SearchParams` へ写せます。
-
-```go
-import (
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
-	"github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-)
-
-byCategoryAgg := query.StringTermsAgg("by_category", FieldCategory)
-
-params := query.NewSearch().
-	Where(
-		query.TermValue(FieldStatus, "active"),              // filter 句
-		query.DateRangeQuery(FieldDate, "2024-01-01", ""),
-	).
-	Must(
-		query.MatchPhrase(FieldTitle, "search keyword"),     // must 句
-	).
-	Should(
-		query.TermValue(FieldCategory, "premium"),           // should 句
-	).
-	MustNot(
-		query.ExistsField(FieldPrice),                       // must_not 句
-	).
-	Sort(query.NewSort().
-		Field(FieldDate, sortorder.Desc).
-		ScoreDesc().
-		Build()...,
-	).
-	Aggregations(query.Aggs(
-		byCategoryAgg,
-	)).
-	Limit(10).
-	Offset(0).
-	Build()
-
-resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
-	Query:        params.Query,
-	Sort:         params.Sort,
-	Aggregations: params.Aggregations,
-	Highlight:    params.Highlight,
-	Collapse:     params.Collapse,
-	ScriptFields: params.ScriptFields,
-	Size:         params.Size,
-	From:         params.From,
-})
-```
-
-すでに `types.Query` を構築済みの場合は直接セットすることもできます。
-
-```go
-params := query.NewSearch().
-	Query(query.BoolQuery(query.NewBoolQuery().
-		Must(query.TermValue(FieldStatus, "active")).
-		Build()),
-	).
-	Limit(20).
-	Build()
-```
-
-### プロパティビルダー（インデックスマッピング）
-
-型安全な Functional-option コンストラクタでインデックスマッピングを定義します。全 53 種類のプロパティ型とそのオプションの一覧は、[プロパティリファレンス](docs/property-reference.ja.md)を参照してください。
-
-```go
-import (
-	"github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/estype"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
-)
-
-mappings := &types.TypeMapping{
-	Properties: map[string]types.Property{
-		"title": esv8.NewTextProperty(
-			esv8.WithTextAnalyzer("standard"),
-			esv8.WithTextFields(map[string]types.Property{
-				"keyword": esv8.NewKeywordProperty(esv8.WithKeywordIgnoreAbove(256)),
-			}), // .keyword サブフィールドを追加
-		),
-		"status": esv8.NewKeywordProperty(),
-		"price": esv8.NewIntegerNumberProperty(
-			esv8.WithIntegerNumberCoerce(true),
-		),
-		"date": esv8.NewDateProperty(
-			esv8.WithDateFormat(
-				estype.DateFormatStrictDateTime,
-				estype.DateFormatEpochMillis,
-			),
-		),
-		"enabled": esv8.NewBooleanProperty(),
-		"location": esv8.NewGeoPointProperty(),
-		"tags": esv8.NewKeywordProperty(
-			esv8.WithKeywordIgnoreAbove(256),
-		),
-		"items": esv8.NewNestedProperty(
-			func(p *types.NestedProperty) {
-				p.Properties = map[string]types.Property{
-					"name":  esv8.NewTextProperty(),
-					"value": esv8.NewIntegerNumberProperty(),
-				}
-			},
-		),
-	},
-}
-```
-
-### ESMappingProvider
-
-`estyped -struct` を使用する際、各フィールドの Elasticsearch 型名をジェネレータに伝えるために、struct に `estype.ESMappingProvider` を実装します。このメソッドがない場合、生成されるコメントのすべてのフィールド型は `"unknown"` になります。
-
-`MappingField.Property` には `estype.MappingProperty`（`ESTypeName() string` インターフェース）を実装した値を設定します。
-
-| プロパティ値 | 用途 |
-|---|---|
-| `estype.FieldType("integer")` | 型名の文字列指定: `keyword`、`text`、`integer`、`long`、`float`、`double`、`boolean`、`date`、`object`、`nested`、`geo_point`、`dense_vector` など |
-| `estype.NewTextProperty(...)` | アナライザやマルチフィールドサブプロパティを持つテキストフィールド |
-| `estype.NewKeywordProperty(...)` | `ignore_above` などのオプションを持つキーワードフィールド |
-
-`Path` はドット区切りの JSON フィールドパスで、型は `string` です。パスは JSON のキーに由来するため、`string` 型にすることでプログラムからマッピングを構築する際に明示的な型変換が不要になります。
-
-```go
-//go:generate go tool estyped -struct Product -out product_fields.go
-
-type Product struct {
-	Status string   `json:"status"`
-	Title  string   `json:"title"`
-	Price  int      `json:"price"`
-	Tags   []string `json:"tags"`
-	Items  []Item   `json:"items"`
-}
-
-type Item struct {
-	Name  string `json:"name"`
-	Value int    `json:"value"`
-}
-
-func (Product) ESMapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status",      Property: estype.NewKeywordProperty()},
-			{Path: "title",       Property: estype.NewTextProperty(
-				estype.WithField("keyword", estype.NewKeywordProperty(estype.WithIgnoreAbove())),
-				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
-				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
-			)},
-			{Path: "price",       Property: estype.FieldType("integer")},
-			{Path: "tags",        Property: estype.FieldType("keyword")},
-			{Path: "items",       Property: estype.FieldType("nested")},
-			{Path: "items.name",  Property: estype.NewTextProperty()},
-			{Path: "items.value", Property: estype.FieldType("integer")},
-		},
-	}
-}
-```
-
-### 日付フォーマット定数
-
-80 以上の Elasticsearch 組み込み日付フォーマット定数が利用可能です。
-
-```go
-import "github.com/tomtwinkle/es-typed-go/estype"
-
-// 定義済み定数を使用
-estype.DateFormatEpochMillis       // "epoch_millis"
-estype.DateFormatStrictDate        // "strict_date" (yyyy-MM-dd)
-estype.DateFormatStrictDateTime    // "strict_date_time" (yyyy-MM-dd'T'HH:mm:ss.SSSZ)
-estype.DateFormatBasicDate         // "basic_date" (yyyyMMdd)
-
-// JoinDateFormats で複数フォーマットを結合
-format := estype.JoinDateFormats(
-	estype.DateFormatEpochMillis,
-	estype.DateFormatStrictDate,
-)
-// 結果: "epoch_millis||strict_date"
-```
-
-### ESClient と ESClientSpec
-
-2 種類のクライアントインターフェースが利用可能です。
-
-| インターフェース | 用途 |
-|-----------|----------|
-| `ESClient` | 厳選された共通操作セット（検索、インデックス、エイリアス管理）。アプリケーションコードでの使用を推奨。 |
-| `ESClientSpec` | Elasticsearch API の完全カバレッジ（スペックから自動生成）。`ESClient` に必要なエンドポイントがない場合に使用。 |
-
-```go
-// ESClient — 厳選された使いやすいインターフェース
-client, _ := esv8.NewClientWithLogger(config, logger)
-
-// ESClientSpec — 完全な API カバレッジ
-specClient, _ := esv8.NewSpecClient(config)
-```
-
-### ESClient の操作一覧
-
-`ESClient` のメソッドは 4 つのカテゴリに分類されます。
-
-**クラスター**
-- `Info(ctx)` — クラスター情報の取得
-
-**インデックス管理**
-- `CreateIndex(ctx, index, settings, mappings)` — インデックスの作成
-- `DeleteIndex(ctx, index)` — インデックスの削除
-- `IndexExists(ctx, index) bool` — 存在確認
-- `IndexRefresh(ctx, index)` — 強制リフレッシュ
-- `IndexDocumentCount(ctx, index)` — ドキュメント件数の取得
-
-**エイリアス管理**
-- `CreateAlias(ctx, index, alias, isWriteIndex)` — エイリアスの作成
-- `UpdateAliases(ctx, actions)` — エイリアスのアトミックな追加/削除
-- `AliasExists(ctx, alias) bool` — 存在確認
-- `AliasRefresh(ctx, alias)` — 強制リフレッシュ
-- `GetIndicesForAlias(ctx, alias) []Index` — 紐付けられたインデックスの一覧
-- `GetRefreshInterval(ctx, alias)` — リフレッシュ間隔の取得
-- `UpdateRefreshInterval(ctx, alias, interval)` — リフレッシュ間隔の更新
-
-**ドキュメント**
-- `CreateDocument(ctx, alias, id, doc)` — ドキュメントのインデックス（リフレッシュ待ち）
-- `GetDocument(ctx, alias, id)` — ID によるドキュメントの取得
-- `DeleteDocument(ctx, index, id)` — ドキュメントの削除
-- `UpdateDocument(ctx, index, id, req)` — 部分更新
-
-**検索**
-- `esv8.Search[T](ctx, client, alias, params)` — 高レベルな型付き検索 API を実行
-- `SearchRaw(ctx, alias, req)` — 生の `search.Request` による検索
-
-**再インデックス**
-- `Reindex(ctx, srcIndex, dstIndex, waitForCompletion)` — 全件再インデックス
-- `DeltaReindex(ctx, srcIndex, dstIndex, since, timestampField, waitForCompletion)` — 差分再インデックス
-- `WaitForTaskCompletion(ctx, taskID, timeout)` — タスク完了まで待機
-
-### 型付き検索の完全な実行例
+## 最小例
 
 ```go
 package main
 
 import (
 	"context"
-	"fmt"
-	"log/slog"
-	"math"
 
-	es8 "github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
-
-	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/esv8"
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
-)
-
-// estyped CLI で生成されたフィールド定数
-const (
-	FieldStatus   estype.Field = "status"
-	FieldCategory estype.Field = "category"
-	FieldDate     estype.Field = "date"
-	FieldPrice    estype.Field = "price"
+	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
 type Product struct {
-	ID       string  `json:"id"`
-	Status   string  `json:"status"`
-	Category string  `json:"category"`
-	Price    float64 `json:"price"`
+	ID     string `json:"id"`
+	Status string `json:"status"`
 }
 
-func main() {
-	client, err := esv8.NewClientWithLogger(
-		es8.Config{Addresses: []string{"http://localhost:19200"}},
-		slog.Default(),
-	)
-	if err != nil {
-		panic(err)
-	}
+var FieldStatus estype.Field = "status"
 
-	avgPriceAgg := query.AvgAgg("avg_price", FieldPrice)
-	byCategoryAgg := query.StringTermsAgg(
-		"by_category",
-		FieldCategory,
-		query.WithTermsSize(10),
-		query.WithSubAggs(avgPriceAgg),
-	)
+func main() {
+	var client esv8.ESClient
+	alias := estype.Alias("products")
 
 	params := query.NewSearch().
 		Where(query.TermValue(FieldStatus, "active")).
-		Where(
-			query.TermsValues(FieldCategory, "electronics", "books"),
-			query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31"),
-		).
-		Sort(query.NewSort().
-			Field(FieldDate, sortorder.Desc).
-			ScoreDesc().
-			Build()...,
-		).
-		Aggregations(query.Aggs(
-			byCategoryAgg,
-		)).
 		Limit(10).
-		Offset(0).
 		Build()
 
-	ctx := context.Background()
-	alias := estype.Alias("my-alias")
-
-	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
-		Query:        params.Query,
-		Sort:         params.Sort,
-		Aggregations: params.Aggregations,
-		Highlight:    params.Highlight,
-		Collapse:     params.Collapse,
-		ScriptFields: params.ScriptFields,
-		Size:         params.Size,
-		From:         params.From,
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf("Total hits: %d\n", resp.Total)
-	for _, hit := range resp.Hits {
-		fmt.Printf("product=%+v\n", hit.Source)
-	}
-
-	terms := resp.Aggregations.MustStringTerms(byCategoryAgg)
-	for _, bucket := range terms.Buckets() {
-		avg := bucket.Aggregations().MustAvg(avgPriceAgg)
-		if avg.Value() != nil && math.Abs(*avg.Value()) > 0 {
-			fmt.Printf("category=%s avg_price=%.2f\n", bucket.Key(), *avg.Value())
-		}
-	}
-
-	rawReq := search.NewRequest()
-	rawReq.Query = &params.Query
-	rawSize := 1
-	rawReq.Size = &rawSize
-
-	rawResp, err := client.SearchRaw(ctx, alias, rawReq)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("raw took: %d\n", rawResp.Took)
+	_, _ = esv8.Search[Product](context.Background(), client, alias, params)
 }
 ```
 
-## Elasticsearch v8 / v9 対応
+実行可能なエンドツーエンド例は以下を参照してください。
 
-es-typed-go は Elasticsearch v8 と v9 の両方を同一の API でサポートしています。インポートパスを変更するだけで切り替えられます。
-
-```go
-// Elasticsearch v8 の場合
-import (
-	"github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-)
-
-// Elasticsearch v9 の場合
-import (
-	"github.com/tomtwinkle/es-typed-go/esv9"
-	"github.com/tomtwinkle/es-typed-go/esv9/query"
-)
-```
-
-全てのビルダー、ヘルパー、プロパティコンストラクタは両バージョンで同一のシグネチャを持ちます。`esv8/` への変更は常に `esv9/` にもミラーされます。
-
-高レベルな検索ヘルパーも同様に揃っています。
-
-```go
-// v8
-v8Resp, err := esv8.Search[Product](ctx, v8Client, alias, esv8.SearchParams{
-	Query: params.Query,
-})
-
-// v9
-v9Resp, err := esv9.Search[Product](ctx, v9Client, alias, esv9.SearchParams{
-	Query: params.Query,
-})
-```
-
-便利ヘルパーも同じ考え方で使えます。
-
-```go
-v8Docs, err := esv8.SearchDocuments[Product](ctx, v8Client, alias, esv8.SearchParams{
-	Query: params.Query,
-})
-
-v9Doc, found, err := esv9.SearchOne[Product](ctx, v9Client, alias, esv9.SearchParams{
-	Query: params.Query,
-})
-```
-
-## リポジトリ構成
-
-```
-estype/            コア共有型（Field, Index, Alias, DateFormat, マッピングパーサー）
-esv8/              Elasticsearch v8 ラッパー
-  query/           v8 用クエリ、ソート、アグリゲーションビルダー
-  generator/       v8 API カバレッジテスト用コードジェネレーター
-esv9/              Elasticsearch v9 ラッパー（esv8 のミラー）
-  query/           v9 用クエリ、ソート、アグリゲーションビルダー
-  generator/       v9 API カバレッジテスト用コードジェネレーター
-cmd/estyped/       CLI ツール：ES マッピングから型付き Field 定数を生成
-docs/              リファレンスドキュメント
-```
+- [`examples/quickstart/main.go`](examples/quickstart/main.go)
+- [`examples/quickstart/README.md`](examples/quickstart/README.md)
 
 ## ドキュメント
 
-- [Property Reference](docs/property-reference.md) — All property types and their functional options (English)
-- [プロパティリファレンス](docs/property-reference.ja.md) — 全プロパティ型とオプションの一覧（日本語）
+詳細な説明は `docs/` 以下にあります。
 
-## 必要要件
+### 利用者向け
+- [Search Guide](docs/search-guide.md)
+- [Property Reference](docs/property-reference.md)
+- [ドキュメント一覧](docs/README.md)
 
-- Go 1.26 以降
-- Elasticsearch v8.x または v9.x
+### コントリビューター向け
+- [Contributing Guide](docs/contributing.md)
+- [コントリビューションガイド](docs/contributing.ja.md)
+- [贡献指南](docs/contributing.zh-CN.md)
+
+## バージョンサポート
+
+- `esv8` は Elasticsearch v8 向け
+- `esv9` は Elasticsearch v9 向け
+
+両パッケージは、できるだけ近い API 形状を維持する方針です。
 
 ## ライセンス
 
