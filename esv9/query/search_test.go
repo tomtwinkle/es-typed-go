@@ -18,11 +18,10 @@ func TestNewSearch_Empty(t *testing.T) {
 
 	assert.DeepEqual(t, types.Query{}, params.Query)
 	assert.Assert(t, len(params.Sort) == 0)
-	assert.Assert(t, params.Aggregations.Build() == nil)
+	assert.Assert(t, params.Aggregations == nil)
 	assert.Assert(t, params.Highlight == nil)
 	assert.Assert(t, params.Collapse == nil)
 	assert.Assert(t, params.ScriptFields == nil)
-	assert.Assert(t, params.TrackTotalHits == nil)
 	assert.Equal(t, 0, params.Size)
 	assert.Equal(t, 0, params.From)
 }
@@ -150,13 +149,12 @@ func TestSearchBuilder_Aggregation(t *testing.T) {
 	aggs := query.Aggs(termsDef)
 
 	params := query.NewSearch().
-		Aggregation(aggs).
+		Aggregation(aggs.Build()).
 		Build()
 
-	built := params.Aggregations.Build()
-	assert.Assert(t, built != nil)
+	assert.Assert(t, params.Aggregations != nil)
 
-	agg, ok := built["by_category"]
+	agg, ok := params.Aggregations["by_category"]
 	assert.Assert(t, ok)
 	assert.Assert(t, agg.Terms != nil)
 	assert.Equal(t, string(FieldCategory), *agg.Terms.Field)
@@ -206,16 +204,6 @@ func TestSearchBuilder_ScriptFields(t *testing.T) {
 	assert.Equal(t, source, sf.Script.Source)
 }
 
-func TestSearchBuilder_TrackTotalHits(t *testing.T) {
-	t.Parallel()
-
-	params := query.NewSearch().
-		TrackTotalHits(true).
-		Build()
-
-	assert.Equal(t, true, params.TrackTotalHits)
-}
-
 func TestSearchBuilder_CombinedBoolClauses(t *testing.T) {
 	t.Parallel()
 
@@ -253,7 +241,7 @@ func TestSearchBuilder_FullChaining(t *testing.T) {
 		Sort(sorts...).
 		Limit(10).
 		Offset(0).
-		Aggregation(aggs).
+		Aggregation(aggs.Build()).
 		Highlight(&types.Highlight{
 			Fields: []map[string]types.HighlightField{
 				{FieldTitle.String(): {}},
@@ -267,7 +255,7 @@ func TestSearchBuilder_FullChaining(t *testing.T) {
 	assert.Assert(t, len(params.Sort) == 2)
 	assert.Equal(t, 10, params.Size)
 	assert.Equal(t, 0, params.From)
-	assert.Assert(t, params.Aggregations.Build() != nil)
+	assert.Assert(t, params.Aggregations != nil)
 	assert.Assert(t, params.Highlight != nil)
 }
 
