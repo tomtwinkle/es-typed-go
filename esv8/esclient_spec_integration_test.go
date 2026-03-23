@@ -138,7 +138,7 @@ func TestIntegration_Spec_IndicesCreateDelete(t *testing.T) {
 		_, _ = client.IndicesDelete(cctx, name)
 	})
 
-	// Create with number_of_replicas=0 to keep the cluster GREEN on a single-nodejj
+	// Create with number_of_replicas=0 to keep the cluster GREEN on a single-node
 	// cluster and avoid interference with parallel tests that use UpdateByQuery.
 	zeroReplicas := "0"
 	createRes, err := client.IndicesCreate(ctx, name, &indicescreate.Request{
