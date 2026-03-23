@@ -1,3 +1,6 @@
+# CI uses GitHub Actions service containers, which are exposed to job steps on
+# localhost:9200 inside the runner. The local Docker Compose setup uses
+# localhost:19200 (v8) and localhost:19201 (v9) to avoid host port conflicts.
 name: Test
 
 on:

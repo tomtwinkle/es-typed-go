@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
 	core_bulk "github.com/elastic/go-elasticsearch/v8/typedapi/core/bulk"
@@ -31,6 +32,16 @@ func newRawTypedClient(t *testing.T) *es8.TypedClient {
 	t.Helper()
 	c, err := es8.NewTypedClient(es8.Config{Addresses: []string{esURL()}})
 	assert.NilError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	info, err := c.API.Info().Do(ctx)
+	if err != nil {
+		t.Skipf("skipping integration test: Elasticsearch is unavailable at %s: %v", esURL(), err)
+	}
+	assert.Assert(t, info != nil)
+
 	return c
 }
 
@@ -257,7 +268,8 @@ func TestIntegration_WithOption_WithUpdateMaxDocs_OnlyNDocumentsUpdated(t *testi
 		esv8.WithUpdateWaitForCompletion(true),
 	)
 	assert.NilError(t, err)
-	assert.Equal(t, int64(2), res.Updated)
+	assert.Assert(t, res.Updated != nil)
+	assert.Equal(t, int64(2), *res.Updated)
 }
 
 // ---------------------------------------------------------------------------
@@ -285,7 +297,8 @@ func TestIntegration_WithOption_WithDeleteMaxDocs_OnlyNDocumentsDeleted(t *testi
 		esv8.WithDeleteWaitForCompletion(true),
 	)
 	assert.NilError(t, err)
-	assert.Equal(t, int64(2), res.Deleted)
+	assert.Assert(t, res.Deleted != nil)
+	assert.Equal(t, int64(2), *res.Deleted)
 }
 
 // ---------------------------------------------------------------------------
@@ -315,7 +328,8 @@ func TestIntegration_WithOption_WithUpdateConflicts_ProceedReportsConflictsInste
 	assert.NilError(t, err)
 	// On a single-node cluster there are no concurrent conflicts; the option
 	// must not cause the request itself to fail.
-	assert.Equal(t, int64(3), res.Updated)
+	assert.Assert(t, res.Updated != nil)
+	assert.Equal(t, int64(3), *res.Updated)
 }
 
 // WithDeleteConflicts(proceed) continues a DeleteByQuery even when version
@@ -339,7 +353,8 @@ func TestIntegration_WithOption_WithDeleteConflicts_ProceedReportsConflictsInste
 		esv8.WithDeleteWaitForCompletion(true),
 	)
 	assert.NilError(t, err)
-	assert.Equal(t, int64(3), res.Deleted)
+	assert.Assert(t, res.Deleted != nil)
+	assert.Equal(t, int64(3), *res.Deleted)
 }
 
 // ---------------------------------------------------------------------------

@@ -78,30 +78,26 @@ func TestFieldNames_Single(t *testing.T) {
 func TestRefreshInterval_String(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
+	tests := map[string]struct {
 		interval estype.RefreshInterval
 		want     string
 	}{
-		{
-			name:     "disabled",
+		"disabled": {
 			interval: estype.RefreshIntervalDisable,
 			want:     "-1",
 		},
-		{
-			name:     "not set",
+		"not set": {
 			interval: estype.RefreshIntervalNotSet,
 			want:     "",
 		},
-		{
-			name:     "default 1s",
+		"default 1s": {
 			interval: estype.RefreshIntervalDefault,
 			want:     "1s",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, tt.interval.String())
 		})
@@ -111,30 +107,26 @@ func TestRefreshInterval_String(t *testing.T) {
 func TestRefreshInterval_ESTypeDuration(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name     string
+	tests := map[string]struct {
 		interval estype.RefreshInterval
 		want     any
 	}{
-		{
-			name:     "disabled returns -1 string",
+		"disabled returns -1 string": {
 			interval: estype.RefreshIntervalDisable,
 			want:     "-1",
 		},
-		{
-			name:     "not set returns empty string",
+		"not set returns empty string": {
 			interval: estype.RefreshIntervalNotSet,
 			want:     "",
 		},
-		{
-			name:     "default returns 1s string",
+		"default returns 1s string": {
 			interval: estype.RefreshIntervalDefault,
 			want:     "1s",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			assert.Equal(t, tt.want, tt.interval.ESTypeDuration())
 		})
@@ -144,36 +136,31 @@ func TestRefreshInterval_ESTypeDuration(t *testing.T) {
 func TestParseRefreshInterval(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name    string
+	tests := map[string]struct {
 		input   string
 		want    estype.RefreshInterval
 		wantErr bool
 	}{
-		{
-			name:  "disabled",
+		"disabled": {
 			input: "-1",
 			want:  estype.RefreshIntervalDisable,
 		},
-		{
-			name:  "not set",
+		"not set": {
 			input: "",
 			want:  estype.RefreshIntervalNotSet,
 		},
-		{
-			name:  "1 second",
+		"1 second": {
 			input: "1s",
 			want:  estype.RefreshIntervalDefault,
 		},
-		{
-			name:    "invalid",
+		"invalid": {
 			input:   "not-a-duration",
 			wantErr: true,
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got, err := estype.ParseRefreshInterval(tt.input)
 			if tt.wantErr {

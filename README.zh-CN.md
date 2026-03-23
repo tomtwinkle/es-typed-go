@@ -263,7 +263,7 @@ import (
 func main() {
 	client, err := esv8.NewClientWithLogger(
 		es8.Config{
-			Addresses: []string{"http://localhost:9200"},
+			Addresses: []string{"http://localhost:19200"}, // 本地 compose.yaml 的 v8 默认端口
 		},
 		slog.Default(),
 	)
@@ -692,7 +692,7 @@ const (
 func main() {
 	// 创建客户端
 	client, err := esv8.NewClientWithLogger(
-		es8.Config{Addresses: []string{"http://localhost:9200"}},
+		es8.Config{Addresses: []string{"http://localhost:19200"}}, // 本地 compose.yaml 的 v8 默认端口
 		slog.Default(),
 	)
 	if err != nil {
