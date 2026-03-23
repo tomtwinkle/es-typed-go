@@ -48,20 +48,6 @@ func newESClient(typedClient *es8.TypedClient) *esClient {
 	}
 }
 
-// NewClientWithLogger constructs an ESClient backed by the Elasticsearch v8 typed client
-// using a custom slog.Logger.
-func NewClientWithLogger(config es8.Config, logger *slog.Logger) (ESClient, error) {
-	typedClient, err := es8.NewTypedClient(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create elasticsearch TypedClient: %w", err)
-	}
-	c := newESClient(typedClient)
-	if logger != nil {
-		c.logger = logger
-	}
-	return c, nil
-}
-
 func (c *esClient) Info(ctx context.Context) (*info.Response, error) {
 	return c.typedClient.Info().Do(ctx)
 }

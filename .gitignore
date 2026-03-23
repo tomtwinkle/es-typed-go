@@ -34,3 +34,9 @@ go.work.sum
 
 # Sessions
 .sessions/
+
+# binary
+quickstart
+!quickstart/
+okassertcheck
+!okassertcheck/

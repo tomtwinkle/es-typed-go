@@ -25,8 +25,8 @@ go generate ./...
 
 # Generate field constants from a mapping file
 go tool estyped -mapping mapping.json -out model.go -package model
-# Struct mode (grouped access via model.Sample.FieldName)
-go tool estyped -mapping mapping.json -out model.go -package model -name Sample
+# Grouped mode (grouped access via model.Sample.FieldName)
+go tool estyped -mapping mapping.json -out model.go -package model -group Sample
 # Generate field constants from a Go struct with JSON tags
 go tool estyped -struct MyType -out model.go -package model
 ```
@@ -133,6 +133,7 @@ sort := query.NewSort().
 | Search API guidance | Prefer `Search[T](...)` for normal application searches; reserve `SearchRaw(...)` for advanced escape-hatch scenarios |
 | SearchBuilder output | `query.NewSearch().Build()` returns `query.SearchParams`; map it into `esv8.SearchParams` / `esv9.SearchParams` before calling `Search[T](...)` |
 | Documentation style | No emoji; no excessive bold for inline emphasis (bold is reserved for list-item headings and table headers) |
+| Session notes | After each meaningful work step, write or update a compressed session note under `.sessions/yyyymmddhhmmss_title.md` so the current context can be resumed later |
 
 ---
 

@@ -29,7 +29,7 @@ func (f FieldType) ESTypeName() string { return string(f) }
 
 // Analyzer is a named Elasticsearch analyzer.
 // Use a typed Analyzer value instead of a plain string to avoid typos in
-// analyzer names when defining field mappings via [ESMappingProvider].
+// analyzer names when defining field mappings via [MappingProvider].
 type Analyzer string
 
 // String returns the string representation of the Analyzer.

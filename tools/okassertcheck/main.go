@@ -10,16 +10,26 @@ import (
 	"golang.org/x/tools/go/analysis/unitchecker"
 )
 
+// Analyzer reports unchecked type assertions and requires explicit `ok` handling.
+//
+// In test files and external test packages, the analyzer accepts either positive
+// or negative checks as long as the `ok` result is explicitly referenced. In
+// non-test packages, it also accepts guard patterns that terminate control flow,
+// such as `return`, `continue`, or `panic`, and ignores the analyzer's own
+// implementation file to avoid self-reporting on intentionally analyzed cases.
 var Analyzer = &analysis.Analyzer{
 	Name: "okassertcheck",
 	Doc:  "reports unchecked type assertions and requires explicit ok handling; tolerant of continue-style filtering in non-test packages and ignores self-analysis package",
 	Run:  run,
 }
 
+// main runs the okassertcheck analyzer as a singlechecker-compatible command.
 func main() {
 	unitchecker.Main(Analyzer)
 }
 
+// run inspects each file in the current analysis pass and reports unchecked
+// type assertions that do not satisfy the package-specific guard rules.
 func run(pass *analysis.Pass) (any, error) {
 	for _, file := range pass.Files {
 		filename := pass.Fset.File(file.Pos()).Name()
@@ -69,6 +79,7 @@ func run(pass *analysis.Pass) (any, error) {
 	return nil, nil
 }
 
+// analyzedFile captures file-level context that influences analyzer rules.
 type analyzedFile struct {
 	isTestFile     bool
 	isTestPackage  bool
@@ -77,27 +88,34 @@ type analyzedFile struct {
 	normalizedPath string
 }
 
+// isTestFile reports whether the filename belongs to a Go test file.
 func isTestFile(name string) bool {
 	return strings.HasSuffix(filepath.Base(name), "_test.go")
 }
 
+// isTestPackage reports whether the AST file belongs to an external test package.
 func isTestPackage(file *ast.File) bool {
 	return strings.HasSuffix(file.Name.Name, "_test")
 }
 
+// isAnalyzerSelfFile reports whether the path is this analyzer's own source file.
 func isAnalyzerSelfFile(name string) bool {
 	path := normalizePath(name)
 	return strings.HasSuffix(path, "/tools/okassertcheck/main.go")
 }
 
+// normalizePath converts a path to slash-separated form and removes duplicate separators.
 func normalizePath(name string) string {
 	return strings.ReplaceAll(filepath.ToSlash(name), "//", "/")
 }
 
+// isTestContext reports whether test-specific assertion-handling rules should apply.
 func isTestContext(info analyzedFile) bool {
 	return info.isTestFile || info.isTestPackage
 }
 
+// checkIfStmtTypeAssertion reports whether a type assertion used in an if
+// statement is explicitly guarded in an allowed form.
 func checkIfStmtTypeAssertion(expr *ast.TypeAssertExpr, ifStmt *ast.IfStmt, info analyzedFile) bool {
 	assign, ok := ifStmt.Init.(*ast.AssignStmt)
 	if !ok {
@@ -138,6 +156,8 @@ func checkIfStmtTypeAssertion(expr *ast.TypeAssertExpr, ifStmt *ast.IfStmt, info
 	return false
 }
 
+// checkAssignStmtTypeAssertion reports whether a two-result type assertion
+// assigned outside an if init is followed by an allowed guard or explicit use.
 func checkAssignStmtTypeAssertion(expr *ast.TypeAssertExpr, assign *ast.AssignStmt, path []ast.Node, info analyzedFile) bool {
 	if len(assign.Rhs) != 1 || len(assign.Lhs) != 2 || assign.Rhs[0] != expr {
 		return false
@@ -159,6 +179,8 @@ func checkAssignStmtTypeAssertion(expr *ast.TypeAssertExpr, assign *ast.AssignSt
 	return hasFollowingGuard(path, assign, okName)
 }
 
+// identName returns the identifier name for expr, or an empty string when expr
+// is not an identifier.
 func identName(expr ast.Expr) string {
 	id, ok := expr.(*ast.Ident)
 	if !ok {
@@ -167,6 +189,8 @@ func identName(expr ast.Expr) string {
 	return id.Name
 }
 
+// conditionReferencesIdent reports whether cond contains a reference to the
+// named identifier.
 func conditionReferencesIdent(cond ast.Expr, name string) bool {
 	if name == "" || name == "_" {
 		return false
@@ -184,6 +208,8 @@ func conditionReferencesIdent(cond ast.Expr, name string) bool {
 	return found
 }
 
+// negatedIdent returns whether expr is a logical negation of an identifier and,
+// if so, the identifier name.
 func negatedIdent(expr ast.Expr) (bool, string) {
 	unary, ok := expr.(*ast.UnaryExpr)
 	if !ok || unary.Op != token.NOT {
@@ -196,6 +222,8 @@ func negatedIdent(expr ast.Expr) (bool, string) {
 	return true, id.Name
 }
 
+// okIdentUsedAfter reports whether the ok identifier is referenced by a later
+// statement in the same enclosing block.
 func okIdentUsedAfter(path []ast.Node, stmt ast.Stmt, okName string) bool {
 	if okName == "" || okName == "_" {
 		return false
@@ -214,6 +242,8 @@ func okIdentUsedAfter(path []ast.Node, stmt ast.Stmt, okName string) bool {
 	return false
 }
 
+// sameStatementNegativeGuard reports whether stmt is enclosed by an if block
+// guarded with `!ok` whose body terminates control flow.
 func sameStatementNegativeGuard(path []ast.Node, stmt ast.Stmt, okName string) bool {
 	if okName == "" || okName == "_" {
 		return false
@@ -239,6 +269,7 @@ func sameStatementNegativeGuard(path []ast.Node, stmt ast.Stmt, okName string) b
 	return false
 }
 
+// statementInBlock reports whether stmt appears directly in block.
 func statementInBlock(block *ast.BlockStmt, stmt ast.Stmt) bool {
 	if block == nil {
 		return false
@@ -251,6 +282,8 @@ func statementInBlock(block *ast.BlockStmt, stmt ast.Stmt) bool {
 	return false
 }
 
+// hasFollowingGuard reports whether a valid guard for okName appears after stmt
+// in the same enclosing block before any unsafe use.
 func hasFollowingGuard(path []ast.Node, stmt ast.Stmt, okName string) bool {
 	block, stmtIndex := enclosingBlockAndStmtIndex(path, stmt)
 	if block == nil || stmtIndex < 0 {
@@ -280,6 +313,8 @@ func hasFollowingGuard(path []ast.Node, stmt ast.Stmt, okName string) bool {
 	return false
 }
 
+// guardUsesOKAndTerminates reports whether ifStmt uses okName as an accepted
+// control-flow guard.
 func guardUsesOKAndTerminates(ifStmt *ast.IfStmt, okName string) bool {
 	if ifStmt == nil {
 		return false
@@ -301,6 +336,8 @@ func guardUsesOKAndTerminates(ifStmt *ast.IfStmt, okName string) bool {
 	return false
 }
 
+// elseTerminatesControlFlow reports whether the else branch always terminates
+// control flow.
 func elseTerminatesControlFlow(ifStmt *ast.IfStmt) bool {
 	if ifStmt == nil {
 		return false
@@ -316,6 +353,8 @@ func elseTerminatesControlFlow(ifStmt *ast.IfStmt) bool {
 	}
 }
 
+// positiveBodyContinuesAfterFiltering reports whether a positive ok branch ends
+// with `continue`, allowing the loop to filter non-matching values.
 func positiveBodyContinuesAfterFiltering(block *ast.BlockStmt) bool {
 	if block == nil || len(block.List) == 0 {
 		return false
@@ -329,6 +368,8 @@ func positiveBodyContinuesAfterFiltering(block *ast.BlockStmt) bool {
 	return branch.Tok == token.CONTINUE
 }
 
+// nestedIfStmtUsesImmediateNegativeContinueGuard reports whether stmt is an if
+// statement that guards `!ok` and immediately terminates control flow.
 func nestedIfStmtUsesImmediateNegativeContinueGuard(stmt ast.Stmt, okName string) bool {
 	ifStmt, ok := stmt.(*ast.IfStmt)
 	if !ok || ifStmt.Init != nil {
@@ -343,6 +384,8 @@ func nestedIfStmtUsesImmediateNegativeContinueGuard(stmt ast.Stmt, okName string
 	return blockTerminatesControlFlow(ifStmt.Body)
 }
 
+// blockTerminatesControlFlow reports whether the final statement in block
+// unconditionally terminates the current control-flow path.
 func blockTerminatesControlFlow(block *ast.BlockStmt) bool {
 	if block == nil || len(block.List) == 0 {
 		return false
@@ -368,6 +411,7 @@ func blockTerminatesControlFlow(block *ast.BlockStmt) bool {
 	}
 }
 
+// ifStmtTerminates reports whether both branches of ifStmt terminate control flow.
 func ifStmtTerminates(ifStmt *ast.IfStmt) bool {
 	if ifStmt == nil {
 		return false
@@ -380,6 +424,8 @@ func ifStmtTerminates(ifStmt *ast.IfStmt) bool {
 	return elseTerminatesControlFlow(ifStmt)
 }
 
+// enclosingBlockAndStmtIndex returns the nearest enclosing block for stmt and
+// its statement index within that block.
 func enclosingBlockAndStmtIndex(path []ast.Node, stmt ast.Stmt) (*ast.BlockStmt, int) {
 	for i := len(path) - 1; i >= 0; i-- {
 		block, ok := path[i].(*ast.BlockStmt)
@@ -395,6 +441,8 @@ func enclosingBlockAndStmtIndex(path []ast.Node, stmt ast.Stmt) (*ast.BlockStmt,
 	return nil, -1
 }
 
+// stmtUsesIdent reports whether stmt references the named identifier anywhere
+// within its subtree.
 func stmtUsesIdent(stmt ast.Stmt, name string) bool {
 	used := false
 	ast.Inspect(stmt, func(n ast.Node) bool {
@@ -408,6 +456,8 @@ func stmtUsesIdent(stmt ast.Stmt, name string) bool {
 	return used
 }
 
+// findParentStmtWithPath locates the nearest enclosing statement for target and
+// returns both that statement and the AST path leading to target.
 func findParentStmtWithPath(file *ast.File, target ast.Node) (ast.Stmt, []ast.Node) {
 	var result ast.Stmt
 	var resultPath []ast.Node

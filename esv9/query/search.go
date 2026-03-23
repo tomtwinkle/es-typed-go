@@ -1,6 +1,7 @@
 package query
 
 import (
+	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 )
 
@@ -14,6 +15,44 @@ type SearchParams struct {
 	ScriptFields map[string]types.ScriptField
 	Size         int
 	From         int
+}
+
+func (p SearchParams) ToRequest() *search.Request {
+	req := search.NewRequest()
+
+	req.Query = &p.Query
+
+	if len(p.Sort) > 0 {
+		req.Sort = p.Sort
+	}
+	if len(p.Aggregations) > 0 {
+		req.Aggregations = p.Aggregations
+	}
+	if p.Highlight != nil {
+		req.Highlight = p.Highlight
+	}
+	if p.Collapse != nil {
+		req.Collapse = p.Collapse
+	}
+	if len(p.ScriptFields) > 0 {
+		req.ScriptFields = p.ScriptFields
+	}
+
+	if p.Size > 0 {
+		size := p.Size
+		req.Size = &size
+	}
+
+	if p.From > 0 {
+		from := p.From
+		req.From = &from
+	}
+
+	timeout := "10s"
+	req.Timeout = &timeout
+	req.Source_ = true
+
+	return req
 }
 
 // ISearchBuilder is a self-referential type constraint for search builders.

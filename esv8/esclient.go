@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"time"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
@@ -167,6 +168,18 @@ type ESClient interface {
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-create-index.html
 	CreateIndex(ctx context.Context, indexName estype.Index, settings *types.IndexSettings, mappings *types.TypeMapping) (*idxcreate.Response, error)
 
+	// CreateIndexFromDefinitions creates an index from estype-owned settings and mapping definitions.
+	//
+	// Converts library-owned settings and mapping values into Elasticsearch typed request objects internally so application code does not need to depend on typed client request structs directly.
+	CreateIndexFromDefinitions(ctx context.Context, indexName estype.Index, settings estype.Settings, mapping estype.Mapping) (*idxcreate.Response, error)
+
+	// CreateIndexFromProviders creates an index from a model/provider-owned estype
+	// configuration value that provides both settings and mapping definitions.
+	//
+	// Reads settings and mapping from a unified [estype.ESConfig] value, then
+	// converts them internally before creating the index.
+	CreateIndexFromProviders(ctx context.Context, indexName estype.Index, provider estype.ESConfig) (*idxcreate.Response, error)
+
 	// DeleteIndex deletes the specified index.
 	//
 	// Deletes an index, permanently removing all its documents and metadata.
@@ -252,8 +265,8 @@ type ESClient interface {
 	UpdateDocument(ctx context.Context, indexName estype.Index, id string, req *update.Request) (*update.Response, error)
 
 	// SearchRaw executes a search using a fully-constructed search.Request.
-	// Use this as the low-level escape hatch beside the high-level Search[T],
-	// SearchDocuments[T], and SearchOne[T] helpers.
+	// Use this as the low-level escape hatch beside the high-level Search[T]
+	// and SearchDocuments[T] helpers.
 	//
 	// This is intended for advanced scenarios such as kNN search,
 	// point-in-time, search_after, or custom source filtering that are not yet
@@ -1076,6 +1089,20 @@ func NewClient(config es8.Config) (ESClient, error) {
 		return nil, fmt.Errorf("failed to create elasticsearch TypedClient: %w", err)
 	}
 	return newESClient(typedClient), nil
+}
+
+// NewClient constructs an ESClient backed by the Elasticsearch v8 typed client
+// using a custom slog.Logger.
+func NewClientWithLogger(config es8.Config, logger *slog.Logger) (ESClient, error) {
+	typedClient, err := es8.NewTypedClient(config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create elasticsearch TypedClient: %w", err)
+	}
+	c := newESClient(typedClient)
+	if logger != nil {
+		c.logger = logger
+	}
+	return c, nil
 }
 
 // NewSpecClient constructs an ESClientSpec backed by the Elasticsearch v8 typed client.
