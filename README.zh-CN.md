@@ -292,14 +292,14 @@ var index estype.Index = "my-index"     // Elasticsearch 索引名
 var alias estype.Alias = "my-alias"     // Elasticsearch 别名
 
 // OK — 正确用法
-_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, alias, esv8.SearchParams{})
 client.DeleteIndex(ctx, index)
 
 // 编译错误 — 在期望 Alias 的位置传入了 Field
-_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, field, esv8.SearchParams{})
 
 // 编译错误 — 在期望 Alias 的位置传入了 Index
-_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchRequest{})
+_, _ = esv8.Search[MyDocument](ctx, client, index, esv8.SearchParams{})
 ```
 
 ### 查询构建器
@@ -451,7 +451,7 @@ aggs := query.Aggs(
 
 ### SearchBuilder
 
-`query.NewSearch()` 提供 ActiveRecord 风格的构建器，将查询、排序、聚合和分页合并为单一的类型化 `query.SearchRequest` 值。
+`query.NewSearch()` 提供 ActiveRecord 风格的构建器，将查询、排序、聚合和分页组合为单个 `query.SearchParams` 值，然后可映射到 `esv8.SearchParams` 供 `esv8.Search(...)` 使用。
 
 ```go
 import (
@@ -488,16 +488,15 @@ params := query.NewSearch().
 	Offset(0).
 	Build()
 
-resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
-	Query:          params.Query,
-	Sort:           params.Sort,
-	Aggregations:   params.Aggregations,
-	Highlight:      params.Highlight,
-	Collapse:       params.Collapse,
-	ScriptFields:   params.ScriptFields,
-	TrackTotalHits: params.TrackTotalHits,
-	Size:           params.Size,
-	From:           params.From,
+resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
+	Query:        params.Query,
+	Sort:         params.Sort,
+	Aggregations: params.Aggregations,
+	Highlight:    params.Highlight,
+	Collapse:     params.Collapse,
+	ScriptFields: params.ScriptFields,
+	Size:         params.Size,
+	From:         params.From,
 })
 ```
 
@@ -676,7 +675,7 @@ specClient, _ := esv8.NewSpecClient(config)
 - `UpdateDocument(ctx, index, id, req)` — 部分更新
 
 **搜索**
-- `esv8.Search[T](ctx, client, alias, req)` — 执行高层类型化搜索 API
+- `esv8.Search[T](ctx, client, alias, params)` — 执行高层类型安全搜索 API
 - `SearchRaw(ctx, alias, req)` — 执行原始 `search.Request`
 
 **重建索引**
@@ -756,16 +755,15 @@ func main() {
 	ctx := context.Background()
 	alias := estype.Alias("my-alias")
 
-	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchRequest{
-		Query:          params.Query,
-		Sort:           params.Sort,
-		Aggregations:   params.Aggregations,
-		Highlight:      params.Highlight,
-		Collapse:       params.Collapse,
-		ScriptFields:   params.ScriptFields,
-		TrackTotalHits: params.TrackTotalHits,
-		Size:           params.Size,
-		From:           params.From,
+	resp, err := esv8.Search[Product](ctx, client, alias, esv8.SearchParams{
+		Query:        params.Query,
+		Sort:         params.Sort,
+		Aggregations: params.Aggregations,
+		Highlight:    params.Highlight,
+		Collapse:     params.Collapse,
+		ScriptFields: params.ScriptFields,
+		Size:         params.Size,
+		From:         params.From,
 	})
 	if err != nil {
 		panic(err)
@@ -784,10 +782,12 @@ func main() {
 		}
 	}
 
-	rawResp, err := client.SearchRaw(ctx, alias, (&esv8.SearchRequest{
-		Query: params.Query,
-		Size:  1,
-	}).ToTypedRequest())
+	rawReq := search.NewRequest()
+	rawReq.Query = &params.Query
+	rawSize := 1
+	rawReq.Size = &rawSize
+
+	rawResp, err := client.SearchRaw(ctx, alias, rawReq)
 	if err != nil {
 		panic(err)
 	}
@@ -814,6 +814,32 @@ import (
 ```
 
 所有构建器、辅助函数和属性构造器在两个版本中具有相同的签名。对 `esv8/` 的变更始终会同步到 `esv9/`。
+
+高层类型化搜索辅助函数同样保持一致：
+
+```go
+// v8
+v8Resp, err := esv8.Search[Product](ctx, v8Client, alias, esv8.SearchParams{
+	Query: params.Query,
+})
+
+// v9
+v9Resp, err := esv9.Search[Product](ctx, v9Client, alias, esv9.SearchParams{
+	Query: params.Query,
+})
+```
+
+便捷辅助函数也是如此：
+
+```go
+v8Docs, err := esv8.SearchDocuments[Product](ctx, v8Client, alias, esv8.SearchParams{
+	Query: params.Query,
+})
+
+v9Doc, found, err := esv9.SearchOne[Product](ctx, v9Client, alias, esv9.SearchParams{
+	Query: params.Query,
+})
+```
 
 ## 仓库结构
 

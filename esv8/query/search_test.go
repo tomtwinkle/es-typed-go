@@ -134,9 +134,9 @@ func TestSearchBuilder_LimitAndOffset(t *testing.T) {
 
 func TestSearchBuilder_Aggregation(t *testing.T) {
 	t.Parallel()
-	aggs := query.NewAggregations().
-		Terms("by_category", FieldCategory).
-		Build()
+	aggs := query.Aggs(
+		query.StringTermsAgg("by_category", FieldCategory),
+	).Build()
 
 	params := query.NewSearch().
 		Aggregation(aggs).
@@ -207,9 +207,9 @@ func TestSearchBuilder_CombinedBoolClauses(t *testing.T) {
 func TestSearchBuilder_FullChaining(t *testing.T) {
 	t.Parallel()
 	// Demonstrates the ActiveRecord-style fluent API.
-	aggs := query.NewAggregations().
-		DateHistogram("by_month", FieldDate, calendarinterval.Month).
-		Build()
+	aggs := query.Aggs(
+		query.DateHistogramAgg("by_month", FieldDate, calendarinterval.Month),
+	).Build()
 
 	sorts := query.NewSort().
 		Field(FieldDate, sortorder.Desc).

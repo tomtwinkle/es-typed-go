@@ -354,18 +354,18 @@ func TestIntegration_Spec_ScrollAndClear(t *testing.T) {
 	assert.NilError(t, err)
 	_, _ = client.IndicesRefresh(ctx)
 
-	// Initiate a scroll using SearchWithRequest – Scroll is a URL parameter set
-	// via the builder, not via the request body. We use SearchWithRequest here,
+	// Initiate a scroll using SearchRaw – Scroll is a URL parameter set
+	// via the builder, not via the request body. We use SearchRaw here,
 	// which does not set scroll, so we won't get a valid scroll_id back. Instead
 	// we verify that calling Scroll with an empty scroll_id returns a well-formed
 	// ES error (not a panic or transport error).
-	scrollRes, err := client.SearchWithRequest(ctx, estype.Alias(idx), &coresearch.Request{
+	scrollRes, err := client.SearchRaw(ctx, estype.Alias(idx), &coresearch.Request{
 		Query: &types.Query{MatchAll: &types.MatchAllQuery{}},
 		Size:  func() *int { n := 2; return &n }(),
 	})
 	assert.NilError(t, err)
 	assert.Assert(t, scrollRes != nil)
-	t.Logf("SearchWithRequest returned %d hits", scrollRes.Hits.Total.Value)
+	t.Logf("SearchRaw returned %d hits", scrollRes.Hits.Total.Value)
 
 	// Attempt ClearScroll with _all – this is a fire-and-forget cleanup.
 	clearReq := clearscroll.Request{ScrollId: []string{"_all"}}

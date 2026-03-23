@@ -146,7 +146,6 @@ func TestESClientSpec_SpecMethodsPresent(t *testing.T) {
 		"IngestDeletePipeline",
 		// Already present in ESClient (via embedding)
 		"Info",
-		"Search",
 		"Reindex",
 	}
 

@@ -267,67 +267,14 @@ func (c *esClient) UpdateDocument(ctx context.Context, indexName estype.Index, i
 	return c.typedClient.Update(indexName.String(), id).Request(req).Do(ctx)
 }
 
-func (c *esClient) Search(
-	ctx context.Context,
-	aliasName estype.Alias,
-	query types.Query,
-	limit int,
-	offset int,
-	sort []types.SortCombinations,
-	aggregations map[string]types.Aggregations,
-	highlight *types.Highlight,
-	collapse *types.FieldCollapse,
-	scriptFields map[string]types.ScriptField,
-) (*search.Response, error) {
-	req := search.NewRequest()
-	req.Query = &query
-	req.Size = &limit
-	if offset > 0 {
-		req.From = &offset
-	}
-	if len(sort) > 0 {
-		req.Sort = sort
-	}
-	if len(aggregations) > 0 {
-		req.Aggregations = aggregations
-	}
-	if highlight != nil {
-		req.Highlight = highlight
-	}
-	if collapse != nil {
-		req.Collapse = collapse
-	}
-	if len(scriptFields) > 0 {
-		req.ScriptFields = scriptFields
-	}
-	timeout := "10s"
-	req.Timeout = &timeout
-	req.Source_ = true
-
-	c.logger.DebugContext(ctx, "Elasticsearch Search Request",
-		slog.String("alias", aliasName.String()),
-	)
-
-	res, err := c.typedClient.Search().Index(aliasName.String()).Request(req).Do(ctx)
-	if err != nil {
-		searchErr := c.buildSearchError(err)
-		c.logger.ErrorContext(ctx, "Elasticsearch Search Request failed",
-			slog.String("alias", aliasName.String()),
-			slog.Any("error", searchErr),
-		)
-		return nil, searchErr
-	}
-	return res, nil
-}
-
-func (c *esClient) SearchWithRequest(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error) {
-	c.logger.DebugContext(ctx, "Elasticsearch SearchWithRequest",
+func (c *esClient) SearchRaw(ctx context.Context, aliasName estype.Alias, req *search.Request) (*search.Response, error) {
+	c.logger.DebugContext(ctx, "Elasticsearch SearchRaw",
 		slog.String("alias", aliasName.String()),
 	)
 	res, err := c.typedClient.Search().Index(aliasName.String()).Request(req).Do(ctx)
 	if err != nil {
 		searchErr := c.buildSearchError(err)
-		c.logger.ErrorContext(ctx, "Elasticsearch SearchWithRequest failed",
+		c.logger.ErrorContext(ctx, "Elasticsearch SearchRaw failed",
 			slog.String("alias", aliasName.String()),
 			slog.Any("error", searchErr),
 		)
