@@ -47,8 +47,10 @@ func (p SearchParams) ToRequest() *search.Request {
 		req.ScriptFields = p.ScriptFields
 	}
 
-	size := p.Size
-	req.Size = &size
+	if p.Size > 0 {
+		size := p.Size
+		req.Size = &size
+	}
 
 	if p.From > 0 {
 		from := p.From
