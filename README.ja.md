@@ -102,8 +102,6 @@ func main() {
 
 ### コントリビューター向け
 - [Contributing Guide](docs/contributing.md)
-- [コントリビューションガイド](docs/contributing.ja.md)
-- [贡献指南](docs/contributing.zh-CN.md)
 
 ## バージョンサポート
 

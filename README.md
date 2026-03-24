@@ -99,8 +99,6 @@ Detailed documentation has been moved under `docs/`.
 
 ### Contributor guides
 - [Contributing Guide](docs/contributing.md)
-- [コントリビューションガイド](docs/contributing.ja.md)
-- [贡献指南](docs/contributing.zh-CN.md)
 
 ## Version support
 

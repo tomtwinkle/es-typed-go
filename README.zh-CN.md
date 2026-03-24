@@ -103,8 +103,6 @@ func main() {
 
 ### 面向贡献者
 - [Contributing Guide](docs/contributing.md)
-- [コントリビューションガイド](docs/contributing.ja.md)
-- [贡献指南](docs/contributing.zh-CN.md)
 
 ## 版本支持
 

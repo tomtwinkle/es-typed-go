@@ -7,9 +7,9 @@ The top-level `README*` files are intentionally focused on library users: instal
 ## For library users
 
 ### Reference
-- [Search Guide](search-guide.md) — Detailed guide to typed search helpers, counts, pagination, and raw search usage
-- [検索ガイド](search-guide.ja.md) — 型付き検索 helper、件数取得、ページネーション、raw search の詳細ガイド（日本語）
-- [搜索指南](search-guide.zh-CN.md) — typed search helper、计数、分页与 raw search 用法详解（简体中文）
+- [Search Guide](search-guide.md) — Concise search API selection notes
+- [検索ガイド](search-guide.ja.md) — 検索 API の使い分けを簡潔に整理したメモ（日本語）
+- [搜索指南](search-guide.zh-CN.md) — 搜索 API 选择指引的简要说明（简体中文）
 - [Property Reference](property-reference.md) — Complete list of supported property builders and their functional options
 - [プロパティリファレンス](property-reference.ja.md) — 全プロパティ型とオプションの一覧（日本語）
 
@@ -21,9 +21,7 @@ The top-level `README*` files are intentionally focused on library users: instal
 ## For contributors
 
 ### Contribution guides
-- [Contributing Guide](contributing.md) — Development workflow, repository rules, testing, generators, internal tools, and PR checklist
-- [コントリビューションガイド](contributing.ja.md) — 開発フロー、テスト、内部ツール、保守ルール
-- [贡献指南](contributing.zh-CN.md) — 开发流程、测试、代码生成与仓库规则
+- [Contributing Guide](contributing.md) — Development prerequisites, local Elasticsearch setup, build/test commands, and validation steps
 
 ## Documentation policy
 
@@ -40,10 +38,9 @@ Keep these focused on library users:
 ### `docs/`
 Place detailed or contributor-oriented material here:
 - reference documentation
-- development workflow
 - testing instructions
-- generator maintenance notes
-- repository conventions
+- environment setup details
+- reference documentation
 - internal tooling guidance
 
 If a document is mainly useful for contributors or maintainers, it belongs in `docs/`, not in the top-level README.
