@@ -3,6 +3,8 @@ package esv8
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
 	searchapi "github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
@@ -162,6 +164,197 @@ func TestSearchHelpers_WithDirectParams(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestSearchParams_ToRequest_AllOptionalFields(t *testing.T) {
+	t.Parallel()
+
+	highlight := &types.Highlight{
+		Fields: map[string]types.HighlightField{
+			"title": {},
+		},
+	}
+	collapse := &types.FieldCollapse{
+		Field: "category",
+	}
+	scriptFields := map[string]types.ScriptField{
+		"score_x2": {},
+	}
+	aggs := map[string]types.Aggregations{
+		"avg_price": {
+			Avg: types.NewAverageAggregation(),
+		},
+	}
+	sorts := []types.SortCombinations{
+		types.SortOptions{
+			SortOptions: map[string]types.FieldSort{
+				"date": {},
+			},
+		},
+	}
+
+	req := (SearchParams{
+		Query:        query.TermValue(estype.Field("status"), "active"),
+		Sort:         sorts,
+		Aggregations: aggs,
+		Highlight:    highlight,
+		Collapse:     collapse,
+		ScriptFields: scriptFields,
+		Size:         3,
+		From:         7,
+	}).ToRequest()
+
+	assert.Assert(t, req != nil)
+	assert.Assert(t, req.Query != nil)
+	assert.DeepEqual(t, sorts, req.Sort)
+	assert.DeepEqual(t, aggs, req.Aggregations)
+	assert.Equal(t, highlight, req.Highlight)
+	assert.Equal(t, collapse, req.Collapse)
+	assert.DeepEqual(t, scriptFields, req.ScriptFields)
+	assert.Assert(t, req.Size != nil)
+	assert.Equal(t, 3, *req.Size)
+	assert.Assert(t, req.From != nil)
+	assert.Equal(t, 7, *req.From)
+	assert.Equal(t, true, req.Source_)
+	assert.Assert(t, req.Timeout != nil)
+	assert.Equal(t, "10s", *req.Timeout)
+}
+
+func TestSearch_EmptyHitsAndNilTotal(t *testing.T) {
+	t.Parallel()
+
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		assert.Equal(t, estype.Alias("products"), aliasName)
+		assert.Assert(t, req != nil)
+
+		return &searchapi.Response{
+			Aggregations: map[string]types.Aggregate{},
+			Hits: types.HitsMetadata{
+				Hits: nil,
+			},
+		}, nil
+	})
+
+	resp, err := Search[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.NilError(t, err)
+	assert.Assert(t, resp != nil)
+	assert.Equal(t, int64(0), resp.Total)
+	assert.Equal(t, 0, len(resp.Hits))
+	assert.Assert(t, resp.Raw != nil)
+}
+
+func TestSearch_DecodeErrorIncludesHitID(t *testing.T) {
+	t.Parallel()
+
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		id := "broken-doc"
+		return &searchapi.Response{
+			Hits: types.HitsMetadata{
+				Hits: []types.Hit{
+					{
+						Id_:     &id,
+						Index_:  "products-000001",
+						Source_: []byte("{"),
+					},
+				},
+			},
+		}, nil
+	})
+
+	resp, err := Search[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.Assert(t, resp == nil)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), `decode search hit "broken-doc"`))
+}
+
+func TestSearch_DecodeErrorWithoutHitID(t *testing.T) {
+	t.Parallel()
+
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		return &searchapi.Response{
+			Hits: types.HitsMetadata{
+				Hits: []types.Hit{
+					{
+						Index_:  "products-000001",
+						Source_: []byte("{"),
+					},
+				},
+			},
+		}, nil
+	})
+
+	resp, err := Search[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.Assert(t, resp == nil)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, strings.Contains(err.Error(), `decode search hit ""`))
+}
+
+func TestSearch_AllowsHitWithoutSourceIDOrScore(t *testing.T) {
+	t.Parallel()
+
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		return &searchapi.Response{
+			Hits: types.HitsMetadata{
+				Total: &types.TotalHits{Value: 1},
+				Hits: []types.Hit{
+					{
+						Index_: "products-000001",
+					},
+				},
+			},
+		}, nil
+	})
+
+	resp, err := Search[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.NilError(t, err)
+	assert.Assert(t, resp != nil)
+	assert.Equal(t, int64(1), resp.Total)
+	assert.Equal(t, 1, len(resp.Hits))
+	assert.Equal(t, "", resp.Hits[0].ID)
+	assert.Equal(t, "products-000001", resp.Hits[0].Index)
+	assert.Assert(t, resp.Hits[0].Score == nil)
+	assert.DeepEqual(t, searchTestDoc{}, resp.Hits[0].Source)
+}
+
+func TestSearch_PropagatesSearchRawError(t *testing.T) {
+	t.Parallel()
+
+	wantErr := errors.New("search failed")
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		return nil, wantErr
+	})
+
+	resp, err := Search[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.Assert(t, resp == nil)
+	assert.Equal(t, wantErr, err)
+}
+
+func TestSearchDocuments_PropagatesSearchError(t *testing.T) {
+	t.Parallel()
+
+	wantErr := errors.New("search documents failed")
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		return nil, wantErr
+	})
+
+	docs, err := SearchDocuments[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.Assert(t, docs == nil)
+	assert.Equal(t, wantErr, err)
+}
+
+func TestSearchDocuments_EmptyResult(t *testing.T) {
+	t.Parallel()
+
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		return &searchapi.Response{
+			Hits: types.HitsMetadata{},
+		}, nil
+	})
+
+	docs, err := SearchDocuments[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.NilError(t, err)
+	assert.Assert(t, docs != nil)
+	assert.Equal(t, 0, len(docs))
 }
 
 type searchTestDoc struct {

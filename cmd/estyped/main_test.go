@@ -599,6 +599,59 @@ type Item struct {
 	}
 }
 
+// TestGoFieldJSONName covers struct field JSON-name extraction for tagged,
+// untagged, excluded, and unnamed fields.
+func TestGoFieldJSONName(t *testing.T) {
+	t.Parallel()
+
+	parseField := func(t *testing.T, src string) *ast.Field {
+		t.Helper()
+		fset := token.NewFileSet()
+		expr, err := parser.ParseExprFrom(fset, "", src, 0)
+		assert.NilError(t, err)
+
+		st, ok := expr.(*ast.StructType)
+		assert.Assert(t, ok)
+		assert.Assert(t, len(st.Fields.List) == 1)
+
+		return st.Fields.List[0]
+	}
+
+	tests := map[string]struct {
+		src  string
+		want string
+	}{
+		"tagged": {
+			src:  `struct{ Status string ` + "`json:\"status\"`" + ` }`,
+			want: "status",
+		},
+		"tagged_skip": {
+			src:  `struct{ Ignored string ` + "`json:\"-\"`" + ` }`,
+			want: "-",
+		},
+		"tagged_empty_name_falls_back_to_go_name": {
+			src:  `struct{ Status string ` + "`json:\",omitempty\"`" + ` }`,
+			want: "Status",
+		},
+		"untagged_named_field": {
+			src:  `struct{ Status string }`,
+			want: "Status",
+		},
+		"anonymous_field_without_tag": {
+			src:  `struct{ Embedded }`,
+			want: "",
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := goFieldJSONName(parseField(t, tt.src))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 // TestJSONTagKey covers the jsonTagKey helper for all relevant tag formats.
 func TestJSONTagKey(t *testing.T) {
 	t.Parallel()
@@ -606,16 +659,87 @@ func TestJSONTagKey(t *testing.T) {
 		raw  string
 		want string
 	}{
-		"plain":       {raw: `json:"status"`, want: "status"},
-		"omitempty":   {raw: `json:"title,omitempty"`, want: "title"},
-		"skip":        {raw: `json:"-"`, want: "-"},
-		"no_json_tag": {raw: `db:"col"`, want: ""},
-		"empty_name":  {raw: `json:",omitempty"`, want: ""},
+		"plain":            {raw: `json:"status"`, want: "status"},
+		"omitempty":        {raw: `json:"title,omitempty"`, want: "title"},
+		"skip":             {raw: `json:"-"`, want: "-"},
+		"no_json_tag":      {raw: `db:"col"`, want: ""},
+		"empty_name":       {raw: `json:",omitempty"`, want: ""},
+		"unterminated_tag": {raw: `json:"status`, want: ""},
+		"json_after_other": {raw: `xml:"status" json:"title,omitempty"`, want: "title"},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := jsonTagKey(tt.raw)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestDerefTypeName covers identifier, pointer, slice, array, and unsupported
+// expression shapes for derefTypeName.
+func TestDerefTypeName(t *testing.T) {
+	t.Parallel()
+
+	parseExpr := func(t *testing.T, src string) ast.Expr {
+		t.Helper()
+		fset := token.NewFileSet()
+		expr, err := parser.ParseExprFrom(fset, "", src, 0)
+		assert.NilError(t, err)
+		return expr
+	}
+
+	tests := map[string]struct {
+		src  string
+		want string
+	}{
+		"ident":            {src: `Tag`, want: "Tag"},
+		"pointer":          {src: `*Tag`, want: "Tag"},
+		"slice":            {src: `[]Tag`, want: "Tag"},
+		"array":            {src: `[2]Tag`, want: "Tag"},
+		"pointer_to_slice": {src: `*[]Tag`, want: "Tag"},
+		"selector_expr":    {src: `time.Time`, want: ""},
+		"map_type":         {src: `map[string]Tag`, want: ""},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := derefTypeName(parseExpr(t, tt.src))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestIsSliceExpr covers pointer-unwrapping and distinguishes slices from
+// arrays and non-array expressions.
+func TestIsSliceExpr(t *testing.T) {
+	t.Parallel()
+
+	parseExpr := func(t *testing.T, src string) ast.Expr {
+		t.Helper()
+		fset := token.NewFileSet()
+		expr, err := parser.ParseExprFrom(fset, "", src, 0)
+		assert.NilError(t, err)
+		return expr
+	}
+
+	tests := map[string]struct {
+		src  string
+		want bool
+	}{
+		"slice":            {src: `[]Tag`, want: true},
+		"pointer_to_slice": {src: `*[]Tag`, want: true},
+		"array":            {src: `[2]Tag`, want: false},
+		"pointer_to_array": {src: `*[2]Tag`, want: false},
+		"pointer":          {src: `*Tag`, want: false},
+		"ident":            {src: `Tag`, want: false},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := isSliceExpr(parseExpr(t, tt.src))
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -672,6 +796,39 @@ func TestPropertyCallTypeName(t *testing.T) {
 	}
 }
 
+// TestFieldTypeFuncName covers function-name extraction from identifiers,
+// selectors, and unsupported expression forms.
+func TestFieldTypeFuncName(t *testing.T) {
+	t.Parallel()
+
+	parseExpr := func(t *testing.T, src string) ast.Expr {
+		t.Helper()
+		fset := token.NewFileSet()
+		expr, err := parser.ParseExprFrom(fset, "", src, 0)
+		assert.NilError(t, err)
+		return expr
+	}
+
+	tests := map[string]struct {
+		src  string
+		want string
+	}{
+		"ident":      {src: `FieldType`, want: "FieldType"},
+		"selector":   {src: `estype.FieldType`, want: "FieldType"},
+		"call_expr":  {src: `FieldType("keyword")`, want: ""},
+		"index_expr": {src: `fn[i]`, want: ""},
+		"paren_expr": {src: `(FieldType)`, want: ""},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := fieldTypeFuncName(parseExpr(t, tt.src))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 // TestPropertyValueTypeName covers the propertyValueTypeName helper that extracts
 // an ES type name from a full Property value AST expression.
 // It covers FieldType("...") conversions, NewXxxProperty(...) constructors,
@@ -682,13 +839,16 @@ func TestPropertyValueTypeName(t *testing.T) {
 		src  string // a Go expression used as the Property value
 		want string
 	}{
-		"field_type_qualified":    {src: `estype.FieldType("integer")`, want: "integer"},
-		"field_type_unqualified":  {src: `FieldType("keyword")`, want: "keyword"},
-		"field_type_empty":        {src: `FieldType("")`, want: ""},
-		"constructor_qualified":   {src: `estype.NewTextProperty()`, want: "text"},
-		"constructor_unqualified": {src: `NewKeywordProperty()`, want: "keyword"},
-		"string_literal_fallback": {src: `"date"`, want: "date"},
-		"non_string_literal":      {src: `42`, want: ""},
+		"field_type_qualified":       {src: `estype.FieldType("integer")`, want: "integer"},
+		"field_type_unqualified":     {src: `FieldType("keyword")`, want: "keyword"},
+		"field_type_empty":           {src: `FieldType("")`, want: ""},
+		"field_type_wrong_arg_count": {src: `FieldType("keyword", "text")`, want: ""},
+		"field_type_non_string_arg":  {src: `FieldType(42)`, want: ""},
+		"constructor_qualified":      {src: `estype.NewTextProperty()`, want: "text"},
+		"constructor_unqualified":    {src: `NewKeywordProperty()`, want: "keyword"},
+		"constructor_unknown":        {src: `BuildKeywordProperty()`, want: ""},
+		"string_literal_fallback":    {src: `"date"`, want: "date"},
+		"non_string_literal":         {src: `42`, want: ""},
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
@@ -698,6 +858,122 @@ func TestPropertyValueTypeName(t *testing.T) {
 			assert.NilError(t, err)
 			got := propertyValueTypeName(expr)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestParseMappingBody covers statically analyzable and ignored branches in
+// parseMappingBody.
+func TestParseMappingBody(t *testing.T) {
+	t.Parallel()
+
+	parseBody := func(t *testing.T, src string) *ast.BlockStmt {
+		t.Helper()
+		fset := token.NewFileSet()
+		file, err := parser.ParseFile(fset, "", "package model\nfunc mapping() any "+src, 0)
+		assert.NilError(t, err)
+
+		assert.Assert(t, len(file.Decls) == 1)
+		fd, ok := file.Decls[0].(*ast.FuncDecl)
+		assert.Assert(t, ok)
+		assert.Assert(t, fd.Body != nil)
+
+		return fd.Body
+	}
+
+	tests := map[string]struct {
+		src  string
+		want map[string]string
+	}{
+		"single_return_with_fields": {
+			src: `{
+				return estype.Mapping{
+					Fields: []estype.MappingField{
+						{Path: "status", Property: estype.FieldType("keyword")},
+						{Path: "title", Property: estype.NewTextProperty()},
+					},
+				}
+			}`,
+			want: map[string]string{
+				"status": "keyword",
+				"title":  "text",
+			},
+		},
+		"ignores_non_return_statements": {
+			src: `{
+				x := 1
+				_ = x
+				return estype.Mapping{
+					Fields: []estype.MappingField{
+						{Path: "status", Property: estype.FieldType("keyword")},
+					},
+				}
+			}`,
+			want: map[string]string{
+				"status": "keyword",
+			},
+		},
+		"ignores_multi_result_return": {
+			src: `{
+				return estype.Mapping{}, nil
+			}`,
+			want: map[string]string{},
+		},
+		"ignores_non_composite_return": {
+			src: `{
+				mapping := estype.Mapping{}
+				return mapping
+			}`,
+			want: map[string]string{},
+		},
+		"ignores_non_fields_keys": {
+			src: `{
+				return estype.Mapping{
+					Name: "ignored",
+				}
+			}`,
+			want: map[string]string{},
+		},
+		"ignores_non_composite_fields_value": {
+			src: `{
+				fields := []estype.MappingField{}
+				_ = fields
+				return estype.Mapping{
+					Fields: fields,
+				}
+			}`,
+			want: map[string]string{},
+		},
+		"ignores_invalid_field_elements": {
+			src: `{
+				return estype.Mapping{
+					Fields: []estype.MappingField{
+						123,
+						{Path: "status", Property: estype.FieldType("keyword")},
+						{Path: dynamicPath(), Property: estype.FieldType("text")},
+						{Path: "title", Property: propertyExpr()},
+						{Path: "price"},
+						{Property: estype.FieldType("integer")},
+					},
+				}
+			}`,
+			want: map[string]string{
+				"status": "keyword",
+			},
+		},
+	}
+
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			got := make(map[string]string)
+			parseMappingBody(parseBody(t, tt.src), got)
+			assert.Equal(t, len(tt.want), len(got))
+			for path, wantType := range tt.want {
+				gotType, ok := got[path]
+				assert.Assert(t, ok, "missing path %q", path)
+				assert.Equal(t, wantType, gotType)
+			}
 		})
 	}
 }
@@ -951,6 +1227,56 @@ func (d *Document) Mapping() estype.Mapping {
 	assert.Equal(t, 1, len(entries))
 	assert.Equal(t, "status", entries[0].Path)
 	assert.Equal(t, "keyword", entries[0].Type)
+}
+
+// TestParseGoStruct_TagFallbacksAndPointers verifies fallback-to-Go-name,
+// pointer recursion, anonymous pointer embedding, arrays, and unsupported
+// external struct types.
+func TestParseGoStruct_TagFallbacksAndPointers(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+
+import "time"
+
+type Base struct {
+	ID string `+"`"+`json:"id"`+"`"+`
+}
+
+type Item struct {
+	Name string `+"`"+`json:"name"`+"`"+`
+}
+
+type Document struct {
+	*Base
+	Status    string    `+"`"+`json:",omitempty"`+"`"+`
+	Item      *Item     `+"`"+`json:"item"`+"`"+`
+	ItemArray [2]Item   `+"`"+`json:"item_array"`+"`"+`
+	CreatedAt time.Time `+"`"+`json:"created_at"`+"`"+`
+}
+`)
+	entries, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	gotTypes := make(map[string]string, len(entries))
+	for _, e := range entries {
+		got[e.Path] = e.FieldName
+		gotTypes[e.Path] = e.Type
+	}
+
+	assert.Equal(t, 7, len(entries))
+	assert.Equal(t, "Id", got["id"])
+	assert.Equal(t, "Status", got["Status"])
+	assert.Equal(t, "Item", got["item"])
+	assert.Equal(t, "Item_Name", got["item.name"])
+	assert.Equal(t, "ItemArray", got["item_array"])
+	assert.Equal(t, "ItemArray_Name", got["item_array.name"])
+	assert.Equal(t, "unknown", gotTypes["created_at"])
+	assert.Equal(t, "object", gotTypes["item"])
+	assert.Equal(t, "object", gotTypes["item_array"])
+	assert.Equal(t, "unknown", gotTypes["item.name"])
+	assert.Equal(t, "unknown", gotTypes["item_array.name"])
 }
 
 // TestParseGoStruct_WithMapping_PartialOverride verifies that only fields

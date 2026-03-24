@@ -11,11 +11,37 @@ import (
 	"github.com/tomtwinkle/es-typed-go/esv8/query"
 )
 
+func assertPanicsWithErrorContains(t *testing.T, want string, fn func()) {
+	t.Helper()
+
+	defer func() {
+		recovered := recover()
+		assert.Assert(t, recovered != nil)
+
+		err, ok := recovered.(error)
+		assert.Assert(t, ok)
+		assert.ErrorContains(t, err, want)
+	}()
+
+	fn()
+}
+
 func TestAggs_Empty(t *testing.T) {
 	t.Parallel()
 
 	aggs := query.Aggs().Build()
 	assert.Assert(t, aggs == nil)
+}
+
+func TestAggResults_NewAggResultsRaw(t *testing.T) {
+	t.Parallel()
+
+	raw := map[string]types.Aggregate{
+		"avg_price": &types.AvgAggregate{},
+	}
+
+	results := query.NewAggResults(raw)
+	assert.DeepEqual(t, results.Raw(), raw)
 }
 
 func TestStringTermsAgg_Build(t *testing.T) {
@@ -41,6 +67,34 @@ func TestStringTermsAgg_WithSize(t *testing.T) {
 	assert.Assert(t, agg.Terms != nil)
 	assert.Equal(t, string(FieldCategory), *agg.Terms.Field)
 	assert.Equal(t, 10, *agg.Terms.Size)
+}
+
+func TestTermsAgg_AliasBuild(t *testing.T) {
+	t.Parallel()
+
+	def := query.TermsAgg("top5", FieldCategory, query.WithTermsSize(5))
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["top5"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Terms != nil)
+	assert.Equal(t, string(FieldCategory), *agg.Terms.Field)
+	assert.Equal(t, 5, *agg.Terms.Size)
+}
+
+func TestTermsAgg_AliasWithSubAggs(t *testing.T) {
+	t.Parallel()
+
+	avgDef := query.AvgAgg("avg_price", FieldPrice)
+	def := query.TermsAgg("by_category", FieldCategory, query.WithSubAggs(avgDef))
+
+	aggs := query.Aggs(def).Build()
+	agg, ok := aggs["by_category"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Aggregations != nil)
+
+	_, ok = agg.Aggregations["avg_price"]
+	assert.Assert(t, ok)
 }
 
 func TestDateHistogramAgg_Build(t *testing.T) {
@@ -254,6 +308,19 @@ func TestAggResults_Avg(t *testing.T) {
 	assert.Equal(t, value, *res.Value())
 }
 
+func TestAggResults_AvgNilValue(t *testing.T) {
+	t.Parallel()
+
+	def := query.AvgAgg("avg_price", FieldPrice)
+	raw := map[string]types.Aggregate{
+		"avg_price": &types.AvgAggregate{Value: nil},
+	}
+
+	res, err := query.NewAggResults(raw).GetAvg(def)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Value() == nil)
+}
+
 func TestAggResults_Sum(t *testing.T) {
 	t.Parallel()
 
@@ -268,6 +335,19 @@ func TestAggResults_Sum(t *testing.T) {
 
 	assert.Assert(t, res.Value() != nil)
 	assert.Equal(t, value, *res.Value())
+}
+
+func TestAggResults_SumNilValue(t *testing.T) {
+	t.Parallel()
+
+	def := query.SumAgg("sum_value", FieldValue)
+	raw := map[string]types.Aggregate{
+		"sum_value": &types.SumAggregate{Value: nil},
+	}
+
+	res, err := query.NewAggResults(raw).GetSum(def)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Value() == nil)
 }
 
 func TestAggResults_Min(t *testing.T) {
@@ -286,6 +366,19 @@ func TestAggResults_Min(t *testing.T) {
 	assert.Equal(t, value, *res.Value())
 }
 
+func TestAggResults_MinNilValue(t *testing.T) {
+	t.Parallel()
+
+	def := query.MinAgg("min_price", FieldPrice)
+	raw := map[string]types.Aggregate{
+		"min_price": &types.MinAggregate{Value: nil},
+	}
+
+	res, err := query.NewAggResults(raw).GetMin(def)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Value() == nil)
+}
+
 func TestAggResults_Max(t *testing.T) {
 	t.Parallel()
 
@@ -302,6 +395,19 @@ func TestAggResults_Max(t *testing.T) {
 	assert.Equal(t, value, *res.Value())
 }
 
+func TestAggResults_MaxNilValue(t *testing.T) {
+	t.Parallel()
+
+	def := query.MaxAgg("max_price", FieldPrice)
+	raw := map[string]types.Aggregate{
+		"max_price": &types.MaxAggregate{Value: nil},
+	}
+
+	res, err := query.NewAggResults(raw).GetMax(def)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Value() == nil)
+}
+
 func TestAggResults_ValueCount(t *testing.T) {
 	t.Parallel()
 
@@ -316,6 +422,19 @@ func TestAggResults_ValueCount(t *testing.T) {
 
 	assert.Assert(t, res.Value() != nil)
 	assert.Equal(t, int64(7), *res.Value())
+}
+
+func TestAggResults_ValueCountNilValue(t *testing.T) {
+	t.Parallel()
+
+	def := query.ValueCountAgg("order_count", FieldId)
+	raw := map[string]types.Aggregate{
+		"order_count": &types.ValueCountAggregate{Value: nil},
+	}
+
+	res, err := query.NewAggResults(raw).GetValueCount(def)
+	assert.NilError(t, err)
+	assert.Assert(t, res.Value() == nil)
 }
 
 func TestAggResults_Cardinality(t *testing.T) {
@@ -390,6 +509,55 @@ func TestAggResults_StringTerms(t *testing.T) {
 	assert.Equal(t, int64(3), buckets[1].DocCount())
 }
 
+func TestAggResults_StringTermsNilBucketAggs(t *testing.T) {
+	t.Parallel()
+
+	def := query.StringTermsAgg("by_category", FieldCategory)
+	raw := map[string]types.Aggregate{
+		"by_category": &types.StringTermsAggregate{
+			Buckets: []types.StringTermsBucket{
+				{Key: "electronics", DocCount: 2, Aggregations: nil},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetStringTerms(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Assert(t, res.Buckets()[0].Aggregations().Raw() == nil)
+}
+
+func TestAggResults_StringTermsBucketKeyTypeError(t *testing.T) {
+	t.Parallel()
+
+	def := query.StringTermsAgg("by_category", FieldCategory)
+	raw := map[string]types.Aggregate{
+		"by_category": &types.StringTermsAggregate{
+			Buckets: []types.StringTermsBucket{
+				{Key: 123, DocCount: 2},
+			},
+		},
+	}
+
+	_, err := query.NewAggResults(raw).GetStringTerms(def)
+	assert.ErrorContains(t, err, `aggregation "by_category" has unexpected bucket key type int`)
+}
+
+func TestAggResults_StringTermsBucketsTypeError(t *testing.T) {
+	t.Parallel()
+
+	def := query.StringTermsAgg("by_category", FieldCategory)
+	raw := map[string]types.Aggregate{
+		"by_category": &types.StringTermsAggregate{
+			Buckets: map[string]types.StringTermsBucket{},
+		},
+	}
+
+	_, err := query.NewAggResults(raw).GetStringTerms(def)
+	assert.ErrorContains(t, err, `aggregation "by_category" has unexpected buckets type`)
+}
+
 func TestAggResults_DateHistogram(t *testing.T) {
 	t.Parallel()
 
@@ -411,6 +579,40 @@ func TestAggResults_DateHistogram(t *testing.T) {
 	assert.Equal(t, int64(1704067200000), buckets[0].Key())
 	assert.Equal(t, "2024-01", buckets[0].KeyAsString())
 	assert.Equal(t, int64(2), buckets[0].DocCount())
+}
+
+func TestAggResults_DateHistogramNilKeyAsString(t *testing.T) {
+	t.Parallel()
+
+	def := query.DateHistogramAgg("by_month", FieldDate, calendarinterval.Month)
+	raw := map[string]types.Aggregate{
+		"by_month": &types.DateHistogramAggregate{
+			Buckets: []types.DateHistogramBucket{
+				{Key: 1704067200000, KeyAsString: nil, DocCount: 2, Aggregations: nil},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetDateHistogram(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Equal(t, "", res.Buckets()[0].KeyAsString())
+	assert.Assert(t, res.Buckets()[0].Aggregations().Raw() == nil)
+}
+
+func TestAggResults_DateHistogramBucketsTypeError(t *testing.T) {
+	t.Parallel()
+
+	def := query.DateHistogramAgg("by_month", FieldDate, calendarinterval.Month)
+	raw := map[string]types.Aggregate{
+		"by_month": &types.DateHistogramAggregate{
+			Buckets: map[string]types.DateHistogramBucket{},
+		},
+	}
+
+	_, err := query.NewAggResults(raw).GetDateHistogram(def)
+	assert.ErrorContains(t, err, `aggregation "by_month" has unexpected buckets type`)
 }
 
 func TestAggResults_Histogram(t *testing.T) {
@@ -437,6 +639,40 @@ func TestAggResults_Histogram(t *testing.T) {
 	assert.Equal(t, int64(4), buckets[0].DocCount())
 	assert.Equal(t, 50.0, buckets[1].Key())
 	assert.Equal(t, int64(2), buckets[1].DocCount())
+}
+
+func TestAggResults_HistogramNilBucketAggs(t *testing.T) {
+	t.Parallel()
+
+	def := query.HistogramAgg("price_ranges", FieldPrice, 50.0)
+	k1 := types.Float64(0)
+	raw := map[string]types.Aggregate{
+		"price_ranges": &types.HistogramAggregate{
+			Buckets: []types.HistogramBucket{
+				{Key: k1, DocCount: 4, Aggregations: nil},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetHistogram(def)
+	assert.NilError(t, err)
+
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Assert(t, res.Buckets()[0].Aggregations().Raw() == nil)
+}
+
+func TestAggResults_HistogramBucketsTypeError(t *testing.T) {
+	t.Parallel()
+
+	def := query.HistogramAgg("price_ranges", FieldPrice, 50.0)
+	raw := map[string]types.Aggregate{
+		"price_ranges": &types.HistogramAggregate{
+			Buckets: map[string]types.HistogramBucket{},
+		},
+	}
+
+	_, err := query.NewAggResults(raw).GetHistogram(def)
+	assert.ErrorContains(t, err, `aggregation "price_ranges" has unexpected buckets type`)
 }
 
 func TestGetAgg_GenericHelper(t *testing.T) {
@@ -468,6 +704,16 @@ func TestMustAgg_GenericHelper(t *testing.T) {
 	assert.Equal(t, value, *res.Value())
 }
 
+func TestMustAgg_GenericHelperPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.SumAgg("sum_value", FieldValue)
+
+	assertPanicsWithErrorContains(t, `aggregation "sum_value" not found`, func() {
+		_ = query.MustAgg(query.NewAggResults(nil), def)
+	})
+}
+
 func TestMustAvg(t *testing.T) {
 	t.Parallel()
 
@@ -480,6 +726,76 @@ func TestMustAvg(t *testing.T) {
 	res := query.NewAggResults(raw).MustAvg(def)
 	assert.Assert(t, res.Value() != nil)
 	assert.Equal(t, value, *res.Value())
+}
+
+func TestMustAvgPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.AvgAgg("avg_price", FieldPrice)
+
+	assertPanicsWithErrorContains(t, `aggregation "avg_price" not found`, func() {
+		_ = query.NewAggResults(nil).MustAvg(def)
+	})
+}
+
+func TestMustSumPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.SumAgg("sum_value", FieldValue)
+
+	assertPanicsWithErrorContains(t, `aggregation "sum_value" not found`, func() {
+		_ = query.NewAggResults(nil).MustSum(def)
+	})
+}
+
+func TestMustMinPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.MinAgg("min_price", FieldPrice)
+
+	assertPanicsWithErrorContains(t, `aggregation "min_price" not found`, func() {
+		_ = query.NewAggResults(nil).MustMin(def)
+	})
+}
+
+func TestMustMaxPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.MaxAgg("max_price", FieldPrice)
+
+	assertPanicsWithErrorContains(t, `aggregation "max_price" not found`, func() {
+		_ = query.NewAggResults(nil).MustMax(def)
+	})
+}
+
+func TestMustStatsPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.StatsAgg("price_stats", FieldPrice)
+
+	assertPanicsWithErrorContains(t, `aggregation "price_stats" not found`, func() {
+		_ = query.NewAggResults(nil).MustStats(def)
+	})
+}
+
+func TestMustValueCountPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.ValueCountAgg("order_count", FieldId)
+
+	assertPanicsWithErrorContains(t, `aggregation "order_count" not found`, func() {
+		_ = query.NewAggResults(nil).MustValueCount(def)
+	})
+}
+
+func TestMustCardinalityPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.CardinalityAgg("unique_users", FieldId)
+
+	assertPanicsWithErrorContains(t, `aggregation "unique_users" not found`, func() {
+		_ = query.NewAggResults(nil).MustCardinality(def)
+	})
 }
 
 func TestMustStringTerms(t *testing.T) {
@@ -499,12 +815,50 @@ func TestMustStringTerms(t *testing.T) {
 	assert.Equal(t, "electronics", res.Buckets()[0].Key())
 }
 
+func TestMustStringTermsPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.StringTermsAgg("by_category", FieldCategory)
+
+	assertPanicsWithErrorContains(t, `aggregation "by_category" not found`, func() {
+		_ = query.NewAggResults(nil).MustStringTerms(def)
+	})
+}
+
+func TestMustDateHistogramPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.DateHistogramAgg("by_month", FieldDate, calendarinterval.Month)
+
+	assertPanicsWithErrorContains(t, `aggregation "by_month" not found`, func() {
+		_ = query.NewAggResults(nil).MustDateHistogram(def)
+	})
+}
+
+func TestMustHistogramPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.HistogramAgg("price_ranges", FieldPrice, 50.0)
+
+	assertPanicsWithErrorContains(t, `aggregation "price_ranges" not found`, func() {
+		_ = query.NewAggResults(nil).MustHistogram(def)
+	})
+}
+
 func TestAggResults_MissingAggregation(t *testing.T) {
 	t.Parallel()
 
 	def := query.AvgAgg("missing_avg", FieldPrice)
 	_, err := query.NewAggResults(map[string]types.Aggregate{}).GetAvg(def)
 	assert.ErrorContains(t, err, `aggregation "missing_avg" not found`)
+}
+
+func TestAggResults_NilRawMissingAggregation(t *testing.T) {
+	t.Parallel()
+
+	def := query.AvgAgg("avg_price", FieldPrice)
+	_, err := query.NewAggResults(nil).GetAvg(def)
+	assert.ErrorContains(t, err, `aggregation "avg_price" not found`)
 }
 
 func TestAggResults_UnexpectedType(t *testing.T) {
