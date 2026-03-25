@@ -162,7 +162,7 @@ func TestMainWithLocalSchemaWritesOutput(t *testing.T) {
 	cmd.Stderr = &stderr
 
 	err = cmd.Run()
-	assert.NilError(t, err)
+	assert.NilError(t, err, stderr.String())
 
 	outPath := filepath.Join(cmd.Dir, outputFile)
 	t.Cleanup(func() {
@@ -195,7 +195,7 @@ func TestMainWithMissingSchemaFails(t *testing.T) {
 
 	err := cmd.Run()
 	assert.Assert(t, err != nil)
-	assert.Assert(t, strings.Contains(stderr.String(), "failed to read "+missingPath))
+	assert.Assert(t, strings.Contains(stderr.String(), "failed to read "+missingPath), stderr.String())
 }
 
 func TestMainWithInvalidSchemaFails(t *testing.T) {
@@ -216,5 +216,5 @@ func TestMainWithInvalidSchemaFails(t *testing.T) {
 
 	err = cmd.Run()
 	assert.Assert(t, err != nil)
-	assert.Assert(t, strings.Contains(stderr.String(), "failed to parse schema.json"))
+	assert.Assert(t, strings.Contains(stderr.String(), "failed to parse schema.json"), stderr.String())
 }

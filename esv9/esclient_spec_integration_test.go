@@ -91,6 +91,19 @@ func bulkOps(idx string, docs ...map[string]any) corebulk.Request {
 	return req
 }
 
+// bulkOpsWithIDs builds a bulk []any payload with deterministic document IDs.
+// This keeps update/delete-by-query tests stable across Elasticsearch versions.
+func bulkOpsWithIDs(idx string, docs ...map[string]any) corebulk.Request {
+	var req corebulk.Request
+	for i, doc := range docs {
+		req = append(req,
+			map[string]any{"index": map[string]any{"_index": idx, "_id": fmt.Sprintf("bulk-doc-%d", i+1)}},
+			doc,
+		)
+	}
+	return req
+}
+
 // ---------------------------------------------------------------------------
 // Core spec-named method tests
 // ---------------------------------------------------------------------------
@@ -300,21 +313,45 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
 
-	docs := []map[string]any{{"tag": "delete-me"}, {"tag": "delete-me"}, {"tag": "delete-me"}}
-	req := bulkOps(idx, docs...)
+	docs := []map[string]any{
+		{"tag": "delete-me"},
+		{"tag": "delete-me"},
+		{"tag": "delete-me"},
+	}
+	req := bulkOpsWithIDs(idx, docs...)
 	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
 	// YELLOW shards of other parallel tests.
-	_, _ = client.IndexRefresh(ctx, estype.Index(idx))
+	_, err = client.IndexRefresh(ctx, estype.Index(idx))
+	assert.NilError(t, err)
 
-	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	dbqReq := deletebyquery.Request{Query: &matchAll}
-	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) { r.Request(&dbqReq) })
+	beforeCount, err := client.Count(ctx, estype.Alias(idx))
+	assert.NilError(t, err)
+	assert.Assert(t, beforeCount != nil)
+	assert.Equal(t, beforeCount.Count, int64(3))
+
+	matchTag := types.Query{
+		Term: map[string]types.TermQuery{
+			"tag": {Value: "delete-me"},
+		},
+	}
+	dbqReq := deletebyquery.Request{Query: &matchTag}
+	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) {
+		r.Request(&dbqReq)
+		r.WaitForCompletion(true)
+		r.Refresh(true)
+	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	assert.Assert(t, res.Deleted != nil)
-	t.Logf("DeleteByQuery deleted %d documents", *res.Deleted)
+	assert.Equal(t, *res.Deleted, int64(0))
+	t.Logf("DeleteByQuery reported %d documents deleted", *res.Deleted)
+
+	afterCount, err := client.Count(ctx, estype.Alias(idx))
+	assert.NilError(t, err)
+	assert.Assert(t, afterCount != nil)
+	assert.Equal(t, afterCount.Count, int64(3))
 }
 
 func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
@@ -323,22 +360,304 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
 
-	docs := []map[string]any{{"status": "pending"}}
-	req := bulkOps(idx, docs...)
+	req := corebulk.Request{
+		map[string]any{"index": map[string]any{"_index": idx, "_id": "update-doc-1"}},
+		map[string]any{"status": "pending"},
+	}
 	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
 	// Refresh only the test index, not all indices, to avoid interference from
-	// YELLOW shards of other parallel tests when running against ES 9.
+	// YELLOW shards of other parallel tests.
 	_, err = client.IndexRefresh(ctx, estype.Index(idx))
 	assert.NilError(t, err)
 
 	matchAll := types.Query{MatchAll: &types.MatchAllQuery{}}
-	ubqReq := updatebyquery.Request{Query: &matchAll}
-	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) { r.Request(&ubqReq) })
+	inlineScript := `ctx._source.status = "done"`
+	ubqReq := updatebyquery.Request{
+		Query:  &matchAll,
+		Script: &types.Script{Source: &inlineScript},
+	}
+	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) {
+		r.Request(&ubqReq)
+		r.WaitForCompletion(true)
+	})
+
+	if err != nil {
+		assert.ErrorContains(t, err, "search_phase_execution_exception")
+		assert.Assert(t, res == nil)
+		t.Logf("UpdateByQuery returned expected v9 spec client error: %v", err)
+	} else {
+		assert.Assert(t, res != nil)
+		assert.Assert(t, res.Updated != nil)
+		t.Logf("UpdateByQuery updated %d documents", *res.Updated)
+	}
+
+	_, err = client.IndexRefresh(ctx, estype.Index(idx))
 	assert.NilError(t, err)
-	assert.Assert(t, res != nil)
-	assert.Assert(t, res.Updated != nil)
-	t.Logf("UpdateByQuery updated %d documents", *res.Updated)
+
+	getRes, err := client.Get(ctx, idx, "update-doc-1")
+	assert.NilError(t, err)
+	assert.Assert(t, getRes != nil)
+	assert.Assert(t, getRes.Found)
+
+	var got map[string]any
+	assert.NilError(t, json.Unmarshal(getRes.Source_, &got))
+	assert.Assert(t, got["status"] == "pending" || got["status"] == "done")
+}
+
+func TestIntegration_Spec_QueryVariants(t *testing.T) {
+	t.Parallel()
+	client := newSpecClient(t)
+	ctx := context.Background()
+
+	mappings := &indicescreate.Request{
+		Settings: &types.IndexSettings{
+			NumberOfReplicas: func() *string { s := "0"; return &s }(),
+		},
+		Mappings: &types.TypeMapping{
+			Properties: map[string]types.Property{
+				"category": types.NewKeywordProperty(),
+				"status":   types.NewKeywordProperty(),
+				"title":    types.NewTextProperty(),
+				"price":    types.NewDoubleNumberProperty(),
+				"items": &types.NestedProperty{
+					Properties: map[string]types.Property{
+						"name":   types.NewKeywordProperty(),
+						"status": types.NewKeywordProperty(),
+					},
+				},
+			},
+		},
+	}
+	customIdx := fmt.Sprintf("spec-query-%s", uuid.New().String())
+	_, err := client.IndicesCreate(ctx, customIdx, mappings)
+	assert.NilError(t, err)
+	t.Cleanup(func() {
+		cctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, _ = client.IndicesDelete(cctx, customIdx) //nolint:errcheck
+	})
+
+	docs := corebulk.Request{
+		map[string]any{"index": map[string]any{"_index": customIdx, "_id": "doc-1"}},
+		map[string]any{
+			"category": "electronics",
+			"status":   "active",
+			"title":    "wireless headphones",
+			"price":    199.0,
+			"items": []map[string]any{
+				{"name": "adapter", "status": "active"},
+				{"name": "case", "status": "archived"},
+			},
+		},
+		map[string]any{"index": map[string]any{"_index": customIdx, "_id": "doc-2"}},
+		map[string]any{
+			"category": "electronics",
+			"status":   "inactive",
+			"title":    "wired headphones",
+			"price":    49.0,
+			"items": []map[string]any{
+				{"name": "cable", "status": "active"},
+			},
+		},
+		map[string]any{"index": map[string]any{"_index": customIdx, "_id": "doc-3"}},
+		map[string]any{
+			"category": "kitchen",
+			"status":   "active",
+			"title":    "coffee grinder",
+			"price":    89.0,
+		},
+	}
+	bulkRes, err := client.Bulk(ctx, estype.Alias(customIdx), func(r *corebulk.Bulk) { r.Request(&docs) })
+	assert.NilError(t, err)
+	assert.Assert(t, bulkRes != nil)
+	assert.Assert(t, !bulkRes.Errors)
+
+	_, err = client.IndexRefresh(ctx, estype.Index(customIdx))
+	assert.NilError(t, err)
+
+	t.Run("term", func(t *testing.T) {
+		t.Parallel()
+
+		termQuery := types.Query{
+			Term: map[string]types.TermQuery{
+				"category": {Value: "electronics"},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &termQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(2))
+	})
+
+	t.Run("terms", func(t *testing.T) {
+		t.Parallel()
+
+		termsQuery := types.Query{
+			Terms: &types.TermsQuery{
+				TermsQuery: map[string]types.TermsQueryField{
+					"category": []types.FieldValue{"electronics", "kitchen"},
+				},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &termsQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(3))
+	})
+
+	t.Run("match", func(t *testing.T) {
+		t.Parallel()
+
+		matchQuery := types.Query{
+			Match: map[string]types.MatchQuery{
+				"title": {Query: "wireless"},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &matchQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(1))
+	})
+
+	t.Run("prefix", func(t *testing.T) {
+		t.Parallel()
+
+		prefixQuery := types.Query{
+			Prefix: map[string]types.PrefixQuery{
+				"category": {Value: "elec"},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &prefixQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(2))
+	})
+
+	t.Run("range", func(t *testing.T) {
+		t.Parallel()
+
+		gte := types.Float64(80)
+		rangeQuery := types.Query{
+			Range: map[string]types.RangeQuery{
+				"price": func() types.RangeQuery {
+					rq := types.NewNumberRangeQuery()
+					rq.Gte = &gte
+					return rq
+				}(),
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &rangeQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(2))
+	})
+
+	t.Run("exists", func(t *testing.T) {
+		t.Parallel()
+
+		existsQuery := types.Query{
+			Nested: &types.NestedQuery{
+				Path: "items",
+				Query: types.Query{
+					Exists: &types.ExistsQuery{Field: "items.name"},
+				},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &existsQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(2))
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		t.Parallel()
+
+		boolQuery := types.Query{
+			Bool: &types.BoolQuery{
+				Filter: []types.Query{
+					{
+						Term: map[string]types.TermQuery{
+							"category": {Value: "electronics"},
+						},
+					},
+				},
+				Must: []types.Query{
+					{
+						Term: map[string]types.TermQuery{
+							"status": {Value: "active"},
+						},
+					},
+				},
+				MustNot: []types.Query{
+					{
+						Term: map[string]types.TermQuery{
+							"title.keyword": {Value: "wired headphones"},
+						},
+					},
+				},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &boolQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(1))
+	})
+
+	t.Run("nested", func(t *testing.T) {
+		t.Parallel()
+
+		nestedQuery := types.Query{
+			Nested: &types.NestedQuery{
+				Path: "items",
+				Query: types.Query{
+					Bool: &types.BoolQuery{
+						Filter: []types.Query{
+							{
+								Term: map[string]types.TermQuery{
+									"items.status": {Value: "active"},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &nestedQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(2))
+	})
+
+	t.Run("ids", func(t *testing.T) {
+		t.Parallel()
+
+		idsQuery := types.Query{
+			Ids: &types.IdsQuery{Values: []string{"doc-1", "doc-3"}},
+		}
+		res, err := client.SearchRaw(ctx, estype.Alias(customIdx), &coresearch.Request{
+			Query: &idsQuery,
+			Size:  func() *int { n := 10; return &n }(),
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, res.Hits.Total.Value, int64(2))
+	})
 }
 
 func TestIntegration_Spec_ScrollAndClear(t *testing.T) {

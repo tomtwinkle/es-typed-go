@@ -98,6 +98,60 @@ type productDoc struct {
 // Tests
 // ---------------------------------------------------------------------------
 
+type searchBuilderDoc struct {
+	ID        string        `json:"id"`
+	Name      string        `json:"name"`
+	Category  string        `json:"category"`
+	Price     float64       `json:"price"`
+	Enabled   bool          `json:"enabled"`
+	Tags      []string      `json:"tags,omitempty"`
+	CreatedAt time.Time     `json:"created_at"`
+	Items     []builderItem `json:"items,omitempty"`
+}
+
+type builderItem struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+func createSearchBuilderIndex(t *testing.T, ctx context.Context, client esv8.ESClient, idx estype.Index, alias estype.Alias) {
+	t.Helper()
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"id":         types.NewKeywordProperty(),
+			"name":       types.NewTextProperty(),
+			"category":   types.NewKeywordProperty(),
+			"price":      types.NewDoubleNumberProperty(),
+			"enabled":    types.NewBooleanProperty(),
+			"tags":       types.NewKeywordProperty(),
+			"created_at": &types.DateProperty{Format: func() *string { s := "strict_date_optional_time"; return &s }()},
+			"items":      types.NewNestedProperty(),
+		},
+	}
+
+	itemsProp, ok := mappings.Properties["items"].(*types.NestedProperty)
+	assert.Assert(t, ok)
+	itemsProp.Properties = map[string]types.Property{
+		"name":   types.NewKeywordProperty(),
+		"status": types.NewKeywordProperty(),
+	}
+
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, true)
+	assert.NilError(t, err)
+}
+
+func indexSearchBuilderDocs(t *testing.T, ctx context.Context, client esv8.ESClient, alias estype.Alias, docs []searchBuilderDoc) {
+	t.Helper()
+
+	for _, doc := range docs {
+		_, err := client.CreateDocument(ctx, alias, doc.ID, doc)
+		assert.NilError(t, err)
+	}
+}
+
 func TestIntegration_Info(t *testing.T) {
 	t.Parallel()
 	client := newTestClient(t)
@@ -864,6 +918,458 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 	res2, err := client.SearchRaw(ctx, alias, req2)
 	assert.NilError(t, err)
 	assert.Assert(t, len(res2.Hits.Hits) == 3)
+}
+
+func TestIntegration_Search_HelperCoverage(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	createSearchBuilderIndex(t, ctx, client, idx, alias)
+
+	base := time.Date(2024, 1, 10, 12, 0, 0, 0, time.UTC)
+	docs := []searchBuilderDoc{
+		{
+			ID:        "doc-1",
+			Name:      "alpha widget",
+			Category:  "electronics",
+			Price:     120,
+			Enabled:   true,
+			Tags:      []string{"featured", "sale"},
+			CreatedAt: base.AddDate(0, 0, -2),
+			Items: []builderItem{
+				{Name: "bundle-a", Status: "active"},
+			},
+		},
+		{
+			ID:        "doc-2",
+			Name:      "alpha cable",
+			Category:  "electronics",
+			Price:     80,
+			Enabled:   true,
+			CreatedAt: base.AddDate(0, 0, -1),
+			Items: []builderItem{
+				{Name: "bundle-b", Status: "inactive"},
+			},
+		},
+		{
+			ID:        "doc-3",
+			Name:      "beta shirt",
+			Category:  "clothing",
+			Price:     45,
+			Enabled:   false,
+			Tags:      []string{"clearance"},
+			CreatedAt: base,
+			Items: []builderItem{
+				{Name: "bundle-c", Status: "active"},
+			},
+		},
+		{
+			ID:        "doc-4",
+			Name:      "gamma mug",
+			Category:  "kitchen",
+			Price:     25,
+			Enabled:   true,
+			CreatedAt: base.AddDate(0, 0, 1),
+			Items: []builderItem{
+				{Name: "bundle-d", Status: "active"},
+			},
+		},
+	}
+	indexSearchBuilderDocs(t, ctx, client, alias, docs)
+
+	_, err := client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	t.Run("TermsValues", func(t *testing.T) {
+		t.Parallel()
+		q := query.TermsValues("category", query.FieldValues("electronics", "kitchen")...)
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(3), res.Hits.Total.Value)
+	})
+
+	t.Run("MatchPhrase", func(t *testing.T) {
+		t.Parallel()
+		q := query.MatchPhrase("name", "alpha widget")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+	})
+
+	t.Run("ExistsField", func(t *testing.T) {
+		t.Parallel()
+		q := query.ExistsField("tags")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("NotExists", func(t *testing.T) {
+		t.Parallel()
+		q := query.NotExists("tags")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("NestedFilter", func(t *testing.T) {
+		t.Parallel()
+		q := query.NestedFilter(
+			"items",
+			query.TermValue("items.status", "active"),
+			query.TermValue("items.name", "bundle-a"),
+		)
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+	})
+
+	t.Run("DateRangeQuery", func(t *testing.T) {
+		t.Parallel()
+		q := query.DateRangeQuery("created_at", "2024-01-09T00:00:00Z", "2024-01-10T23:59:59Z")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("NumberRangeQuery", func(t *testing.T) {
+		t.Parallel()
+		gte := types.Float64(50)
+		lte := types.Float64(100)
+		q := query.NumberRangeQuery("price", &gte, &lte)
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+	})
+
+	t.Run("BoolMust", func(t *testing.T) {
+		t.Parallel()
+		q := query.BoolMust(
+			query.TermValue("category", "electronics"),
+			query.TermValue("enabled", true),
+		)
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("BoolShould", func(t *testing.T) {
+		t.Parallel()
+		q := query.BoolShould(
+			query.TermValue("category", "electronics"),
+			query.TermValue("category", "kitchen"),
+		)
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(3), res.Hits.Total.Value)
+	})
+
+	t.Run("BoolFilter", func(t *testing.T) {
+		t.Parallel()
+		q := query.BoolFilter(
+			query.TermValue("enabled", true),
+			query.TermValue("category", "electronics"),
+		)
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("BoolMustNot", func(t *testing.T) {
+		t.Parallel()
+		q := query.BoolMustNot(query.TermValue("category", "electronics"))
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("MatchValue", func(t *testing.T) {
+		t.Parallel()
+		q := query.MatchValue("name", "alpha")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("MatchNone", func(t *testing.T) {
+		t.Parallel()
+		q := query.MatchNone()
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(0), res.Hits.Total.Value)
+	})
+
+	t.Run("IdsQuery", func(t *testing.T) {
+		t.Parallel()
+		q := query.IdsQuery("doc-1", "doc-4")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("PrefixValue", func(t *testing.T) {
+		t.Parallel()
+		q := query.PrefixValue("category", "elec")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("WildcardValue", func(t *testing.T) {
+		t.Parallel()
+		q := query.WildcardValue("category", "kit*")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+	})
+
+	t.Run("MultiMatchQuery", func(t *testing.T) {
+		t.Parallel()
+		q := query.MultiMatchQuery("gamma", "name", "category")
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+	})
+
+	t.Run("FunctionScoreQuery", func(t *testing.T) {
+		t.Parallel()
+		q := query.FunctionScoreQuery(&types.FunctionScoreQuery{
+			Query: func() *types.Query {
+				inner := query.TermValue("category", "electronics")
+				return &inner
+			}(),
+		})
+		req := search.NewRequest()
+		req.Query = &q
+		size := 10
+		req.Size = &size
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+}
+
+func TestIntegration_SearchBuilder_Composition(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	createSearchBuilderIndex(t, ctx, client, idx, alias)
+
+	base := time.Date(2024, 1, 10, 12, 0, 0, 0, time.UTC)
+	docs := []searchBuilderDoc{
+		{
+			ID:        "doc-1",
+			Name:      "alpha widget",
+			Category:  "electronics",
+			Price:     120,
+			Enabled:   true,
+			Tags:      []string{"featured"},
+			CreatedAt: base.AddDate(0, 0, -2),
+			Items: []builderItem{
+				{Name: "bundle-a", Status: "active"},
+			},
+		},
+		{
+			ID:        "doc-2",
+			Name:      "alpha cable",
+			Category:  "electronics",
+			Price:     80,
+			Enabled:   true,
+			CreatedAt: base.AddDate(0, 0, -1),
+			Items: []builderItem{
+				{Name: "bundle-b", Status: "inactive"},
+			},
+		},
+		{
+			ID:        "doc-3",
+			Name:      "beta shirt",
+			Category:  "clothing",
+			Price:     45,
+			Enabled:   false,
+			Tags:      []string{"clearance"},
+			CreatedAt: base,
+			Items: []builderItem{
+				{Name: "bundle-c", Status: "active"},
+			},
+		},
+		{
+			ID:        "doc-4",
+			Name:      "gamma mug",
+			Category:  "kitchen",
+			Price:     25,
+			Enabled:   true,
+			CreatedAt: base.AddDate(0, 0, 1),
+			Items: []builderItem{
+				{Name: "bundle-d", Status: "active"},
+			},
+		},
+	}
+	indexSearchBuilderDocs(t, ctx, client, alias, docs)
+
+	_, err := client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	t.Run("full builder composition", func(t *testing.T) {
+		t.Parallel()
+		params := query.NewSearch().
+			Where(
+				query.TermsValues("category", query.FieldValues("electronics", "kitchen")...),
+				query.NumberRangeQuery("price", func() *types.Float64 { v := types.Float64(20); return &v }(), func() *types.Float64 { v := types.Float64(120); return &v }()),
+			).
+			Must(query.MatchValue("name", "alpha")).
+			Should(query.TermValue("enabled", true)).
+			MustNot(query.NotExists("tags")).
+			MinimumShouldMatch(1).
+			Sort(query.NewSort().Field("price", sortorder.Desc).Build()...).
+			Limit(10).
+			Offset(0).
+			Build()
+
+		req := params.ToRequest()
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+
+		var got searchBuilderDoc
+		assert.NilError(t, json.Unmarshal(res.Hits.Hits[0].Source_, &got))
+		assert.Equal(t, "doc-1", got.ID)
+	})
+
+	t.Run("query override supports unsupported builder shapes", func(t *testing.T) {
+		t.Parallel()
+		params := query.NewSearch().
+			Where(query.TermValue("category", "electronics")).
+			Query(
+				query.BoolQuery(
+					query.NewBoolQuery().
+						Filter(
+							query.NestedFilter("items", query.TermValue("items.status", "active")),
+							query.DateRangeQuery("created_at", "2024-01-08T00:00:00Z", "2024-01-11T23:59:59Z"),
+						).
+						Should(
+							query.IdsQuery("doc-1"),
+							query.PrefixValue("category", "kit"),
+						).
+						MinimumShouldMatch(1).
+						Build(),
+				),
+			).
+			Build()
+
+		req := params.ToRequest()
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+	})
+
+	t.Run("empty builder omits query and returns all docs", func(t *testing.T) {
+		t.Parallel()
+
+		params := query.NewSearch().
+			Limit(10).
+			Build()
+
+		req := params.ToRequest()
+		assert.Assert(t, req != nil)
+		assert.Assert(t, req.Query == nil)
+
+		res, err := client.SearchRaw(ctx, alias, req)
+		assert.NilError(t, err)
+		assert.Equal(t, int64(4), res.Hits.Total.Value)
+		assert.Equal(t, 4, len(res.Hits.Hits))
+	})
 }
 
 func TestIntegration_Search_Request(t *testing.T) {

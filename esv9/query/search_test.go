@@ -26,6 +26,20 @@ func TestNewSearch_Empty(t *testing.T) {
 	assert.Equal(t, 0, params.From)
 }
 
+func TestSearchParams_ToRequest_EmptyQueryOmitsQuery(t *testing.T) {
+	t.Parallel()
+
+	req := query.NewSearch().Build().ToRequest()
+
+	assert.Assert(t, req != nil)
+	assert.Assert(t, req.Query == nil)
+	assert.Assert(t, req.Size == nil)
+	assert.Assert(t, req.From == nil)
+	assert.Assert(t, req.Timeout != nil)
+	assert.Equal(t, "10s", *req.Timeout)
+	assert.Assert(t, req.Source_)
+}
+
 func TestSearchBuilder_Where(t *testing.T) {
 	t.Parallel()
 

@@ -1,6 +1,8 @@
 package query
 
 import (
+	"encoding/json"
+
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
@@ -20,7 +22,9 @@ type SearchParams struct {
 func (p SearchParams) ToRequest() *search.Request {
 	req := search.NewRequest()
 
-	req.Query = &p.Query
+	if !isZeroQuery(p.Query) {
+		req.Query = &p.Query
+	}
 
 	if len(p.Sort) > 0 {
 		req.Sort = p.Sort
@@ -53,6 +57,14 @@ func (p SearchParams) ToRequest() *search.Request {
 	req.Source_ = true
 
 	return req
+}
+
+func isZeroQuery(q types.Query) bool {
+	b, err := json.Marshal(q)
+	if err != nil {
+		return false
+	}
+	return string(b) == "{}"
 }
 
 // ISearchBuilder is a self-referential type constraint for search builders.

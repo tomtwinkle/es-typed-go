@@ -10,6 +10,7 @@ import (
 	"time"
 
 	es8 "github.com/elastic/go-elasticsearch/v8"
+	clusterhealth "github.com/elastic/go-elasticsearch/v8/typedapi/cluster/health"
 	corebulk "github.com/elastic/go-elasticsearch/v8/typedapi/core/bulk"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/clearscroll"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/closepointintime"
@@ -23,6 +24,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/updatebyquery"
 	indicescreate "github.com/elastic/go-elasticsearch/v8/typedapi/indices/create"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/healthstatus"
 	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
 
@@ -305,10 +307,15 @@ func TestIntegration_Spec_Mget(t *testing.T) {
 }
 
 func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
-	t.Parallel()
 	client := newSpecClient(t)
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
+
+	_, err := client.ClusterHealth(ctx, estype.Index(idx), func(r *clusterhealth.Health) {
+		r.WaitForStatus(healthstatus.Green)
+		r.Timeout("10s")
+	})
+	assert.NilError(t, err)
 
 	docs := []map[string]any{
 		{"tag": "delete-me"},
@@ -316,10 +323,8 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 		{"tag": "delete-me"},
 	}
 	req := bulkOpsWithIDs(idx, docs...)
-	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
+	_, err = client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
-	// Refresh only the test index, not all indices, to avoid interference from
-	// YELLOW shards of other parallel tests.
 	_, err = client.IndexRefresh(ctx, estype.Index(idx))
 	assert.NilError(t, err)
 
@@ -333,15 +338,13 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 	res, err := client.DeleteByQuery(ctx, estype.Index(idx), func(r *deletebyquery.DeleteByQuery) {
 		r.Request(&dbqReq)
 		r.WaitForCompletion(true)
+		r.Refresh(true)
 	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)
 	assert.Assert(t, res.Deleted != nil)
 	assert.Equal(t, *res.Deleted, int64(3))
 	t.Logf("DeleteByQuery deleted %d documents", *res.Deleted)
-
-	_, err = client.IndexRefresh(ctx, estype.Index(idx))
-	assert.NilError(t, err)
 
 	afterCount, err := client.Count(ctx, estype.Alias(idx))
 	assert.NilError(t, err)
@@ -350,19 +353,22 @@ func TestIntegration_Spec_DeleteByQuery(t *testing.T) {
 }
 
 func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
-	t.Parallel()
 	client := newSpecClient(t)
 	ctx := context.Background()
 	idx := uniqueSpecIndex(t, client)
+
+	_, err := client.ClusterHealth(ctx, estype.Index(idx), func(r *clusterhealth.Health) {
+		r.WaitForStatus(healthstatus.Green)
+		r.Timeout("10s")
+	})
+	assert.NilError(t, err)
 
 	req := corebulk.Request{
 		map[string]any{"index": map[string]any{"_index": idx, "_id": "update-doc-1"}},
 		map[string]any{"status": "pending"},
 	}
-	_, err := client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
+	_, err = client.Bulk(ctx, estype.Alias(idx), func(r *corebulk.Bulk) { r.Request(&req) })
 	assert.NilError(t, err)
-	// Refresh only the test index, not all indices, to avoid interference from
-	// YELLOW shards of other parallel tests.
 	_, err = client.IndexRefresh(ctx, estype.Index(idx))
 	assert.NilError(t, err)
 
@@ -375,6 +381,7 @@ func TestIntegration_Spec_UpdateByQuery(t *testing.T) {
 	res, err := client.UpdateByQuery(ctx, estype.Index(idx), func(r *updatebyquery.UpdateByQuery) {
 		r.Request(&ubqReq)
 		r.WaitForCompletion(true)
+		r.Refresh(true)
 	})
 	assert.NilError(t, err)
 	assert.Assert(t, res != nil)

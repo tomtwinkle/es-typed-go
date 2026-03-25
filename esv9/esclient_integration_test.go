@@ -25,6 +25,17 @@ import (
 	"github.com/tomtwinkle/es-typed-go/esv9/query"
 )
 
+const (
+	fieldName      estype.Field = "name"
+	fieldCategory  estype.Field = "category"
+	fieldPrice     estype.Field = "price"
+	fieldCreatedAt estype.Field = "created_at"
+	fieldInStock   estype.Field = "in_stock"
+	fieldTags      estype.Field = "tags"
+	fieldItems     estype.Field = "items"
+	fieldItemsName estype.Field = "items.name"
+)
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -97,6 +108,21 @@ type productDoc struct {
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+func nestedObjectProperty(properties map[string]types.Property) types.Property {
+	return &types.NestedProperty{
+		Properties: properties,
+	}
+}
+
+func indexSearchDocs(t *testing.T, ctx context.Context, client esv9.ESClient, alias estype.Alias, docs ...any) {
+	t.Helper()
+
+	for i, doc := range docs {
+		_, err := client.CreateDocument(ctx, alias, fmt.Sprintf("doc-%d", i), doc)
+		assert.NilError(t, err)
+	}
+}
 
 func TestIntegration_Info(t *testing.T) {
 	t.Parallel()
@@ -920,6 +946,361 @@ func TestIntegration_Search_Request(t *testing.T) {
 	assert.Equal(t, int64(2), statsAgg.Count)
 	assert.Assert(t, math.Abs(15.0-float64(*statsAgg.Avg)) < 0.001)
 }
+
+func TestIntegration_Search_QueryHelpers(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	type itemDoc struct {
+		Name string `json:"name"`
+	}
+	type searchableDoc struct {
+		Name      string    `json:"name"`
+		Category  string    `json:"category"`
+		Price     float64   `json:"price"`
+		CreatedAt time.Time `json:"created_at"`
+		InStock   bool      `json:"in_stock"`
+		Tags      []string  `json:"tags,omitempty"`
+		Items     []itemDoc `json:"items,omitempty"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldName):      types.NewTextProperty(),
+			string(fieldCategory):  types.NewKeywordProperty(),
+			string(fieldPrice):     types.NewDoubleNumberProperty(),
+			string(fieldCreatedAt): &types.DateProperty{Format: func() *string { s := "strict_date_optional_time"; return &s }()},
+			string(fieldInStock):   types.NewBooleanProperty(),
+			string(fieldTags):      types.NewKeywordProperty(),
+			string(fieldItems): nestedObjectProperty(map[string]types.Property{
+				"name": types.NewKeywordProperty(),
+			}),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, true)
+	assert.NilError(t, err)
+
+	base := time.Date(2024, 1, 15, 12, 0, 0, 0, time.UTC)
+	indexSearchDocs(t, ctx, client, alias,
+		searchableDoc{
+			Name:      "alpha phone",
+			Category:  "electronics",
+			Price:     100,
+			CreatedAt: base,
+			InStock:   true,
+			Tags:      []string{"hot", "sale"},
+			Items:     []itemDoc{{Name: "charger"}, {Name: "case"}},
+		},
+		searchableDoc{
+			Name:      "alpha shirt",
+			Category:  "clothing",
+			Price:     40,
+			CreatedAt: base.AddDate(0, 1, 0),
+			InStock:   false,
+			Items:     []itemDoc{{Name: "hanger"}},
+		},
+		searchableDoc{
+			Name:      "beta blender",
+			Category:  "kitchen",
+			Price:     80,
+			CreatedAt: base.AddDate(0, 2, 0),
+			InStock:   true,
+			Tags:      []string{"new"},
+			Items:     []itemDoc{{Name: "jar"}},
+		},
+	)
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	tests := []struct {
+		name string
+		q    types.Query
+		want int
+	}{
+		{
+			name: "TermsValues",
+			q:    query.TermsValues(fieldCategory, query.FieldValues("electronics", "kitchen")...),
+			want: 2,
+		},
+		{
+			name: "MatchPhrase",
+			q:    query.MatchPhrase(fieldName, "alpha phone"),
+			want: 1,
+		},
+		{
+			name: "ExistsField",
+			q:    query.ExistsField(fieldTags),
+			want: 2,
+		},
+		{
+			name: "NotExists",
+			q:    query.NotExists(fieldTags),
+			want: 1,
+		},
+		{
+			name: "NestedFilter",
+			q:    query.NestedFilter(fieldItems, query.TermValue(fieldItemsName, "charger")),
+			want: 1,
+		},
+		{
+			name: "DateRangeQuery",
+			q:    query.DateRangeQuery(fieldCreatedAt, base.AddDate(0, 1, 0).Format(time.RFC3339), ""),
+			want: 2,
+		},
+		{
+			name: "NumberRangeQuery",
+			q: func() types.Query {
+				gte := types.Float64(70)
+				lte := types.Float64(100)
+				return query.NumberRangeQuery(fieldPrice, &gte, &lte)
+			}(),
+			want: 2,
+		},
+		{
+			name: "BoolMust",
+			q: query.BoolMust(
+				query.TermValue(fieldCategory, "electronics"),
+				query.TermValue(fieldInStock, true),
+			),
+			want: 1,
+		},
+		{
+			name: "BoolShould",
+			q: query.BoolShould(
+				query.TermValue(fieldCategory, "electronics"),
+				query.TermValue(fieldCategory, "kitchen"),
+			),
+			want: 2,
+		},
+		{
+			name: "BoolFilter",
+			q: query.BoolFilter(
+				query.TermValue(fieldInStock, true),
+				query.TermsValues(fieldCategory, query.FieldValues("electronics", "kitchen")...),
+			),
+			want: 2,
+		},
+		{
+			name: "BoolMustNot",
+			q: query.BoolMustNot(
+				query.TermValue(fieldCategory, "clothing"),
+			),
+			want: 2,
+		},
+		{
+			name: "MatchValue",
+			q:    query.MatchValue(fieldName, "alpha"),
+			want: 2,
+		},
+		{
+			name: "MatchAll",
+			q:    query.MatchAll(),
+			want: 3,
+		},
+		{
+			name: "MatchNone",
+			q:    query.MatchNone(),
+			want: 0,
+		},
+		{
+			name: "IdsQuery",
+			q:    query.IdsQuery("doc-0", "doc-2"),
+			want: 2,
+		},
+		{
+			name: "PrefixValue",
+			q:    query.PrefixValue(fieldCategory, "elec"),
+			want: 1,
+		},
+		{
+			name: "WildcardValue",
+			q:    query.WildcardValue(fieldCategory, "kit*"),
+			want: 1,
+		},
+		{
+			name: "MultiMatchQuery",
+			q:    query.MultiMatchQuery("alpha", fieldName, fieldCategory),
+			want: 2,
+		},
+		{
+			name: "BoolQuery wrapper",
+			q: query.BoolQuery(
+				query.NewBoolQuery().
+					Filter(query.TermValue(fieldInStock, true)).
+					Build(),
+			),
+			want: 2,
+		},
+		{
+			name: "FunctionScoreQuery",
+			q: query.FunctionScoreQuery(&types.FunctionScoreQuery{
+				Query: &types.Query{
+					Term: map[string]types.TermQuery{
+						string(fieldCategory): {Value: "electronics"},
+					},
+				},
+			}),
+			want: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := search.NewRequest()
+			req.Query = &tt.q
+			size := 10
+			req.Size = &size
+
+			res, err := client.SearchRaw(ctx, alias, req)
+			assert.NilError(t, err)
+			assert.Equal(t, int64(tt.want), res.Hits.Total.Value)
+		})
+	}
+}
+
+func TestIntegration_Search_SearchBuilderComposition(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	type builderDoc struct {
+		Name      string    `json:"name"`
+		Category  string    `json:"category"`
+		Price     float64   `json:"price"`
+		CreatedAt time.Time `json:"created_at"`
+		InStock   bool      `json:"in_stock"`
+		Tags      []string  `json:"tags,omitempty"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldName):      types.NewTextProperty(),
+			string(fieldCategory):  types.NewKeywordProperty(),
+			string(fieldPrice):     types.NewDoubleNumberProperty(),
+			string(fieldCreatedAt): &types.DateProperty{Format: func() *string { s := "strict_date_optional_time"; return &s }()},
+			string(fieldInStock):   types.NewBooleanProperty(),
+			string(fieldTags):      types.NewKeywordProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, true)
+	assert.NilError(t, err)
+
+	base := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	indexSearchDocs(t, ctx, client, alias,
+		builderDoc{Name: "alpha", Category: "electronics", Price: 90, CreatedAt: base, InStock: true, Tags: []string{"featured"}},
+		builderDoc{Name: "beta", Category: "electronics", Price: 70, CreatedAt: base.AddDate(0, 0, 1), InStock: true},
+		builderDoc{Name: "gamma", Category: "electronics", Price: 40, CreatedAt: base.AddDate(0, 0, 2), InStock: false, Tags: []string{"clearance"}},
+		builderDoc{Name: "delta", Category: "kitchen", Price: 85, CreatedAt: base.AddDate(0, 0, 3), InStock: true},
+	)
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	priceDoubleScript := "doc['price'].value * 2"
+	params := query.NewSearch().
+		Where(query.TermValue(fieldCategory, "electronics")).
+		Must(query.MatchValue(fieldName, "alpha")).
+		Should(query.TermValue(fieldInStock, true), query.TermValue(fieldTags, "featured")).
+		MinimumShouldMatch(1).
+		MustNot(query.TermValue(fieldPrice, 40.0)).
+		Sort(query.NewSort().Field(fieldPrice, sortorder.Desc).Build()...).
+		Limit(1).
+		Offset(0).
+		Highlight(&types.Highlight{
+			Fields: []map[string]types.HighlightField{
+				{fieldName.String(): {}},
+			},
+		}).
+		Collapse(&types.FieldCollapse{Field: fieldCategory.String()}).
+		ScriptFields(map[string]types.ScriptField{
+			"price_x2": {Script: types.Script{Source: priceDoubleScript}},
+		}).
+		Build()
+
+	req := params.ToRequest()
+	res, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(1), res.Hits.Total.Value)
+	assert.Equal(t, 1, len(res.Hits.Hits))
+
+	var got builderDoc
+	assert.NilError(t, json.Unmarshal(res.Hits.Hits[0].Source_, &got))
+	assert.Equal(t, "alpha", got.Name)
+	assert.Assert(t, req.Highlight != nil)
+	assert.Assert(t, req.Collapse != nil)
+	assert.Assert(t, req.ScriptFields != nil)
+	assert.Assert(t, req.Query != nil)
+	assert.Assert(t, req.Query.Bool != nil)
+	assert.Equal(t, 1, req.Query.Bool.MinimumShouldMatch)
+
+	overrideParams := query.NewSearch().
+		Where(query.TermValue(fieldCategory, "electronics")).
+		Query(query.MatchNone()).
+		Build()
+
+	overrideRes, err := client.SearchRaw(ctx, alias, overrideParams.ToRequest())
+	assert.NilError(t, err)
+	assert.Equal(t, int64(0), overrideRes.Hits.Total.Value)
+}
+
+func TestIntegration_Search_EmptySearchBuilderSerialization(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	type builderDoc struct {
+		Name     string `json:"name"`
+		Category string `json:"category"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldName):     types.NewTextProperty(),
+			string(fieldCategory): types.NewKeywordProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, true)
+	assert.NilError(t, err)
+
+	indexSearchDocs(t, ctx, client, alias,
+		builderDoc{Name: "alpha", Category: "electronics"},
+		builderDoc{Name: "beta", Category: "kitchen"},
+	)
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	params := query.NewSearch().
+		Build()
+
+	req := params.ToRequest()
+	assert.Assert(t, req != nil)
+	assert.Assert(t, req.Query == nil)
+
+	res, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(2), res.Hits.Total.Value)
+	assert.Equal(t, 2, len(res.Hits.Hits))
+}
+
+// TestIntegration_SearchRaw demonstrates using the lower-level
 
 // TestIntegration_SearchRaw demonstrates using the lower-level
 // search.Request struct directly for scenarios not covered by the high-level Search.
