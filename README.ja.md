@@ -74,7 +74,13 @@ type Product struct {
 var FieldStatus estype.Field = "status"
 
 func main() {
-	var client esv8.ESClient
+	ctx := context.Background()
+
+	client, err := esv8.NewClient(...)
+	if err != nil {
+		panic(err)
+	}
+
 	alias := estype.Alias("products")
 
 	params := query.NewSearch().
@@ -82,7 +88,7 @@ func main() {
 		Limit(10).
 		Build()
 
-	_, _ = esv8.Search[Product](context.Background(), client, alias, params)
+	_, _ = esv8.Search[Product](ctx, client, alias, params)
 }
 ```
 
