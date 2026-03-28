@@ -14,6 +14,8 @@ import (
 	indices_clear_cache "github.com/elastic/go-elasticsearch/v8/typedapi/indices/clearcache"
 	indices_forcemerge "github.com/elastic/go-elasticsearch/v8/typedapi/indices/forcemerge"
 	indices_stats "github.com/elastic/go-elasticsearch/v8/typedapi/indices/stats"
+	idxputalias "github.com/elastic/go-elasticsearch/v8/typedapi/indices/putalias"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	ilm_explain_lifecycle "github.com/elastic/go-elasticsearch/v8/typedapi/ilm/explainlifecycle"
 	ml_delete_datafeed "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletedatafeed"
 	ml_delete_job "github.com/elastic/go-elasticsearch/v8/typedapi/ml/deletejob"
