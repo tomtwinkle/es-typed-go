@@ -210,10 +210,10 @@ type ESClient interface {
 
 	// CreateAlias creates an alias pointing to an index.
 	//
-	// Creates an alias pointing to the specified index. When isWriteIndex is true, the index is designated as the write target for the alias.
+	// Creates an alias pointing to the specified index. Use estype.WriteIndexEnabled to designate the index as the write target for the alias.
 	//
 	// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
-	CreateAlias(ctx context.Context, indexName estype.Index, aliasName estype.Alias, isWriteIndex bool) (*idxputalias.Response, error)
+	CreateAlias(ctx context.Context, indexName estype.Index, aliasName estype.Alias, isWriteIndex estype.WriteIndex) (*idxputalias.Response, error)
 
 	// UpdateAliases performs one or more alias add/remove actions atomically.
 	//

@@ -139,7 +139,7 @@ func createSearchBuilderIndex(t *testing.T, ctx context.Context, client esv8.ESC
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 }
 
@@ -237,7 +237,7 @@ func TestIntegration_AliasLifecycle(t *testing.T) {
 	assert.Assert(t, len(indices) == 0)
 
 	// Create alias
-	createRes, err := client.CreateAlias(ctx, idx, alias, true)
+	createRes, err := client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	assert.Assert(t, createRes.Acknowledged)
 
@@ -303,7 +303,7 @@ func TestIntegration_DocumentCRUD(t *testing.T) {
 	// Setup: create index and alias
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	doc := productDoc{
@@ -370,7 +370,7 @@ func TestIntegration_IndexDocumentCount(t *testing.T) {
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	// Index 3 documents
@@ -398,7 +398,7 @@ func TestIntegration_AliasRefresh(t *testing.T) {
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	// AliasRefresh resolves to the backing index and refreshes it
@@ -427,7 +427,7 @@ func TestIntegration_Search_MatchAll(t *testing.T) {
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	// Index documents
@@ -474,7 +474,7 @@ func TestIntegration_Search_TermQuery(t *testing.T) {
 	}
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	for i, doc := range []productDoc{
@@ -515,7 +515,7 @@ func TestIntegration_Search_BoolQuery(t *testing.T) {
 	}
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	docs := []productDoc{
@@ -563,7 +563,7 @@ func TestIntegration_Search_WithAggregations(t *testing.T) {
 	}
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	docs := []productDoc{
@@ -641,7 +641,7 @@ func TestIntegration_Search_DateHistogramAggregation(t *testing.T) {
 	}
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	base := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -696,7 +696,7 @@ func TestIntegration_RefreshInterval(t *testing.T) {
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	// Initially not explicitly set
@@ -732,7 +732,7 @@ func TestIntegration_Reindex(t *testing.T) {
 	// Create source with documents
 	_, err := client.CreateIndex(ctx, srcIdx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, srcIdx, alias, true)
+	_, err = client.CreateAlias(ctx, srcIdx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	for i := 1; i <= 3; i++ {
@@ -780,7 +780,7 @@ func TestIntegration_DeltaReindex(t *testing.T) {
 	assert.NilError(t, err)
 	_, err = client.CreateIndex(ctx, dstIdx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, srcIdx, alias, true)
+	_, err = client.CreateAlias(ctx, srcIdx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	cutoff := time.Now().UTC()
@@ -833,7 +833,7 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 	}
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	for i, doc := range []productDoc{
@@ -883,7 +883,7 @@ func TestIntegration_Search_WithPagination(t *testing.T) {
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	for i := 0; i < 10; i++ {
@@ -1389,7 +1389,7 @@ func TestIntegration_Search_Request(t *testing.T) {
 	}
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	for i, doc := range []productDoc{
@@ -1435,7 +1435,7 @@ func TestIntegration_SearchRaw(t *testing.T) {
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	for i := 0; i < 5; i++ {

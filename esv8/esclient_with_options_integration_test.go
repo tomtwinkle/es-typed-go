@@ -99,7 +99,7 @@ func TestIntegration_WithOption_WithRefresh_DocumentImmediatelySearchable(t *tes
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	doc := productDoc{Name: "Instant Widget", Category: "test", Price: 1.0}
@@ -132,7 +132,7 @@ func TestIntegration_WithOption_WithDeleteRefresh_DeletionImmediatelyReflectedIn
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	doc := productDoc{Name: "Temporary", Category: "test", Price: 1.0}
@@ -163,7 +163,7 @@ func TestIntegration_WithOption_WithBulkRefresh_BulkDocumentsImmediatelySearchab
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	var body []byte
@@ -205,7 +205,7 @@ func TestIntegration_WithOption_WithSourceIncludes_OnlyRequestedFieldsReturned(t
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	doc := productDoc{Name: "Filtered Widget", Category: "test", Price: 42.0}
@@ -235,7 +235,7 @@ func TestIntegration_WithOption_WithSourceExcludes_ExcludedFieldAbsentFromSource
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	doc := productDoc{Name: "Exclude Test", Category: "test", Price: 99.0}
@@ -269,7 +269,7 @@ func TestIntegration_WithOption_WithUpdateMaxDocs_OnlyNDocumentsUpdated(t *testi
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 5)
 
@@ -298,7 +298,7 @@ func TestIntegration_WithOption_WithDeleteMaxDocs_OnlyNDocumentsDeleted(t *testi
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 5)
 
@@ -327,7 +327,7 @@ func TestIntegration_WithOption_WithUpdateConflicts_ProceedReportsConflictsInste
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 3)
 
@@ -354,7 +354,7 @@ func TestIntegration_WithOption_WithDeleteConflicts_ProceedReportsConflictsInste
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 3)
 
@@ -383,7 +383,7 @@ func TestIntegration_WithOption_WithUpdateWaitForCompletion_FalseReturnsTaskBefo
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 5)
 
@@ -407,7 +407,7 @@ func TestIntegration_WithOption_WithDeleteWaitForCompletion_FalseReturnsTaskBefo
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 5)
 
@@ -481,7 +481,7 @@ func TestIntegration_WithOption_WithScrollId_ContinuationPageReturnsRemainingDoc
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 5)
 
@@ -516,7 +516,7 @@ func TestIntegration_WithOption_WithClearScrollId_ScrollContextReleasedWithoutEr
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	doc := productDoc{Name: "Scroll Target", Category: "test", Price: 1.0}
@@ -615,7 +615,7 @@ func TestIntegration_WithOption_WithMaxNumSegments_ForceMergeToSingleSegment(t *
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	indexN(t, client, idx, alias, 3)
 
@@ -743,7 +743,7 @@ func TestIntegration_WithOption_WithRouting_DocumentFoundWhenRoutingMatches(t *t
 
 	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), nil)
 	assert.NilError(t, err)
-	_, err = client.CreateAlias(ctx, idx, alias, true)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 
 	routing := "shard-key-a"

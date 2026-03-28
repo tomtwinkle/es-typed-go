@@ -131,10 +131,10 @@ func (c *esClient) CreateAlias(
 	ctx context.Context,
 	indexName estype.Index,
 	aliasName estype.Alias,
-	isWriteIndex bool,
+	isWriteIndex estype.WriteIndex,
 ) (*idxputalias.Response, error) {
 	req := idxputalias.NewRequest()
-	req.IsWriteIndex = &isWriteIndex
+	req.IsWriteIndex = isWriteIndex.BoolPtr()
 	return c.typedClient.Indices.PutAlias(indexName.String(), aliasName.String()).Request(req).Do(ctx)
 }
 

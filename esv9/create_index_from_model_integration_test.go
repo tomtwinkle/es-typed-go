@@ -106,7 +106,7 @@ func TestIntegration_CreateIndexFromProviders_WithAlias(t *testing.T) {
 	_, err := client.CreateIndexFromProviders(ctx, index, model)
 	assert.NilError(t, err)
 
-	createAliasRes, err := client.CreateAlias(ctx, index, alias, true)
+	createAliasRes, err := client.CreateAlias(ctx, index, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	assert.Assert(t, createAliasRes.Acknowledged)
 
@@ -300,7 +300,7 @@ func assertCreateIndexCanIndexAndReadDocument(t *testing.T, ctx context.Context,
 		_, _ = client.DeleteAlias(cleanupCtx, index, alias)
 	})
 
-	createAliasRes, err := client.CreateAlias(ctx, index, alias, true)
+	createAliasRes, err := client.CreateAlias(ctx, index, alias, estype.WriteIndexEnabled)
 	assert.NilError(t, err)
 	assert.Assert(t, createAliasRes.Acknowledged)
 

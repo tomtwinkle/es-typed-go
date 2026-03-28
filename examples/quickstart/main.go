@@ -233,7 +233,7 @@ func ensureFreshIndexAndAlias(
 		return err
 	}
 	if !aliasExists {
-		if _, err := client.CreateAlias(ctx, index, alias, true); err != nil {
+		if _, err := client.CreateAlias(ctx, index, alias, estype.WriteIndexEnabled); err != nil {
 			return fmt.Errorf("create alias %s -> %s: %w", alias, index, err)
 		}
 		fmt.Printf("created alias: %s -> %s\n", alias, index)

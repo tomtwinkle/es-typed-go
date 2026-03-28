@@ -204,6 +204,60 @@ func WithWaitForEvents(e waitforevents.WaitForEvents) ClusterHealthOption {
 	return func(r *cluster_health.Health) { r.WaitForEvents(e) }
 }
 
+// CreateAlias options
+
+// WithCreateAliasIsWriteIndex sets is_write_index for a CreateAlias request.
+// If true the index becomes the write target for the alias.
+// If false the index is explicitly excluded as the write target.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasIsWriteIndex(v bool) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.IsWriteIndex(v) }
+}
+
+// WithCreateAliasFilter sets the filter query for a CreateAlias request.
+// The alias will only expose documents matching this query.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasFilter(filter *types.Query) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.Filter(filter) }
+}
+
+// WithCreateAliasRouting sets the routing value for both indexing and search on a CreateAlias request.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasRouting(routing string) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.Routing(routing) }
+}
+
+// WithCreateAliasIndexRouting sets the routing value for indexing operations on a CreateAlias request.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasIndexRouting(routing string) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.IndexRouting(routing) }
+}
+
+// WithCreateAliasSearchRouting sets the routing value for search operations on a CreateAlias request.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasSearchRouting(routing string) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.SearchRouting(routing) }
+}
+
+// WithCreateAliasMasterTimeout sets the master_timeout for a CreateAlias request.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasMasterTimeout(timeout string) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.MasterTimeout(timeout) }
+}
+
+// WithCreateAliasTimeout sets the timeout for a CreateAlias request.
+//
+// https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-add-alias.html
+func WithCreateAliasTimeout(timeout string) CreateAliasOption {
+	return func(b *idxputalias.PutAlias) { b.Timeout(timeout) }
+}
+
 // DeleteIndex options
 
 // WithIgnoreUnavailable ignores unavailable indices for a DeleteIndex request.

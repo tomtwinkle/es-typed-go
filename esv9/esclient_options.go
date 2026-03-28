@@ -74,6 +74,7 @@ import (
 	indices_rollover "github.com/elastic/go-elasticsearch/v9/typedapi/indices/rollover"
 	indices_stats "github.com/elastic/go-elasticsearch/v9/typedapi/indices/stats"
 	idxdelete "github.com/elastic/go-elasticsearch/v9/typedapi/indices/delete"
+	idxputalias "github.com/elastic/go-elasticsearch/v9/typedapi/indices/putalias"
 	idxrefresh "github.com/elastic/go-elasticsearch/v9/typedapi/indices/refresh"
 	inference_delete "github.com/elastic/go-elasticsearch/v9/typedapi/inference/delete"
 	inference_get "github.com/elastic/go-elasticsearch/v9/typedapi/inference/get"
@@ -299,6 +300,9 @@ type GetDocumentOption func(*coreget.Get)
 
 // DeleteDocumentOption customises a DeleteDocument request.
 type DeleteDocumentOption func(*coredelete.Delete)
+
+// CreateAliasOption customises a CreateAlias request.
+type CreateAliasOption func(*idxputalias.PutAlias)
 
 // IndexRefreshOption customises an IndexRefresh request.
 type IndexRefreshOption func(*idxrefresh.Refresh)

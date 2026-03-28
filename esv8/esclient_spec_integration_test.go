@@ -539,7 +539,7 @@ func TestIntegration_Spec_IndicesGetAlias(t *testing.T) {
 	// Add an alias via the semantic API
 	idxParsed, _ := estype.ParseESIndex(idx)
 	aliasParsed, _ := estype.ParseESAlias("alias-" + idx)
-	_, err := client.CreateAlias(ctx, idxParsed, aliasParsed, false)
+	_, err := client.CreateAlias(ctx, idxParsed, aliasParsed, estype.WriteIndexDisabled)
 	assert.NilError(t, err)
 
 	// Retrieve all aliases using the spec method

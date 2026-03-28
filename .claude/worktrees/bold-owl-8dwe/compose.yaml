@@ -1,0 +1,33 @@
+services:
+  elasticsearch-v8:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.12
+    environment:
+      cluster.name: elasticsearch-test-v8
+      xpack.security.enabled: "false"
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    ports:
+      - "19200:9200"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+
+  elasticsearch-v9:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.3.1
+    environment:
+      cluster.name: elasticsearch-test-v9
+      xpack.security.enabled: "false"
+      discovery.type: single-node
+      cluster.routing.allocation.disk.threshold_enabled: "false"
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+    ports:
+      - "19201:9200"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
