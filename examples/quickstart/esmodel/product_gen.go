@@ -4,27 +4,48 @@ package esmodel
 
 import "github.com/tomtwinkle/es-typed-go/estype"
 
-// Product provides typed field names for the Elasticsearch index mapping.
+// Product is the unified model accessor for the Elasticsearch index.
+// Access typed field names via Product.Fields, the canonical alias via
+// Product.Alias, and the canonical index name via Product.Index.
 var Product = struct {
-	Category    estype.Field
-	Date        estype.Field
-	Id          estype.Field
-	Items       estype.Field
-	Items_Name  estype.Field
-	Items_Value estype.Field
-	Price       estype.Field
-	Status      estype.Field
-	Tags        estype.Field
-	Title       estype.Field
+	Fields struct {
+		Category    estype.Field
+		Date        estype.Field
+		Id          estype.Field
+		Items       estype.Field
+		Items_Name  estype.Field
+		Items_Value estype.Field
+		Price       estype.Field
+		Status      estype.Field
+		Tags        estype.Field
+		Title       estype.Field
+	}
+	Alias estype.Alias
+	Index estype.Index
 }{
-	Category:    "category",
-	Date:        "date",
-	Id:          "id",
-	Items:       "items",
-	Items_Name:  "items.name",
-	Items_Value: "items.value",
-	Price:       "price",
-	Status:      "status",
-	Tags:        "tags",
-	Title:       "title",
+	Fields: struct {
+		Category    estype.Field
+		Date        estype.Field
+		Id          estype.Field
+		Items       estype.Field
+		Items_Name  estype.Field
+		Items_Value estype.Field
+		Price       estype.Field
+		Status      estype.Field
+		Tags        estype.Field
+		Title       estype.Field
+	}{
+		Category:    "category",
+		Date:        "date",
+		Id:          "id",
+		Items:       "items",
+		Items_Name:  "items.name",
+		Items_Value: "items.value",
+		Price:       "price",
+		Status:      "status",
+		Tags:        "tags",
+		Title:       "title",
+	},
+	Alias: "product",
+	Index: "product-000001",
 }

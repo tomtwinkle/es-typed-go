@@ -1,33 +1,91 @@
-# Search Guide
+# 搜索指南
 
-本文档仅保留搜索 API 的选择指引。
+## 应使用哪个 API？
 
-## API 选择
+| 使用场景 | API |
+|---|---|
+| 需要 typed hits、metadata、aggregations | `Search[T](ctx, client, alias, params)` |
+| 只需要解码后的文档 `_source` | `SearchDocuments[T](ctx, client, alias, params)` |
+| 只需要匹配文档数量 | `Count(ctx, alias)` |
+| 高层 helper 无法覆盖的请求格式 | `SearchRaw(ctx, alias, req)` |
 
-- `Search[T](...)`
-  - 需要 typed hits、`Total`、aggregations 或 raw response 时使用
-- `SearchDocuments[T](...)`
-  - 只需要解码后的文档 `_source` 时使用
-- `Count(...)`
-  - 只需要匹配文档数量时使用
-- `SearchRaw(...)`
-  - 需要高层 helper 尚未覆盖的 Elasticsearch request shape 时使用
+## 构建搜索参数
 
-## 使用原则
+使用顶层 `query` 包构建所有查询。该包与版本无关，`esv8` 和 `esv9` 均可使用。
 
-- 默认优先使用 `Search[T](...)`
-- 只取文档时使用 `SearchDocuments[T](...)`
-- 不要为了 count 而使用 search
-- 只有在高层 API 无法表达请求时才使用 `SearchRaw(...)`
+```go
+import "github.com/tomtwinkle/es-typed-go/query"
+
+params := query.NewSearch().
+    Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
+    Where(
+        query.TermValue(esmodel.Product.Fields.Category, "electronics"),
+        query.DateRangeQuery(esmodel.Product.Fields.Date, "2024-01-01", "2024-12-31"),
+    ).
+    Sort(
+        query.NewSort().
+            Field(esmodel.Product.Fields.Date, query.SortDesc).
+            ScoreDesc().
+            Build()...,
+    ).
+    Aggregation(query.Aggs(
+        query.AvgAgg("avg_price", esmodel.Product.Fields.Price),
+    ).Build()).
+    Limit(20).
+    Offset(0).
+    Build()
+```
+
+将 `params` 直接传给 `Search[T]`：
+
+```go
+// v8
+resp, err := esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
+
+// v9 — 完全相同，只有 package 不同
+resp, err := esv9.Search[Product](ctx, client, esmodel.Product.Alias, params)
+```
+
+## 在 v8 与 v9 之间切换
+
+由于查询构建使用共享的 `query/` 包，切换 Elasticsearch 版本只需修改客户端 import。完整变更列表请参阅 [migration-v2.md](migration-v2.md)。
+
+## 获取 Aggregation 结果
+
+`SearchResponse.Aggregations` 类型为 `query.AggResults`。使用 `GetXxx` / `MustXxx` 方法获取类型化结果：
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Product.Fields.Price)
+termsDef := query.StringTermsAgg("by_category", esmodel.Product.Fields.Category,
+    query.WithSubAggs(avgDef))
+
+// ... 执行搜索 ...
+
+terms := resp.Aggregations.MustStringTerms(termsDef)
+for _, bucket := range terms.Buckets() {
+    avg, _ := bucket.Aggregations().GetAvg(avgDef)
+    // avg.Value() 为 *float64
+}
+```
+
+## 排序方向
+
+使用 `query.SortAsc` / `query.SortDesc`，无需导入版本特定的 `sortorder` 包：
+
+```go
+query.NewSort().Field(esmodel.Product.Fields.Date, query.SortDesc)
+```
 
 ## 补充说明
 
-- `query.NewSearch().Build()` 返回的 params 可以直接传给高层搜索 helper
-- `Limit(0)` 适用于不返回 hits、只关心 total 或 aggregations 的搜索请求
-- `esv8` 与 `esv9` 的搜索 helper 用法应尽量保持一致
+- `Limit(0)` 不返回 hits（适用于仅需 aggregation 或 count 的搜索）。
+- 获取单条结果使用 `Limit(1)`。
+- `SearchRaw` 是高层 helper 无法满足时的逃生通道，接受任意 `*search.Request`。
+- `esv8` 与 `esv9` 的搜索 helper 用法完全一致。
 
 ## 相关文档
 
-- [../README.md](../README.md)
+- [../README.zh-CN.md](../README.zh-CN.md)
+- [migration-v2.md](migration-v2.md) — v2 架构与迁移步骤
 - [property-reference.md](property-reference.md)
 - [contributing.md](contributing.md)

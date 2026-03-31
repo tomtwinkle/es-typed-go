@@ -6,10 +6,13 @@ The top-level `README*` files are intentionally focused on library users: instal
 
 ## For library users
 
+### Guides
+- [Search Guide](search-guide.md) — Search API selection notes and query building patterns
+- [検索ガイド](search-guide.ja.md) — 検索 API の使い分けとクエリ構築パターン（日本語）
+- [搜索指南](search-guide.zh-CN.md) — 搜索 API 选择指引与查询构建模式（简体中文）
+- [Migration Guide (v2)](migration-v2.md) — Breaking changes and migration steps for the v2 architecture
+
 ### Reference
-- [Search Guide](search-guide.md) — Concise search API selection notes
-- [検索ガイド](search-guide.ja.md) — 検索 API の使い分けを簡潔に整理したメモ（日本語）
-- [搜索指南](search-guide.zh-CN.md) — 搜索 API 选择指引的简要说明（简体中文）
 - [Property Reference](property-reference.md) — Complete list of supported property builders and their functional options
 - [プロパティリファレンス](property-reference.ja.md) — 全プロパティ型とオプションの一覧（日本語）
 
@@ -40,16 +43,7 @@ Place detailed or contributor-oriented material here:
 - reference documentation
 - testing instructions
 - environment setup details
-- reference documentation
 - internal tooling guidance
+- migration guides for breaking changes
 
 If a document is mainly useful for contributors or maintainers, it belongs in `docs/`, not in the top-level README.
-
-## Suggested future additions
-
-If the documentation set grows, this directory is a good place for:
-- migration guides for breaking changes
-- generator design notes
-- integration testing setup details
-- architecture or API design notes
-- release process documentation

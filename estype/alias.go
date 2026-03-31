@@ -18,3 +18,14 @@ func ParseESAlias(name string) (Alias, error) {
 	}
 	return Alias(name), nil
 }
+
+// AliasProvider is implemented by types that declare a canonical Elasticsearch alias name.
+// The estyped generator reads this method when running in struct mode with the -group flag
+// to include a typed Alias field in the generated model accessor.
+//
+// Example usage in a definition file:
+//
+//	func (Product) Alias() Alias { return "product" }
+type AliasProvider interface {
+	Alias() Alias
+}

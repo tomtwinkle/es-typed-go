@@ -20,6 +20,9 @@ type Item struct {
 	Value int    `json:"value"`
 }
 
+func (Product) Alias() estype.Alias { return "product" }
+func (Product) Index() estype.Index { return "product-000001" }
+
 func (Product) Settings() estype.Settings {
 	return estype.Settings{
 		NumberOfShards:   new(int(1)),

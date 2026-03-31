@@ -8,7 +8,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/tomtwinkle/es-typed-go/estype"
-	querybuilder "github.com/tomtwinkle/es-typed-go/esv9/query"
+	"github.com/tomtwinkle/es-typed-go/query"
 )
 
 // SearchParams defines the high-level search input surface.
@@ -26,10 +26,18 @@ type SearchParams struct {
 }
 
 // ToRequest converts SearchParams into a typed Elasticsearch search.Request.
+// Deprecated: Use ToV9Request instead for clarity.
 func (p SearchParams) ToRequest() *search.Request {
+	return p.ToV9Request()
+}
+
+// ToV9Request converts SearchParams into a typed Elasticsearch v9 search.Request.
+func (p SearchParams) ToV9Request() *search.Request {
 	req := search.NewRequest()
 
-	req.Query = &p.Query
+	if !query.IsZeroQuery(p.Query) {
+		req.Query = &p.Query
+	}
 
 	if len(p.Sort) > 0 {
 		req.Sort = p.Sort
@@ -78,7 +86,7 @@ type SearchHit[T any] struct {
 type SearchResponse[T any] struct {
 	Total        int64
 	Hits         []SearchHit[T]
-	Aggregations querybuilder.AggResults
+	Aggregations query.AggResults
 	Raw          *search.Response
 }
 
@@ -89,9 +97,10 @@ type SearchClient interface {
 }
 
 // SearchRequest is the minimal input accepted by Search[T] and related helpers.
-// Both esv9.SearchParams and esv9/query.SearchParams satisfy this interface.
+// esv9.SearchParams, esv9/query.SearchParams, and query.SearchParams all satisfy
+// this interface.
 type SearchRequest interface {
-	ToRequest() *search.Request
+	ToV9Request() *search.Request
 }
 
 // Search executes a high-level search against an alias and decodes each hit's
@@ -103,14 +112,14 @@ func Search[T any](
 	aliasName estype.Alias,
 	params SearchRequest,
 ) (*SearchResponse[T], error) {
-	rawResp, err := client.SearchRaw(ctx, aliasName, params.ToRequest())
+	rawResp, err := client.SearchRaw(ctx, aliasName, params.ToV9Request())
 	if err != nil {
 		return nil, err
 	}
 
 	resp := &SearchResponse[T]{
 		Raw:          rawResp,
-		Aggregations: querybuilder.NewAggResults(rawResp.Aggregations),
+		Aggregations: aggResultsFromV9(rawResp.Aggregations),
 	}
 
 	if rawResp.Hits.Total != nil {
@@ -174,4 +183,14 @@ func SearchDocuments[T any](
 		docs = append(docs, hit.Source)
 	}
 	return docs, nil
+}
+
+// aggResultsFromV9 converts v9 aggregation results to query.AggResults via JSON
+// round-trip, since the v8 and v9 aggregation JSON formats are identical.
+func aggResultsFromV9(raw map[string]types.Aggregate) query.AggResults {
+	if len(raw) == 0 {
+		return query.NewAggResultsFromJSON(nil)
+	}
+	b, _ := json.Marshal(raw)
+	return query.NewAggResultsFromJSON(b)
 }
