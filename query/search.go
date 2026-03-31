@@ -73,13 +73,19 @@ func (p SearchParams) ToV9Request() *v9search.Request {
 	return &req
 }
 
-func isZeroQuery(q types.Query) bool {
+// IsZeroQuery reports whether q is an empty query (serializes to "{}").
+// It accepts any to work with both v8 and v9 types.Query without coupling to
+// a specific Elasticsearch SDK version.
+// esv8 and esv9 use this to avoid sending an empty "query":{} to Elasticsearch.
+func IsZeroQuery(q any) bool {
 	b, err := json.Marshal(q)
 	if err != nil {
 		return false
 	}
 	return string(b) == "{}"
 }
+
+func isZeroQuery(q types.Query) bool { return IsZeroQuery(q) }
 
 // ISearchBuilder is a self-referential type constraint for search builders.
 // The type parameter B must itself satisfy ISearchBuilder[B], so every chain

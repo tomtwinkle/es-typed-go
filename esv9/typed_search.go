@@ -35,7 +35,9 @@ func (p SearchParams) ToRequest() *search.Request {
 func (p SearchParams) ToV9Request() *search.Request {
 	req := search.NewRequest()
 
-	req.Query = &p.Query
+	if !query.IsZeroQuery(p.Query) {
+		req.Query = &p.Query
+	}
 
 	if len(p.Sort) > 0 {
 		req.Sort = p.Sort
