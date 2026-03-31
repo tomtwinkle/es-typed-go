@@ -3,8 +3,9 @@ package query
 import (
 	"encoding/json"
 
-	"github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
-	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	v9search "github.com/elastic/go-elasticsearch/v9/typedapi/core/search"
 )
 
 // SearchParams holds all parameters for a search request built by a SearchBuilder.
@@ -19,10 +20,8 @@ type SearchParams struct {
 	From         int
 }
 
-// ToV9Request converts SearchParams into a typed Elasticsearch v9 search.Request.
-func (p SearchParams) ToV9Request() *search.Request { return p.ToRequest() }
-
-func (p SearchParams) ToRequest() *search.Request {
+// ToV8Request converts SearchParams into an Elasticsearch v8 search.Request.
+func (p SearchParams) ToV8Request() *search.Request {
 	req := search.NewRequest()
 
 	if !isZeroQuery(p.Query) {
@@ -60,6 +59,18 @@ func (p SearchParams) ToRequest() *search.Request {
 	req.Source_ = true
 
 	return req
+}
+
+// Deprecated: use ToV8Request. ToRequest is kept for backward compatibility.
+func (p SearchParams) ToRequest() *search.Request { return p.ToV8Request() }
+
+// ToV9Request converts SearchParams into an Elasticsearch v9 search.Request.
+// It works by marshaling the v8 request to JSON and unmarshaling into a v9 request.
+func (p SearchParams) ToV9Request() *v9search.Request {
+	b, _ := json.Marshal(p.ToV8Request())
+	var req v9search.Request
+	_ = json.Unmarshal(b, &req)
+	return &req
 }
 
 func isZeroQuery(q types.Query) bool {

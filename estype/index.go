@@ -18,3 +18,14 @@ func ParseESIndex(name string) (Index, error) {
 	}
 	return Index(name), nil
 }
+
+// IndexProvider is implemented by types that declare a canonical Elasticsearch index name.
+// The estyped generator reads this method when running in struct mode with the -group flag
+// to include a typed Index field in the generated model accessor.
+//
+// Example usage in a definition file:
+//
+//	func (Product) Index() estype.Index { return "product-000001" }
+type IndexProvider interface {
+	Index() Index
+}

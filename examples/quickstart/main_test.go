@@ -67,16 +67,18 @@ func TestProductDefinitionMappingFields(t *testing.T) {
 func TestGeneratedProductFields(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, estype.Field("category"), esmodel.Product.Category)
-	assert.Equal(t, estype.Field("date"), esmodel.Product.Date)
-	assert.Equal(t, estype.Field("id"), esmodel.Product.Id)
-	assert.Equal(t, estype.Field("items"), esmodel.Product.Items)
-	assert.Equal(t, estype.Field("items.name"), esmodel.Product.Items_Name)
-	assert.Equal(t, estype.Field("items.value"), esmodel.Product.Items_Value)
-	assert.Equal(t, estype.Field("price"), esmodel.Product.Price)
-	assert.Equal(t, estype.Field("status"), esmodel.Product.Status)
-	assert.Equal(t, estype.Field("tags"), esmodel.Product.Tags)
-	assert.Equal(t, estype.Field("title"), esmodel.Product.Title)
+	assert.Equal(t, estype.Field("category"), esmodel.Product.Fields.Category)
+	assert.Equal(t, estype.Field("date"), esmodel.Product.Fields.Date)
+	assert.Equal(t, estype.Field("id"), esmodel.Product.Fields.Id)
+	assert.Equal(t, estype.Field("items"), esmodel.Product.Fields.Items)
+	assert.Equal(t, estype.Field("items.name"), esmodel.Product.Fields.Items_Name)
+	assert.Equal(t, estype.Field("items.value"), esmodel.Product.Fields.Items_Value)
+	assert.Equal(t, estype.Field("price"), esmodel.Product.Fields.Price)
+	assert.Equal(t, estype.Field("status"), esmodel.Product.Fields.Status)
+	assert.Equal(t, estype.Field("tags"), esmodel.Product.Fields.Tags)
+	assert.Equal(t, estype.Field("title"), esmodel.Product.Fields.Title)
+	assert.Equal(t, estype.Alias("product"), esmodel.Product.Alias)
+	assert.Equal(t, estype.Index("product-000001"), esmodel.Product.Index)
 }
 
 func TestGeneratedProductFieldsMatchDefinitionPaths(t *testing.T) {
@@ -85,16 +87,16 @@ func TestGeneratedProductFieldsMatchDefinitionPaths(t *testing.T) {
 	mapping := esdefinition.Product{}.Mapping()
 
 	want := map[string]bool{
-		string(esmodel.Product.Category):    true,
-		string(esmodel.Product.Date):        true,
-		string(esmodel.Product.Id):          true,
-		string(esmodel.Product.Items):       true,
-		string(esmodel.Product.Items_Name):  true,
-		string(esmodel.Product.Items_Value): true,
-		string(esmodel.Product.Price):       true,
-		string(esmodel.Product.Status):      true,
-		string(esmodel.Product.Tags):        true,
-		string(esmodel.Product.Title):       true,
+		string(esmodel.Product.Fields.Category):   true,
+		string(esmodel.Product.Fields.Date):       true,
+		string(esmodel.Product.Fields.Id):         true,
+		string(esmodel.Product.Fields.Items):      true,
+		string(esmodel.Product.Fields.Items_Name): true,
+		string(esmodel.Product.Fields.Items_Value): true,
+		string(esmodel.Product.Fields.Price):      true,
+		string(esmodel.Product.Fields.Status):     true,
+		string(esmodel.Product.Fields.Tags):       true,
+		string(esmodel.Product.Fields.Title):      true,
 	}
 
 	got := make(map[string]bool, len(mapping.Fields))

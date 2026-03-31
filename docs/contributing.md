@@ -30,11 +30,20 @@ go test -v -count=1 -timeout=60s ./...
 
 ### Run integration tests
 
-These require running Elasticsearch instances.
+These require running Elasticsearch instances (start them with `docker compose up -d` first).
 
 ```bash
-go test -tags=integration -v ./estype/... ./esv8/...
-go test -tags=integration -v ./esv9/...
+# v8 integration tests (ES on port 19200)
+go test -tags=integration -v -timeout=120s ./estype/... ./esv8/...
+
+# v9 integration tests (ES on port 19201)
+go test -tags=integration -v -timeout=120s ./esv9/...
+```
+
+Override the Elasticsearch URL with the `ES_URL` environment variable if needed:
+
+```bash
+ES_URL=http://localhost:19200 go test -tags=integration -v -timeout=120s ./esv8/...
 ```
 
 ### Regenerate generated files
@@ -57,6 +66,8 @@ The default local ports are:
 - Elasticsearch v8: `http://localhost:19200`
 - Elasticsearch v9: `http://localhost:19201`
 
+Both services have `cluster.routing.allocation.disk.threshold_enabled: "false"` set to prevent the cluster from going read-only on machines with limited disk space.
+
 ## Linting and custom vet checks
 
 This repository includes a custom analyzer for unchecked type assertions.
@@ -73,7 +84,7 @@ Run it with `go vet`:
 go vet -vettool=$(pwd)/bin/okassertcheck ./...
 ```
 
-A practical local validation sequence is:
+A practical local validation sequence:
 
 ```bash
 go test ./... -short -count=1
@@ -81,3 +92,14 @@ go build ./...
 go build -o ./bin/okassertcheck ./tools/okassertcheck
 go vet -vettool=$(pwd)/bin/okassertcheck ./...
 ```
+
+## Adding a new Elasticsearch version
+
+The repository follows a mirrored structure: `esv8/` and `esv9/` expose the same exported symbols. When adding a new version:
+
+1. Copy `esv9/` to `esv{N}/` and update import paths.
+2. Update `go.mod` with the new `go-elasticsearch/v{N}` dependency.
+3. Add a `SearchParams.ToV{N}Request()` method to `query/search.go`.
+4. Add the new `esv{N}.SearchRequest` interface and update `typed_search.go`.
+5. Add integration test containers to `compose.yaml`.
+6. Mirror all `esv9/` tests in `esv{N}/`.

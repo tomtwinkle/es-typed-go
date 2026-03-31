@@ -7,15 +7,19 @@ import (
 	"math"
 	"strings"
 
-	es8 "github.com/elastic/go-elasticsearch/v8"
-	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
+	es9 "github.com/elastic/go-elasticsearch/v9"
 
 	"github.com/tomtwinkle/es-typed-go/estype"
-	"github.com/tomtwinkle/es-typed-go/esv8"
+	"github.com/tomtwinkle/es-typed-go/esv9"
 	"github.com/tomtwinkle/es-typed-go/examples/quickstart/esdefinition"
 	"github.com/tomtwinkle/es-typed-go/examples/quickstart/esmodel"
 	"github.com/tomtwinkle/es-typed-go/query"
 )
+
+// This example is the v9 counterpart of examples/quickstart/main.go.
+// The only difference is the import of esv9 instead of esv8 and the
+// corresponding es9 config type. Query building, field access, and
+// aggregation handling are identical — only the import path changes.
 
 type Product struct {
 	ID       string   `json:"id"`
@@ -28,9 +32,10 @@ type Product struct {
 }
 
 func main() {
-	client, err := esv8.NewClientWithLogger(
-		es8.Config{
-			Addresses: []string{"http://localhost:19200"},
+	// Only this block differs from the v8 example: es9.Config and esv9.NewClientWithLogger.
+	client, err := esv9.NewClientWithLogger(
+		es9.Config{
+			Addresses: []string{"http://localhost:19201"},
 		},
 		slog.Default(),
 	)
@@ -57,9 +62,6 @@ func main() {
 		query.WithSubAggs(avgPriceAgg),
 	)
 
-	// Build a query that matches more than one document so pagination is visible.
-	// The filter intentionally keeps only active electronics released in the second
-	// half of 2024, which matches multiple seeded products.
 	params := query.NewSearch().
 		Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
 		Where(
@@ -75,25 +77,17 @@ func main() {
 		Aggregation(query.Aggs(
 			byCategoryAgg,
 		).Build()).
-		// Limit the page to one hit so total hits and returned hits differ.
 		Limit(1).
-		// Start from the first page.
 		Offset(0).
 		Build()
 
-	resp, err := esv8.Search[Product](ctx, client, alias, params)
+	// Only this line differs: esv9.Search instead of esv8.Search.
+	resp, err := esv9.Search[Product](ctx, client, alias, params)
 	if err != nil {
 		panic(err)
 	}
 
-	// Total hits is the full number of matching documents across all pages.
-	// len(resp.Hits) is only the number of hits returned in this page.
 	fmt.Printf("Total hits: %d (page size=%d)\n", resp.Total, len(resp.Hits))
-	if resp.Raw != nil && resp.Raw.Hits.Total != nil {
-		// Show the raw Elasticsearch metadata so it is easy to compare with the
-		// higher-level typed response.
-		fmt.Printf("Raw total hits: value=%d relation=%s\n", resp.Raw.Hits.Total.Value, resp.Raw.Hits.Total.Relation)
-	}
 	fmt.Printf("Hits (%d):\n", len(resp.Hits))
 	for i, hit := range resp.Hits {
 		scoreText := "nil"
@@ -117,97 +111,29 @@ func main() {
 			fmt.Printf("category=%s avg_price=%.2f\n", bucket.Key(), *avg.Value())
 		}
 	}
-
-	// Run the same query through the lower-level raw API for comparison.
-	rawReq := search.NewRequest()
-	rawReq.Query = &params.Query
-	// Keep the raw request aligned with the typed search page size.
-	rawReq.Size = new(1)
-
-	rawResp, err := client.SearchRaw(ctx, alias, rawReq)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("raw took: %d\n", rawResp.Took)
-	fmt.Printf("raw response summary: took=%d timed_out=%v shards=%+v\n", rawResp.Took, rawResp.TimedOut, rawResp.Shards_)
-	fmt.Printf("raw response: hits=%+v aggregations=%+v\n", rawResp.Hits, rawResp.Aggregations)
 }
 
-func seedProducts(ctx context.Context, client esv8.ESClient, alias estype.Alias) error {
-	// Seed a mix of matching and non-matching documents so the example shows:
-	// - filtering by status/category/date
-	// - sorting by date
-	// - pagination where total hits is greater than page size
+func seedProducts(ctx context.Context, client esv9.ESClient, alias estype.Alias) error {
 	docs := []Product{
-		{
-			ID:       "product-1",
-			Status:   "active",
-			Title:    "Noise Cancelling Headphones",
-			Category: "electronics",
-			Price:    199.99,
-			Tags:     []string{"audio", "wireless"},
-			Date:     "2024-11-15",
-		},
-		{
-			ID:       "product-2",
-			Status:   "active",
-			Title:    "Go Programming Guide",
-			Category: "books",
-			Price:    39.99,
-			Tags:     []string{"programming", "golang"},
-			Date:     "2024-08-10",
-		},
-		{
-			ID:       "product-3",
-			Status:   "inactive",
-			Title:    "Vintage Camera",
-			Category: "electronics",
-			Price:    89.50,
-			Tags:     []string{"camera", "collectible"},
-			Date:     "2024-10-01",
-		},
-		{
-			ID:       "product-4",
-			Status:   "active",
-			Title:    "Mechanical Keyboard",
-			Category: "electronics",
-			Price:    129.00,
-			Tags:     []string{"keyboard", "office"},
-			Date:     "2024-07-05",
-		},
-		{
-			ID:       "product-5",
-			Status:   "active",
-			Title:    "Standing Desk",
-			Category: "furniture",
-			Price:    499.00,
-			Tags:     []string{"office", "desk"},
-			Date:     "2024-09-12",
-		},
-		{
-			ID:       "product-6",
-			Status:   "active",
-			Title:    "Wireless Mouse",
-			Category: "electronics",
-			Price:    59.99,
-			Tags:     []string{"mouse", "wireless"},
-			Date:     "2024-01-20",
-		},
+		{ID: "product-1", Status: "active", Title: "Noise Cancelling Headphones", Category: "electronics", Price: 199.99, Tags: []string{"audio", "wireless"}, Date: "2024-11-15"},
+		{ID: "product-2", Status: "active", Title: "Go Programming Guide", Category: "books", Price: 39.99, Tags: []string{"programming", "golang"}, Date: "2024-08-10"},
+		{ID: "product-3", Status: "inactive", Title: "Vintage Camera", Category: "electronics", Price: 89.50, Tags: []string{"camera", "collectible"}, Date: "2024-10-01"},
+		{ID: "product-4", Status: "active", Title: "Mechanical Keyboard", Category: "electronics", Price: 129.00, Tags: []string{"keyboard", "office"}, Date: "2024-07-05"},
+		{ID: "product-5", Status: "active", Title: "Standing Desk", Category: "furniture", Price: 499.00, Tags: []string{"office", "desk"}, Date: "2024-09-12"},
+		{ID: "product-6", Status: "active", Title: "Wireless Mouse", Category: "electronics", Price: 59.99, Tags: []string{"mouse", "wireless"}, Date: "2024-01-20"},
 	}
-
 	for _, doc := range docs {
 		if _, err := client.CreateDocument(ctx, alias, doc.ID, doc); err != nil {
 			return fmt.Errorf("seed product %s: %w", doc.ID, err)
 		}
 	}
-
 	fmt.Printf("seeded %d example documents\n", len(docs))
 	return nil
 }
 
 func ensureFreshIndexAndAlias(
 	ctx context.Context,
-	client esv8.ESClient,
+	client esv9.ESClient,
 	index estype.Index,
 	alias estype.Alias,
 ) error {

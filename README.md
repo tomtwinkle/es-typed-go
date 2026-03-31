@@ -27,8 +27,8 @@ The official Elasticsearch Go typed client is powerful, but in practice it still
 - typed query / sort / aggregation builders
 - Elasticsearch property builders
 - high-level search helpers for v8 and v9
-- direct use of builder search params with typed search helpers
-- dual-version support for Elasticsearch v8 and v9
+- **single import path to switch between Elasticsearch v8 and v9**
+- version-agnostic `query/` package shared by both versions
 
 ## Installation
 
@@ -59,16 +59,14 @@ import (
 	"context"
 
 	"github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-	"github.com/tomtwinkle/es-typed-go/estype"
+	"github.com/tomtwinkle/es-typed-go/query"
+	"github.com/tomtwinkle/es-typed-go/examples/quickstart/esmodel"
 )
 
 type Product struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
 }
-
-var FieldStatus estype.Field = "status"
 
 func main() {
 	ctx := context.Background()
@@ -78,29 +76,94 @@ func main() {
 		panic(err)
 	}
 
-	alias := estype.Alias("products")
-
+	// esmodel.Product.Alias and .Index come from the generated model file.
+	// esmodel.Product.Fields.Status is a typed field name (estype.Field).
 	params := query.NewSearch().
-		Where(query.TermValue(FieldStatus, "active")).
+		Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
 		Limit(10).
 		Build()
 
-	_, _ = esv8.Search[Product](ctx, client, alias, params)
+	_, _ = esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
 }
 ```
 
-For a runnable end-to-end example, see:
+## Switching from v8 to v9
 
-- [`examples/quickstart/main.go`](examples/quickstart/main.go)
-- [`examples/quickstart/README.md`](examples/quickstart/README.md)
+Because query building uses the shared `query/` package, switching Elasticsearch versions requires changing **only the client import**:
+
+```go
+// v8
+import (
+    es8 "github.com/elastic/go-elasticsearch/v8"
+    "github.com/tomtwinkle/es-typed-go/esv8"
+    "github.com/tomtwinkle/es-typed-go/query"
+)
+client, _ := esv8.NewClient(es8.Config{Addresses: []string{"http://localhost:19200"}})
+resp, err := esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
+
+// v9 — only the two lines above change
+import (
+    es9 "github.com/elastic/go-elasticsearch/v9"
+    "github.com/tomtwinkle/es-typed-go/esv9"
+    "github.com/tomtwinkle/es-typed-go/query"
+)
+client, _ := esv9.NewClient(es9.Config{Addresses: []string{"http://localhost:19201"}})
+resp, err := esv9.Search[Product](ctx, client, esmodel.Product.Alias, params)
+```
+
+All query building, field names, aggregations, and sort definitions are unchanged.
+
+## Generated model format
+
+Run `estyped` with `-struct` and `-group` to generate a unified model accessor that includes typed field names, the canonical alias, and the canonical index name in one place:
+
+```go
+// esdefinition/product.go
+func (Product) Alias() estype.Alias { return "product" }
+func (Product) Index() estype.Index { return "product-000001" }
+
+//go:generate go tool estyped -struct Product -package esmodel -out ../esmodel/product_gen.go -group Product
+```
+
+The generated accessor:
+
+```go
+// esmodel/product_gen.go (generated — do not edit)
+var Product = struct {
+    Fields struct {
+        Status   estype.Field
+        Category estype.Field
+        // ...
+    }
+    Alias estype.Alias
+    Index estype.Index
+}{
+    Fields: struct{ ... }{Status: "status", Category: "category", ...},
+    Alias: "product",
+    Index: "product-000001",
+}
+```
+
+Usage:
+
+```go
+query.TermValue(esmodel.Product.Fields.Status, "active")
+esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
+```
+
+For runnable end-to-end examples, see:
+
+- [`examples/quickstart/main.go`](examples/quickstart/main.go) — Elasticsearch v8
+- [`examples/quickstart_v9/main.go`](examples/quickstart_v9/main.go) — Elasticsearch v9
 
 ## Documentation
 
-Detailed documentation has been moved under `docs/`.
+Detailed documentation is under `docs/`.
 
 ### User guides
 - [Search Guide](docs/search-guide.md)
 - [Property Reference](docs/property-reference.md)
+- [Migration Guide (v2)](docs/migration-v2.md)
 - [Documentation index](docs/README.md)
 
 ### Contributor guides
@@ -111,7 +174,7 @@ Detailed documentation has been moved under `docs/`.
 - `esv8` targets Elasticsearch v8
 - `esv9` targets Elasticsearch v9
 
-The two packages are intended to stay closely aligned.
+Both packages share the top-level `query/` package for query building and expose identical API signatures. The only difference between them is the underlying Elasticsearch client version.
 
 ## License
 

@@ -32,7 +32,8 @@
 - 类型安全的 query / sort / aggregation builder
 - Elasticsearch property builder
 - 同时支持 `esv8` 和 `esv9`
-- builder 返回的 search params 可直接传给高层 typed search helper
+- **只需更改 import 路径即可在 Elasticsearch v8 和 v9 之间切换**
+- 两个版本共享的 version-agnostic `query/` 包
 
 ## 安装
 
@@ -63,16 +64,14 @@ import (
 	"context"
 
 	"github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
-	"github.com/tomtwinkle/es-typed-go/estype"
+	"github.com/tomtwinkle/es-typed-go/query"
+	"github.com/tomtwinkle/es-typed-go/examples/quickstart/esmodel"
 )
 
 type Product struct {
 	ID     string `json:"id"`
 	Status string `json:"status"`
 }
-
-var FieldStatus estype.Field = "status"
 
 func main() {
 	ctx := context.Background()
@@ -82,21 +81,85 @@ func main() {
 		panic(err)
 	}
 
-	alias := estype.Alias("products")
-
+	// esmodel.Product.Alias / .Index 来自生成的模型文件。
+	// esmodel.Product.Fields.Status 是类型化字段名 (estype.Field)。
 	params := query.NewSearch().
-		Where(query.TermValue(FieldStatus, "active")).
+		Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
 		Limit(10).
 		Build()
 
-	_, _ = esv8.Search[Product](ctx, client, alias, params)
+	_, _ = esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
 }
+```
+
+## 从 v8 切换到 v9
+
+由于查询构建使用共享的 `query/` 包，切换 Elasticsearch 版本只需**更改客户端的 import**：
+
+```go
+// v8
+import (
+    es8 "github.com/elastic/go-elasticsearch/v8"
+    "github.com/tomtwinkle/es-typed-go/esv8"
+    "github.com/tomtwinkle/es-typed-go/query"
+)
+client, _ := esv8.NewClient(es8.Config{Addresses: []string{"http://localhost:19200"}})
+resp, err := esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
+
+// v9 — 只更改上面两行
+import (
+    es9 "github.com/elastic/go-elasticsearch/v9"
+    "github.com/tomtwinkle/es-typed-go/esv9"
+    "github.com/tomtwinkle/es-typed-go/query"
+)
+client, _ := esv9.NewClient(es9.Config{Addresses: []string{"http://localhost:19201"}})
+resp, err := esv9.Search[Product](ctx, client, esmodel.Product.Alias, params)
+```
+
+查询构建、字段名、聚合、排序定义均无需更改。
+
+## 生成模型格式
+
+使用 `-struct` 和 `-group` 标志运行 `estyped`，可生成一个统一的模型访问器，将类型化字段名、别名和索引名集中在一个变量中：
+
+```go
+// esdefinition/product.go
+func (Product) Alias() estype.Alias { return "product" }
+func (Product) Index() estype.Index { return "product-000001" }
+
+//go:generate go tool estyped -struct Product -package esmodel -out ../esmodel/product_gen.go -group Product
+```
+
+生成的访问器：
+
+```go
+// esmodel/product_gen.go（生成文件 — 请勿直接编辑）
+var Product = struct {
+    Fields struct {
+        Status   estype.Field
+        Category estype.Field
+        // ...
+    }
+    Alias estype.Alias
+    Index estype.Index
+}{
+    Fields: struct{ ... }{Status: "status", Category: "category", ...},
+    Alias: "product",
+    Index: "product-000001",
+}
+```
+
+使用方式：
+
+```go
+query.TermValue(esmodel.Product.Fields.Status, "active")
+esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
 ```
 
 可运行的端到端示例请参见：
 
-- [`examples/quickstart/main.go`](examples/quickstart/main.go)
-- [`examples/quickstart/README.md`](examples/quickstart/README.md)
+- [`examples/quickstart/main.go`](examples/quickstart/main.go) — Elasticsearch v8
+- [`examples/quickstart_v9/main.go`](examples/quickstart_v9/main.go) — Elasticsearch v9
 
 ## 文档
 
@@ -105,6 +168,7 @@ func main() {
 ### 面向使用者
 - [Search Guide](docs/search-guide.md)
 - [Property Reference](docs/property-reference.md)
+- [迁移指南 (v2)](docs/migration-v2.md)
 - [文档索引](docs/README.md)
 
 ### 面向贡献者
@@ -115,7 +179,7 @@ func main() {
 - `esv8` 面向 Elasticsearch v8
 - `esv9` 面向 Elasticsearch v9
 
-两个包会尽量保持接近的 API 形状。
+两个包共享顶层 `query/` 包进行查询构建，并保持相同的 API 签名。唯一的区别是底层使用的 Elasticsearch 客户端版本不同。
 
 ## 许可证
 
