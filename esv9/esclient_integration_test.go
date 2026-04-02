@@ -1974,3 +1974,196 @@ func TestIntegration_AllPropertyMappings_KeywordNormalizer(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, res.Acknowledged)
 }
+
+func TestIntegration_NestedAgg(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	type itemDoc struct {
+		Name string `json:"name"`
+	}
+	type nestedDoc struct {
+		Name     string    `json:"name"`
+		Category string    `json:"category"`
+		Items    []itemDoc `json:"items,omitempty"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldName):     types.NewKeywordProperty(),
+			string(fieldCategory): types.NewKeywordProperty(),
+			string(fieldItems): nestedObjectProperty(map[string]types.Property{
+				"name": types.NewKeywordProperty(),
+			}),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	indexSearchDocs(t, ctx, client, alias,
+		nestedDoc{Name: "a", Category: "electronics", Items: []itemDoc{{Name: "charger"}, {Name: "cable"}}},
+		nestedDoc{Name: "b", Category: "clothing", Items: []itemDoc{{Name: "hanger"}}},
+		nestedDoc{Name: "c", Category: "kitchen"},
+	)
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	itemCountAgg := query.ValueCountAgg("item_count", fieldItemsName)
+	nestedAgg := query.NestedAgg("items_agg", fieldItems, query.NestedAggSubAggs(itemCountAgg))
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 0
+	req.Size = &size
+	req.Aggregations = query.Aggs(nestedAgg).Build()
+
+	rawRes, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+
+	results := query.NewAggResults(rawRes.Aggregations)
+	nestedRes, err := results.GetNested(nestedAgg)
+	assert.NilError(t, err)
+	// doc1 has 2 items, doc2 has 1 item, doc3 has 0 → total 3 nested docs
+	assert.Equal(t, int64(3), nestedRes.DocCount())
+
+	countRes, err := nestedRes.Aggregations().GetValueCount(itemCountAgg)
+	assert.NilError(t, err)
+	assert.Assert(t, countRes.Value() != nil)
+	assert.Equal(t, int64(3), *countRes.Value())
+}
+
+func TestIntegration_FilterAgg(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldCategory): types.NewKeywordProperty(),
+			string(fieldPrice):    types.NewDoubleNumberProperty(),
+			string(fieldInStock):  types.NewBooleanProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	indexSearchDocs(t, ctx, client, alias,
+		productDoc{Name: "Laptop", Category: "electronics", Price: 999.99, InStock: true},
+		productDoc{Name: "Phone", Category: "electronics", Price: 699.99, InStock: false},
+		productDoc{Name: "T-Shirt", Category: "clothing", Price: 29.99, InStock: true},
+	)
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	filter := types.Query{Term: map[string]types.TermQuery{
+		string(fieldInStock): {Value: true},
+	}}
+	avgPriceAgg := query.AvgAgg("avg_price", fieldPrice)
+	filterAgg := query.FilterAgg("in_stock_items", filter, query.FilterAggSubAggs(avgPriceAgg))
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 0
+	req.Size = &size
+	req.Aggregations = query.Aggs(filterAgg).Build()
+
+	rawRes, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+
+	results := query.NewAggResults(rawRes.Aggregations)
+	filterRes, err := results.GetFilter(filterAgg)
+	assert.NilError(t, err)
+	// Laptop and T-Shirt are in stock → 2 docs
+	assert.Equal(t, int64(2), filterRes.DocCount())
+
+	avgRes, err := filterRes.Aggregations().GetAvg(avgPriceAgg)
+	assert.NilError(t, err)
+	assert.Assert(t, avgRes.Value() != nil)
+	// avg of 999.99 and 29.99 = 514.99
+	assert.Assert(t, math.Abs(514.99-*avgRes.Value()) < 0.1)
+}
+
+func TestIntegration_MultiTermsAgg(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	type statusDoc struct {
+		Category string  `json:"category"`
+		Status   string  `json:"status"`
+		Value    float64 `json:"value"`
+	}
+	const (
+		fieldStatus estype.Field = "status"
+		fieldValue  estype.Field = "value"
+	)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldCategory): types.NewKeywordProperty(),
+			string(fieldStatus):   types.NewKeywordProperty(),
+			string(fieldValue):    types.NewDoubleNumberProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	indexSearchDocs(t, ctx, client, alias,
+		statusDoc{Category: "electronics", Status: "active", Value: 100},
+		statusDoc{Category: "electronics", Status: "inactive", Value: 200},
+		statusDoc{Category: "clothing", Status: "active", Value: 50},
+		statusDoc{Category: "clothing", Status: "active", Value: 75},
+	)
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	sumValueAgg := query.SumAgg("total_value", fieldValue)
+	multiTerms := query.MultiTermsAgg(
+		"by_cat_status",
+		[]estype.Field{fieldCategory, fieldStatus},
+		query.MultiTermsAggSize(10),
+		query.MultiTermsAggSubAggs(sumValueAgg),
+	)
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 0
+	req.Size = &size
+	req.Aggregations = query.Aggs(multiTerms).Build()
+
+	rawRes, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+
+	results := query.NewAggResults(rawRes.Aggregations)
+	multiRes, err := results.GetMultiTerms(multiTerms)
+	assert.NilError(t, err)
+	// 3 distinct combinations: [electronics, active], [electronics, inactive], [clothing, active]
+	assert.Equal(t, 3, len(multiRes.Buckets()))
+
+	for _, bucket := range multiRes.Buckets() {
+		if len(bucket.Keys()) == 2 && bucket.Keys()[0] == "clothing" && bucket.Keys()[1] == "active" {
+			assert.Equal(t, int64(2), bucket.DocCount())
+			sumRes, err := bucket.Aggregations().GetSum(sumValueAgg)
+			assert.NilError(t, err)
+			assert.Assert(t, sumRes.Value() != nil)
+			// 50 + 75 = 125
+			assert.Assert(t, math.Abs(125.0-*sumRes.Value()) < 0.01)
+		}
+	}
+}

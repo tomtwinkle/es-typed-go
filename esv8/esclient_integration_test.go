@@ -2085,3 +2085,178 @@ func TestIntegration_AllPropertyMappings_KeywordNormalizer(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Assert(t, res.Acknowledged)
 }
+
+func TestIntegration_NestedAgg(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	createSearchBuilderIndex(t, ctx, client, idx, alias)
+	indexSearchBuilderDocs(t, ctx, client, alias, []searchBuilderDoc{
+		{ID: "1", Name: "a", Category: "electronics", Items: []builderItem{{Name: "charger", Status: "active"}, {Name: "cable", Status: "active"}}},
+		{ID: "2", Name: "b", Category: "clothing", Items: []builderItem{{Name: "hanger", Status: "inactive"}}},
+		{ID: "3", Name: "c", Category: "kitchen"},
+	})
+	_, err := client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	itemCountAgg := query.ValueCountAgg("item_count", estype.Field("items.name"))
+	nestedAgg := query.NestedAgg("items_agg", estype.Field("items"), query.NestedAggSubAggs(itemCountAgg))
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 0
+	req.Size = &size
+	req.Aggregations = query.Aggs(nestedAgg).Build()
+
+	rawRes, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+
+	results := query.NewAggResults(rawRes.Aggregations)
+	nestedRes, err := results.GetNested(nestedAgg)
+	assert.NilError(t, err)
+	// doc1 has 2 items, doc2 has 1 item, doc3 has 0 → total 3 nested docs
+	assert.Equal(t, int64(3), nestedRes.DocCount())
+
+	countRes, err := nestedRes.Aggregations().GetValueCount(itemCountAgg)
+	assert.NilError(t, err)
+	assert.Assert(t, countRes.Value() != nil)
+	assert.Equal(t, int64(3), *countRes.Value())
+}
+
+func TestIntegration_FilterAgg(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"category": types.NewKeywordProperty(),
+			"price":    types.NewDoubleNumberProperty(),
+			"in_stock": types.NewBooleanProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	docs := []productDoc{
+		{Name: "Laptop", Category: "electronics", Price: 999.99, InStock: true},
+		{Name: "Phone", Category: "electronics", Price: 699.99, InStock: false},
+		{Name: "T-Shirt", Category: "clothing", Price: 29.99, InStock: true},
+	}
+	for i, doc := range docs {
+		_, err = client.CreateDocument(ctx, alias, fmt.Sprintf("doc-%d", i), doc)
+		assert.NilError(t, err)
+	}
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	filter := types.Query{Term: map[string]types.TermQuery{
+		"in_stock": {Value: true},
+	}}
+	avgPriceAgg := query.AvgAgg("avg_price", estype.Field("price"))
+	filterAgg := query.FilterAgg("in_stock_items", filter, query.FilterAggSubAggs(avgPriceAgg))
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 0
+	req.Size = &size
+	req.Aggregations = query.Aggs(filterAgg).Build()
+
+	rawRes, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+
+	results := query.NewAggResults(rawRes.Aggregations)
+	filterRes, err := results.GetFilter(filterAgg)
+	assert.NilError(t, err)
+	// Laptop and T-Shirt are in stock → 2 docs
+	assert.Equal(t, int64(2), filterRes.DocCount())
+
+	avgRes, err := filterRes.Aggregations().GetAvg(avgPriceAgg)
+	assert.NilError(t, err)
+	assert.Assert(t, avgRes.Value() != nil)
+	// avg of 999.99 and 29.99 = 514.99
+	assert.Assert(t, math.Abs(514.99-*avgRes.Value()) < 0.1)
+}
+
+func TestIntegration_MultiTermsAgg(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	type statusDoc struct {
+		Category string  `json:"category"`
+		Status   string  `json:"status"`
+		Value    float64 `json:"value"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"category": types.NewKeywordProperty(),
+			"status":   types.NewKeywordProperty(),
+			"value":    types.NewDoubleNumberProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	docs := []statusDoc{
+		{Category: "electronics", Status: "active", Value: 100},
+		{Category: "electronics", Status: "inactive", Value: 200},
+		{Category: "clothing", Status: "active", Value: 50},
+		{Category: "clothing", Status: "active", Value: 75},
+	}
+	for i, doc := range docs {
+		_, err = client.CreateDocument(ctx, alias, fmt.Sprintf("doc-%d", i), doc)
+		assert.NilError(t, err)
+	}
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	sumValueAgg := query.SumAgg("total_value", estype.Field("value"))
+	multiTerms := query.MultiTermsAgg(
+		"by_cat_status",
+		[]estype.Field{estype.Field("category"), estype.Field("status")},
+		query.MultiTermsAggSize(10),
+		query.MultiTermsAggSubAggs(sumValueAgg),
+	)
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 0
+	req.Size = &size
+	req.Aggregations = query.Aggs(multiTerms).Build()
+
+	rawRes, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+
+	results := query.NewAggResults(rawRes.Aggregations)
+	multiRes, err := results.GetMultiTerms(multiTerms)
+	assert.NilError(t, err)
+	// 3 distinct combinations: [electronics, active], [electronics, inactive], [clothing, active]
+	assert.Equal(t, 3, len(multiRes.Buckets()))
+
+	for _, bucket := range multiRes.Buckets() {
+		if len(bucket.Keys()) == 2 && bucket.Keys()[0] == "clothing" && bucket.Keys()[1] == "active" {
+			assert.Equal(t, int64(2), bucket.DocCount())
+			sumRes, err := bucket.Aggregations().GetSum(sumValueAgg)
+			assert.NilError(t, err)
+			assert.Assert(t, sumRes.Value() != nil)
+			// 50 + 75 = 125
+			assert.Assert(t, math.Abs(125.0-*sumRes.Value()) < 0.01)
+		}
+	}
+}
