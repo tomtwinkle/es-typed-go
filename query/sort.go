@@ -86,7 +86,7 @@ func (s *SortBuilder) FieldNested(name estype.Field, order sortorder.SortOrder, 
 			string(name): {
 				Order:  &order,
 				Mode:   &mode,
-				Nested: &types.NestedSortValue{Path: string(path)},
+				Nested: NewNestedSort(path),
 			},
 		},
 	})
@@ -94,6 +94,7 @@ func (s *SortBuilder) FieldNested(name estype.Field, order sortorder.SortOrder, 
 }
 
 // FieldCustom adds a sort on the given field with a fully customized FieldSort.
+// Use NewNestedSort to build the Nested field without raw string conversions.
 func (s *SortBuilder) FieldCustom(name estype.Field, fs types.FieldSort) *SortBuilder {
 	s.sorts = append(s.sorts, types.SortOptions{
 		SortOptions: map[string]types.FieldSort{
@@ -142,6 +143,39 @@ func (s *SortBuilder) DocDesc() *SortBuilder {
 // Build returns the constructed sort slice ready for use in a search request.
 func (s *SortBuilder) Build() []types.SortCombinations {
 	return s.sorts
+}
+
+// ---------------------------------------------------------------------------
+// Nested Sort Value Builder
+// ---------------------------------------------------------------------------
+
+// NestedSortOption is a functional option for configuring a NestedSortValue.
+type NestedSortOption func(*types.NestedSortValue)
+
+// NestedSortFilter adds a filter query to the nested sort value.
+func NestedSortFilter(filter types.Query) NestedSortOption {
+	return func(nsv *types.NestedSortValue) { nsv.Filter = &filter }
+}
+
+// NestedSortMaxChildren sets the maximum number of matching child documents per parent
+// to consider when picking the sort value.
+func NestedSortMaxChildren(n int) NestedSortOption {
+	return func(nsv *types.NestedSortValue) { nsv.MaxChildren = &n }
+}
+
+// NestedSortNested adds an inner nested sort value for multi-level nested fields.
+func NestedSortNested(inner *types.NestedSortValue) NestedSortOption {
+	return func(nsv *types.NestedSortValue) { nsv.Nested = inner }
+}
+
+// NewNestedSort creates a NestedSortValue for use with FieldCustom, WithGeoDistanceNested,
+// and WithScriptSortNested without requiring manual string(field) conversions.
+func NewNestedSort(path estype.Field, opts ...NestedSortOption) *types.NestedSortValue {
+	nsv := &types.NestedSortValue{Path: string(path)}
+	for _, opt := range opts {
+		opt(nsv)
+	}
+	return nsv
 }
 
 // ---------------------------------------------------------------------------

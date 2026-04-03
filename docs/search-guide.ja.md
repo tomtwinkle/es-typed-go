@@ -160,7 +160,7 @@ query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
 })
 ```
 
-### Field.Ptr() — typed field を *string に変換
+### Field.Ptr() / Field.String() — typed field の変換
 
 raw go-elasticsearch 型が `*string` を要求する場合（例: `NestedAggregation.Path`、`SumAggregation.Field`）、一時変数の代わりに `Ptr()` を使えます:
 
@@ -173,7 +173,62 @@ types.NestedAggregation{Path: &path}
 types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 ```
 
-`Ptr()` は `estype.Alias` と `estype.Index` でも使用できます。
+フィールドが `string`（`*string` ではない）の場合、例えば `types.NestedSortValue.Path` では `String()` を使います（`Ptr()` は使用できません）:
+
+```go
+// NestedSortValue.Path は string 型 — Ptr() は使用不可
+types.NestedSortValue{Path: esmodel.Item.Fields.Items.String()}
+```
+
+`NestedSortValue` は後述の `NewNestedSort` を使うとより簡潔に書けます。
+
+`Ptr()` と `String()` は `estype.Alias` と `estype.Index` でも使用できます。
+
+### NewNestedSort — 型安全な NestedSortValue ビルダー
+
+`NewNestedSort` を使うと `string(field)` や `.String()` の手動変換が不要になります。
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+nested := &types.NestedSortValue{Path: path}
+
+// After
+nested := query.NewNestedSort(esmodel.Item.Fields.Items)
+```
+
+functional options で任意設定が可能です:
+
+```go
+nested := query.NewNestedSort(
+    esmodel.Item.Fields.Items,
+    query.NestedSortFilter(filterQuery),          // Filter を追加
+    query.NestedSortMaxChildren(10),               // 親ドキュメントごとの最大子数
+    query.NestedSortNested(innerNestedSortValue),  // ネスト内ネスト
+)
+```
+
+`FieldCustom`、`WithGeoDistanceNested`、`WithScriptSortNested` と組み合わせて使えます:
+
+```go
+sorts := query.NewSort().
+    FieldCustom(esmodel.Item.Fields.Items_Price, types.FieldSort{
+        Order:  &order,
+        Mode:   &mode,
+        Nested: query.NewNestedSort(esmodel.Item.Fields.Items),
+    }).
+    Build()
+
+// GeoDistance と組み合わせる場合:
+sorts := query.NewSort().
+    GeoDistance(
+        esmodel.Item.Fields.Items_Location,
+        location,
+        sortorder.Asc,
+        query.WithGeoDistanceNested(query.NewNestedSort(esmodel.Item.Fields.Items)),
+    ).
+    Build()
+```
 
 ## 補足
 
