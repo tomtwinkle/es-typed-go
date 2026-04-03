@@ -8,6 +8,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
 	"gotest.tools/v3/assert"
 
+	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/query"
 )
 
@@ -843,6 +844,381 @@ func TestMustHistogramPanics(t *testing.T) {
 	assertPanicsWithErrorContains(t, `aggregation "price_ranges" not found`, func() {
 		_ = query.NewAggResults(nil).MustHistogram(def)
 	})
+}
+
+func TestNestedAgg_Build(t *testing.T) {
+	t.Parallel()
+
+	def := query.NestedAgg("items_agg", FieldItems)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["items_agg"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Nested != nil)
+	assert.Equal(t, string(FieldItems), *agg.Nested.Path)
+}
+
+func TestNestedAgg_WithSubAggs(t *testing.T) {
+	t.Parallel()
+
+	sumDef := query.SumAgg("total_value", FieldValue)
+	def := query.NestedAgg("items_agg", FieldItems, query.NestedAggSubAggs(sumDef))
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["items_agg"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Nested != nil)
+	assert.Assert(t, agg.Aggregations != nil)
+	_, ok = agg.Aggregations["total_value"]
+	assert.Assert(t, ok)
+}
+
+func TestAggResults_Nested(t *testing.T) {
+	t.Parallel()
+
+	sumDef := query.SumAgg("total_value", FieldValue)
+	def := query.NestedAgg("items_agg", FieldItems, query.NestedAggSubAggs(sumDef))
+	v := 99.9
+	raw := map[string]types.Aggregate{
+		"items_agg": &types.NestedAggregate{
+			DocCount: 5,
+			Aggregations: map[string]types.Aggregate{
+				"total_value": &types.SumAggregate{Value: (*types.Float64)(&v)},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetNested(def)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(5), res.DocCount())
+
+	sumRes, err := res.Aggregations().GetSum(sumDef)
+	assert.NilError(t, err)
+	assert.Assert(t, sumRes.Value() != nil)
+	assert.Equal(t, v, *sumRes.Value())
+}
+
+func TestAggResults_NestedNilSubAggs(t *testing.T) {
+	t.Parallel()
+
+	def := query.NestedAgg("items_agg", FieldItems)
+	raw := map[string]types.Aggregate{
+		"items_agg": &types.NestedAggregate{DocCount: 3},
+	}
+
+	res, err := query.NewAggResults(raw).GetNested(def)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(3), res.DocCount())
+	assert.Assert(t, res.Aggregations().Raw() == nil)
+}
+
+func TestMustNested(t *testing.T) {
+	t.Parallel()
+
+	def := query.NestedAgg("items_agg", FieldItems)
+	raw := map[string]types.Aggregate{
+		"items_agg": &types.NestedAggregate{DocCount: 2},
+	}
+
+	res := query.NewAggResults(raw).MustNested(def)
+	assert.Equal(t, int64(2), res.DocCount())
+}
+
+func TestMustNestedPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.NestedAgg("items_agg", FieldItems)
+	assertPanicsWithErrorContains(t, `aggregation "items_agg" not found`, func() {
+		_ = query.NewAggResults(nil).MustNested(def)
+	})
+}
+
+func TestFilterAgg_Build(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{Term: map[string]types.TermQuery{
+		string(FieldStatus): {Value: "active"},
+	}}
+	def := query.FilterAgg("active_items", filter)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["active_items"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Filter != nil)
+}
+
+func TestFilterAgg_WithSubAggs(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{Term: map[string]types.TermQuery{
+		string(FieldStatus): {Value: "active"},
+	}}
+	sumDef := query.SumAgg("total_value", FieldValue)
+	def := query.FilterAgg("active_items", filter, query.FilterAggSubAggs(sumDef))
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["active_items"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Filter != nil)
+	assert.Assert(t, agg.Aggregations != nil)
+	_, ok = agg.Aggregations["total_value"]
+	assert.Assert(t, ok)
+}
+
+func TestAggResults_Filter(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{Term: map[string]types.TermQuery{
+		string(FieldStatus): {Value: "active"},
+	}}
+	sumDef := query.SumAgg("total_value", FieldValue)
+	def := query.FilterAgg("active_items", filter, query.FilterAggSubAggs(sumDef))
+	v := 42.0
+	raw := map[string]types.Aggregate{
+		"active_items": &types.FilterAggregate{
+			DocCount: 7,
+			Aggregations: map[string]types.Aggregate{
+				"total_value": &types.SumAggregate{Value: (*types.Float64)(&v)},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetFilter(def)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(7), res.DocCount())
+
+	sumRes, err := res.Aggregations().GetSum(sumDef)
+	assert.NilError(t, err)
+	assert.Assert(t, sumRes.Value() != nil)
+	assert.Equal(t, v, *sumRes.Value())
+}
+
+func TestMustFilterPanics(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{}
+	def := query.FilterAgg("active_items", filter)
+	assertPanicsWithErrorContains(t, `aggregation "active_items" not found`, func() {
+		_ = query.NewAggResults(nil).MustFilter(def)
+	})
+}
+
+func TestMultiTermsAgg_Build(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_category_status"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.MultiTerms != nil)
+	assert.Equal(t, 2, len(agg.MultiTerms.Terms))
+	assert.Equal(t, string(FieldCategory), agg.MultiTerms.Terms[0].Field)
+	assert.Equal(t, string(FieldStatus), agg.MultiTerms.Terms[1].Field)
+}
+
+func TestMultiTermsAgg_WithSize(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg(
+		"by_category_status",
+		[]estype.Field{FieldCategory, FieldStatus},
+		query.MultiTermsAggSize(100),
+	)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_category_status"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.MultiTerms != nil)
+	assert.Equal(t, 100, *agg.MultiTerms.Size)
+}
+
+func TestMultiTermsAgg_WithSubAggs(t *testing.T) {
+	t.Parallel()
+
+	sumDef := query.SumAgg("total_value", FieldValue)
+	def := query.MultiTermsAgg(
+		"by_category_status",
+		[]estype.Field{FieldCategory, FieldStatus},
+		query.MultiTermsAggSubAggs(sumDef),
+	)
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_category_status"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.Aggregations != nil)
+	_, ok = agg.Aggregations["total_value"]
+	assert.Assert(t, ok)
+}
+
+func TestAggResults_MultiTerms(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	raw := map[string]types.Aggregate{
+		"by_category_status": &types.MultiTermsAggregate{
+			Buckets: []types.MultiTermsBucket{
+				{Key: []types.FieldValue{"electronics", "active"}, DocCount: 10},
+				{Key: []types.FieldValue{"clothing", "inactive"}, DocCount: 3},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetMultiTerms(def)
+	assert.NilError(t, err)
+
+	buckets := res.Buckets()
+	assert.Equal(t, 2, len(buckets))
+	assert.Equal(t, 2, len(buckets[0].Keys()))
+	assert.Equal(t, "electronics", buckets[0].Keys()[0])
+	assert.Equal(t, "active", buckets[0].Keys()[1])
+	assert.Equal(t, int64(10), buckets[0].DocCount())
+	assert.Equal(t, "clothing", buckets[1].Keys()[0])
+	assert.Equal(t, int64(3), buckets[1].DocCount())
+}
+
+func TestAggResults_MultiTermsWithSubAggs(t *testing.T) {
+	t.Parallel()
+
+	sumDef := query.SumAgg("total_value", FieldValue)
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus},
+		query.MultiTermsAggSubAggs(sumDef),
+	)
+	v := 55.5
+	raw := map[string]types.Aggregate{
+		"by_category_status": &types.MultiTermsAggregate{
+			Buckets: []types.MultiTermsBucket{
+				{
+					Key:      []types.FieldValue{"electronics", "active"},
+					DocCount: 10,
+					Aggregations: map[string]types.Aggregate{
+						"total_value": &types.SumAggregate{Value: (*types.Float64)(&v)},
+					},
+				},
+			},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetMultiTerms(def)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(res.Buckets()))
+
+	sumRes, err := res.Buckets()[0].Aggregations().GetSum(sumDef)
+	assert.NilError(t, err)
+	assert.Assert(t, sumRes.Value() != nil)
+	assert.Equal(t, v, *sumRes.Value())
+}
+
+func TestAggResults_MultiTermsBucketsTypeError(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	raw := map[string]types.Aggregate{
+		"by_category_status": &types.MultiTermsAggregate{
+			Buckets: map[string]types.MultiTermsBucket{},
+		},
+	}
+
+	_, err := query.NewAggResults(raw).GetMultiTerms(def)
+	assert.ErrorContains(t, err, `aggregation "by_category_status" has unexpected buckets type`)
+}
+
+func TestMustMultiTermsPanics(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	assertPanicsWithErrorContains(t, `aggregation "by_category_status" not found`, func() {
+		_ = query.NewAggResults(nil).MustMultiTerms(def)
+	})
+}
+
+func TestAggResults_FilterNilSubAggs(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{}
+	def := query.FilterAgg("active_items", filter)
+	raw := map[string]types.Aggregate{
+		"active_items": &types.FilterAggregate{DocCount: 3},
+	}
+
+	res, err := query.NewAggResults(raw).GetFilter(def)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(3), res.DocCount())
+	assert.Assert(t, res.Aggregations().Raw() == nil)
+}
+
+func TestMustFilter(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{}
+	def := query.FilterAgg("active_items", filter)
+	raw := map[string]types.Aggregate{
+		"active_items": &types.FilterAggregate{DocCount: 7},
+	}
+
+	res := query.NewAggResults(raw).MustFilter(def)
+	assert.Equal(t, int64(7), res.DocCount())
+}
+
+func TestAggResults_MultiTermsEmptyBuckets(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	raw := map[string]types.Aggregate{
+		"by_category_status": &types.MultiTermsAggregate{
+			Buckets: []types.MultiTermsBucket{},
+		},
+	}
+
+	res, err := query.NewAggResults(raw).GetMultiTerms(def)
+	assert.NilError(t, err)
+	assert.Equal(t, 0, len(res.Buckets()))
+}
+
+func TestGetAgg_Nested(t *testing.T) {
+	t.Parallel()
+
+	def := query.NestedAgg("items_agg", FieldItems)
+	raw := map[string]types.Aggregate{
+		"items_agg": &types.NestedAggregate{DocCount: 3},
+	}
+
+	res, err := query.GetAgg(query.NewAggResults(raw), def)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(3), res.DocCount())
+}
+
+func TestGetAgg_Filter(t *testing.T) {
+	t.Parallel()
+
+	filter := types.Query{}
+	def := query.FilterAgg("active_items", filter)
+	raw := map[string]types.Aggregate{
+		"active_items": &types.FilterAggregate{DocCount: 5},
+	}
+
+	res, err := query.GetAgg(query.NewAggResults(raw), def)
+	assert.NilError(t, err)
+	assert.Equal(t, int64(5), res.DocCount())
+}
+
+func TestGetAgg_MultiTerms(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	raw := map[string]types.Aggregate{
+		"by_category_status": &types.MultiTermsAggregate{
+			Buckets: []types.MultiTermsBucket{
+				{Key: []types.FieldValue{"electronics", "active"}, DocCount: 4},
+			},
+		},
+	}
+
+	res, err := query.GetAgg(query.NewAggResults(raw), def)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(res.Buckets()))
+	assert.Equal(t, "electronics", res.Buckets()[0].Keys()[0])
+	assert.Equal(t, "active", res.Buckets()[0].Keys()[1])
 }
 
 func TestAggResults_MissingAggregation(t *testing.T) {

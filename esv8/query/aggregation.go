@@ -214,3 +214,68 @@ func HistogramAgg(name string, field estype.Field, interval float64, opts ...sha
 func HistogramAggSubAggs(defs ...sharedquery.AggEntry) sharedquery.HistogramAggOption {
 	return sharedquery.HistogramAggSubAggs(defs...)
 }
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.NestedResult.
+type NestedResult = sharedquery.NestedResult
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.FilterResult.
+type FilterResult = sharedquery.FilterResult
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsBucketResult.
+type MultiTermsBucketResult = sharedquery.MultiTermsBucketResult
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsResult.
+type MultiTermsResult = sharedquery.MultiTermsResult
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.NestedAggregation.
+type NestedAggregation = sharedquery.NestedAggregation
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.NestedAggOption.
+type NestedAggOption = sharedquery.NestedAggOption
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.FilterAggregation.
+type FilterAggregation = sharedquery.FilterAggregation
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.FilterAggOption.
+type FilterAggOption = sharedquery.FilterAggOption
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsAggregation.
+type MultiTermsAggregation = sharedquery.MultiTermsAggregation
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsAggOption.
+type MultiTermsAggOption = sharedquery.MultiTermsAggOption
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.NestedAgg.
+func NestedAgg(name string, path estype.Field, opts ...sharedquery.NestedAggOption) sharedquery.NestedAggregation {
+	return sharedquery.NestedAgg(name, path, opts...)
+}
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.NestedAggSubAggs.
+func NestedAggSubAggs(defs ...sharedquery.AggEntry) sharedquery.NestedAggOption {
+	return sharedquery.NestedAggSubAggs(defs...)
+}
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.FilterAgg.
+func FilterAgg(name string, filter types.Query, opts ...sharedquery.FilterAggOption) sharedquery.FilterAggregation {
+	return sharedquery.FilterAgg(name, filter, opts...)
+}
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.FilterAggSubAggs.
+func FilterAggSubAggs(defs ...sharedquery.AggEntry) sharedquery.FilterAggOption {
+	return sharedquery.FilterAggSubAggs(defs...)
+}
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsAgg.
+func MultiTermsAgg(name string, fields []estype.Field, opts ...sharedquery.MultiTermsAggOption) sharedquery.MultiTermsAggregation {
+	return sharedquery.MultiTermsAgg(name, fields, opts...)
+}
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsAggSize.
+func MultiTermsAggSize(size int) sharedquery.MultiTermsAggOption {
+	return sharedquery.MultiTermsAggSize(size)
+}
+
+// Deprecated: use github.com/tomtwinkle/es-typed-go/query.MultiTermsAggSubAggs.
+func MultiTermsAggSubAggs(defs ...sharedquery.AggEntry) sharedquery.MultiTermsAggOption {
+	return sharedquery.MultiTermsAggSubAggs(defs...)
+}

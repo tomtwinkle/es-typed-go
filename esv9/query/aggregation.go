@@ -8,6 +8,48 @@ import (
 	"github.com/tomtwinkle/es-typed-go/estype"
 )
 
+// GetNested returns a typed nested aggregation result.
+func (r AggResults) GetNested(def NestedAggregation) (NestedResult, error) {
+	return def.parse(r.raw)
+}
+
+// MustNested returns a typed nested aggregation result or panics.
+func (r AggResults) MustNested(def NestedAggregation) NestedResult {
+	v, err := def.parse(r.raw)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// GetFilter returns a typed filter aggregation result.
+func (r AggResults) GetFilter(def FilterAggregation) (FilterResult, error) {
+	return def.parse(r.raw)
+}
+
+// MustFilter returns a typed filter aggregation result or panics.
+func (r AggResults) MustFilter(def FilterAggregation) FilterResult {
+	v, err := def.parse(r.raw)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
+// GetMultiTerms returns a typed multi_terms aggregation result.
+func (r AggResults) GetMultiTerms(def MultiTermsAggregation) (MultiTermsResult, error) {
+	return def.parse(r.raw)
+}
+
+// MustMultiTerms returns a typed multi_terms aggregation result or panics.
+func (r AggResults) MustMultiTerms(def MultiTermsAggregation) MultiTermsResult {
+	v, err := def.parse(r.raw)
+	if err != nil {
+		panic(err)
+	}
+	return v
+}
+
 // AggDefinition is a typed aggregation definition that can build an Elasticsearch
 // aggregation request and decode the corresponding response value.
 type AggDefinition[R any] interface {
@@ -766,6 +808,221 @@ func (a CardinalityAggregation) parse(raw map[string]types.Aggregate) (Cardinali
 		return CardinalityResult{}, err
 	}
 	return CardinalityResult{value: int64PtrFromInt64(agg.Value)}, nil
+}
+
+// NestedResult wraps a nested aggregation result.
+type NestedResult struct {
+	docCount     int64
+	aggregations AggResults
+}
+
+// DocCount returns the document count.
+func (r NestedResult) DocCount() int64 { return r.docCount }
+
+// Aggregations returns sub-aggregation results.
+func (r NestedResult) Aggregations() AggResults { return r.aggregations }
+
+// FilterResult wraps a filter aggregation result.
+type FilterResult struct {
+	docCount     int64
+	aggregations AggResults
+}
+
+// DocCount returns the document count.
+func (r FilterResult) DocCount() int64 { return r.docCount }
+
+// Aggregations returns sub-aggregation results.
+func (r FilterResult) Aggregations() AggResults { return r.aggregations }
+
+// MultiTermsBucket wraps a multi_terms bucket.
+type MultiTermsBucket struct {
+	keys         []string
+	docCount     int64
+	aggregations AggResults
+}
+
+// Keys returns the composite bucket keys as strings.
+func (b MultiTermsBucket) Keys() []string { return b.keys }
+
+// DocCount returns the bucket document count.
+func (b MultiTermsBucket) DocCount() int64 { return b.docCount }
+
+// Aggregations returns nested aggregation results for this bucket.
+func (b MultiTermsBucket) Aggregations() AggResults { return b.aggregations }
+
+// MultiTermsResult wraps a multi_terms aggregation result.
+type MultiTermsResult struct {
+	buckets []MultiTermsBucket
+}
+
+// Buckets returns the typed multi_terms buckets.
+func (r MultiTermsResult) Buckets() []MultiTermsBucket { return r.buckets }
+
+// NestedAggOption configures a nested aggregation.
+type NestedAggOption func(*NestedAggregation)
+
+// FilterAggOption configures a filter aggregation.
+type FilterAggOption func(*FilterAggregation)
+
+// MultiTermsAggOption configures a multi_terms aggregation.
+type MultiTermsAggOption func(*MultiTermsAggregation)
+
+// NestedAggregation defines a typed nested aggregation.
+type NestedAggregation struct {
+	name string
+	agg  types.Aggregations
+}
+
+// Name returns the aggregation name.
+func (a NestedAggregation) Name() string { return a.name }
+
+func (a NestedAggregation) build() types.Aggregations { return a.agg }
+
+// NestedAggSubAggs sets sub-aggregations for a nested aggregation.
+func NestedAggSubAggs(defs ...aggDefinitionAny) NestedAggOption {
+	return func(a *NestedAggregation) {
+		a.agg.Aggregations = Aggs(defs...).Build()
+	}
+}
+
+// NestedAgg creates a typed nested aggregation definition.
+func NestedAgg(name string, path estype.Field, opts ...NestedAggOption) NestedAggregation {
+	nestedAgg := types.NewNestedAggregation()
+	p := string(path)
+	nestedAgg.Path = &p
+	def := NestedAggregation{
+		name: name,
+		agg:  types.Aggregations{Nested: nestedAgg},
+	}
+	for _, opt := range opts {
+		opt(&def)
+	}
+	return def
+}
+
+func (a NestedAggregation) parse(raw map[string]types.Aggregate) (NestedResult, error) {
+	agg, err := getAggregate[*types.NestedAggregate](raw, a.name, "nested")
+	if err != nil {
+		return NestedResult{}, err
+	}
+	return NestedResult{
+		docCount:     agg.DocCount,
+		aggregations: NewAggResults(agg.Aggregations),
+	}, nil
+}
+
+// FilterAggregation defines a typed filter aggregation.
+type FilterAggregation struct {
+	name string
+	agg  types.Aggregations
+}
+
+// Name returns the aggregation name.
+func (a FilterAggregation) Name() string { return a.name }
+
+func (a FilterAggregation) build() types.Aggregations { return a.agg }
+
+// FilterAggSubAggs sets sub-aggregations for a filter aggregation.
+func FilterAggSubAggs(defs ...aggDefinitionAny) FilterAggOption {
+	return func(a *FilterAggregation) {
+		a.agg.Aggregations = Aggs(defs...).Build()
+	}
+}
+
+// FilterAgg creates a typed filter aggregation definition.
+func FilterAgg(name string, filter types.Query, opts ...FilterAggOption) FilterAggregation {
+	q := filter
+	def := FilterAggregation{
+		name: name,
+		agg:  types.Aggregations{Filter: &q},
+	}
+	for _, opt := range opts {
+		opt(&def)
+	}
+	return def
+}
+
+func (a FilterAggregation) parse(raw map[string]types.Aggregate) (FilterResult, error) {
+	agg, err := getAggregate[*types.FilterAggregate](raw, a.name, "filter")
+	if err != nil {
+		return FilterResult{}, err
+	}
+	return FilterResult{
+		docCount:     agg.DocCount,
+		aggregations: NewAggResults(agg.Aggregations),
+	}, nil
+}
+
+// MultiTermsAggregation defines a typed multi_terms aggregation.
+type MultiTermsAggregation struct {
+	name string
+	agg  types.Aggregations
+}
+
+// Name returns the aggregation name.
+func (a MultiTermsAggregation) Name() string { return a.name }
+
+func (a MultiTermsAggregation) build() types.Aggregations { return a.agg }
+
+// MultiTermsAggSize sets the number of buckets to return.
+func MultiTermsAggSize(size int) MultiTermsAggOption {
+	return func(a *MultiTermsAggregation) {
+		if a.agg.MultiTerms == nil {
+			a.agg.MultiTerms = types.NewMultiTermsAggregation()
+		}
+		a.agg.MultiTerms.Size = &size
+	}
+}
+
+// MultiTermsAggSubAggs sets sub-aggregations for a multi_terms aggregation.
+func MultiTermsAggSubAggs(defs ...aggDefinitionAny) MultiTermsAggOption {
+	return func(a *MultiTermsAggregation) {
+		a.agg.Aggregations = Aggs(defs...).Build()
+	}
+}
+
+// MultiTermsAgg creates a typed multi_terms aggregation definition.
+func MultiTermsAgg(name string, fields []estype.Field, opts ...MultiTermsAggOption) MultiTermsAggregation {
+	multiAgg := types.NewMultiTermsAggregation()
+	terms := make([]types.MultiTermLookup, 0, len(fields))
+	for _, f := range fields {
+		terms = append(terms, types.MultiTermLookup{Field: string(f)})
+	}
+	multiAgg.Terms = terms
+	def := MultiTermsAggregation{
+		name: name,
+		agg:  types.Aggregations{MultiTerms: multiAgg},
+	}
+	for _, opt := range opts {
+		opt(&def)
+	}
+	return def
+}
+
+func (a MultiTermsAggregation) parse(raw map[string]types.Aggregate) (MultiTermsResult, error) {
+	agg, err := getAggregate[*types.MultiTermsAggregate](raw, a.name, "multi_terms")
+	if err != nil {
+		return MultiTermsResult{}, err
+	}
+
+	buckets, ok := agg.Buckets.([]types.MultiTermsBucket)
+	if !ok {
+		return MultiTermsResult{}, fmt.Errorf("aggregation %q has unexpected buckets type %T", a.name, agg.Buckets)
+	}
+
+	out := make([]MultiTermsBucket, 0, len(buckets))
+	for _, bucket := range buckets {
+		keys := make([]string, 0, len(bucket.Key))
+		for _, k := range bucket.Key {
+			keys = append(keys, fmt.Sprintf("%v", k))
+		}
+		out = append(out, MultiTermsBucket{
+			keys:         keys,
+			docCount:     bucket.DocCount,
+			aggregations: NewAggResults(bucket.Aggregations),
+		})
+	}
+	return MultiTermsResult{buckets: out}, nil
 }
 
 func getAggregate[T any](raw map[string]types.Aggregate, name string, kind string) (T, error) {
