@@ -13,6 +13,14 @@ func TestIndex_String(t *testing.T) {
 	assert.Equal(t, "my-index", idx.String())
 }
 
+func TestIndex_Ptr(t *testing.T) {
+	t.Parallel()
+	idx := estype.Index("my-index")
+	p := idx.Ptr()
+	assert.Assert(t, p != nil)
+	assert.Equal(t, "my-index", *p)
+}
+
 func TestParseESIndex(t *testing.T) {
 	t.Parallel()
 
@@ -34,6 +42,14 @@ func TestAlias_String(t *testing.T) {
 	t.Parallel()
 	alias := estype.Alias("my-alias")
 	assert.Equal(t, "my-alias", alias.String())
+}
+
+func TestAlias_Ptr(t *testing.T) {
+	t.Parallel()
+	alias := estype.Alias("my-alias")
+	p := alias.Ptr()
+	assert.Assert(t, p != nil)
+	assert.Equal(t, "my-alias", *p)
 }
 
 func TestParseESAlias(t *testing.T) {
@@ -60,6 +76,14 @@ func TestFieldNames(t *testing.T) {
 	assert.Equal(t, "title", names[0])
 	assert.Equal(t, "name", names[1])
 	assert.Equal(t, "status", names[2])
+}
+
+func TestField_Ptr(t *testing.T) {
+	t.Parallel()
+	f := estype.Field("my-field")
+	p := f.Ptr()
+	assert.Assert(t, p != nil)
+	assert.Equal(t, "my-field", *p)
 }
 
 func TestFieldNames_Empty(t *testing.T) {

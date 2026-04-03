@@ -10,6 +10,13 @@ func (i Index) String() string {
 	return string(i)
 }
 
+// Ptr returns a pointer to the string representation of the Index.
+// This is useful when passing typed Index constants to ES query types that accept *string.
+func (i Index) Ptr() *string {
+	s := string(i)
+	return &s
+}
+
 // ParseESIndex parses an index name string into an Index type.
 // Returns an error if the name is empty.
 func ParseESIndex(name string) (Index, error) {

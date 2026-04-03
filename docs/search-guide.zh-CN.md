@@ -20,7 +20,7 @@ params := query.NewSearch().
     Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
     Where(
         query.TermValue(esmodel.Product.Fields.Category, "electronics"),
-        query.DateRangeQuery(esmodel.Product.Fields.Date, "2024-01-01", "2024-12-31"),
+        query.DateRangeQuery(esmodel.Product.Fields.Date, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31")),
     ).
     Sort(
         query.NewSort().
@@ -129,6 +129,51 @@ for _, bucket := range multi.Buckets() {
 ```go
 query.NewSort().Field(esmodel.Product.Fields.Date, query.SortDesc)
 ```
+
+## 查询 helper 参考
+
+### DateRangeQuery
+
+`DateRangeQuery` 接受 functional options，可以任意组合四种比较运算符：
+
+```go
+// Gte + Lte（闭区间）
+query.DateRangeQuery(field, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31"))
+
+// Gt + Lt（开区间）
+query.DateRangeQuery(field, query.DateRangeGt("2024-01-01"), query.DateRangeLt("2025-01-01"))
+
+// 单侧边界
+query.DateRangeQuery(field, query.DateRangeGte("2024-01-01"))
+```
+
+可用选项：`DateRangeGt`、`DateRangeGte`、`DateRangeLt`、`DateRangeLte`。
+
+### MultiTermsAgg 的字段级 Missing
+
+使用 `query.MultiTermLookup` 可对每个字段单独配置。`Missing` 用于为没有该字段的文档提供替代值：
+
+```go
+query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
+    {Field: esmodel.Item.Fields.BusinessDate},
+    {Field: esmodel.Item.Fields.Timezone, Missing: "UTC"},
+})
+```
+
+### Field.Ptr() — typed field 转 *string
+
+当 raw go-elasticsearch 类型需要 `*string` 时（如 `NestedAggregation.Path`、`SumAggregation.Field`），可使用 `Ptr()` 代替临时变量：
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+types.NestedAggregation{Path: &path}
+
+// After
+types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
+```
+
+`Ptr()` 同样适用于 `estype.Alias` 和 `estype.Index`。
 
 ## 补充说明
 

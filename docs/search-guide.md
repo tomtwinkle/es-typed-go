@@ -20,7 +20,7 @@ params := query.NewSearch().
     Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
     Where(
         query.TermValue(esmodel.Product.Fields.Category, "electronics"),
-        query.DateRangeQuery(esmodel.Product.Fields.Date, "2024-01-01", "2024-12-31"),
+        query.DateRangeQuery(esmodel.Product.Fields.Date, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31")),
     ).
     Sort(
         query.NewSort().
@@ -129,6 +129,51 @@ Use `query.SortAsc` and `query.SortDesc` — no need to import a version-specifi
 ```go
 query.NewSort().Field(esmodel.Product.Fields.Date, query.SortDesc)
 ```
+
+## Query helpers reference
+
+### DateRangeQuery
+
+`DateRangeQuery` accepts functional options so you can use any combination of the four comparison operators:
+
+```go
+// Gte + Lte (closed range)
+query.DateRangeQuery(field, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31"))
+
+// Gt + Lt (open range)
+query.DateRangeQuery(field, query.DateRangeGt("2024-01-01"), query.DateRangeLt("2025-01-01"))
+
+// One-sided bound
+query.DateRangeQuery(field, query.DateRangeGte("2024-01-01"))
+```
+
+Available options: `DateRangeGt`, `DateRangeGte`, `DateRangeLt`, `DateRangeLte`.
+
+### MultiTermsAgg with per-field Missing
+
+Use `query.MultiTermLookup` to configure each field individually. Set `Missing` to substitute a value for documents that do not have that field:
+
+```go
+query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
+    {Field: esmodel.Item.Fields.BusinessDate},
+    {Field: esmodel.Item.Fields.Timezone, Missing: "UTC"},
+})
+```
+
+### Field.Ptr() — typed field to *string
+
+When a raw go-elasticsearch type requires a `*string` (e.g. `NestedAggregation.Path`, `SumAggregation.Field`), use `Ptr()` instead of a temporary variable:
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+types.NestedAggregation{Path: &path}
+
+// After
+types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
+```
+
+`Ptr()` is also available on `estype.Alias` and `estype.Index`.
 
 ## Notes
 

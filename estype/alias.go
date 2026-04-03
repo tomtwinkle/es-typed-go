@@ -10,6 +10,13 @@ func (a Alias) String() string {
 	return string(a)
 }
 
+// Ptr returns a pointer to the string representation of the Alias.
+// This is useful when passing typed Alias constants to ES query types that accept *string.
+func (a Alias) Ptr() *string {
+	s := string(a)
+	return &s
+}
+
 // ParseESAlias parses an alias name string into an Alias type.
 // Returns an error if the name is empty.
 func ParseESAlias(name string) (Alias, error) {

@@ -66,7 +66,7 @@ func main() {
 		Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
 		Where(
 			query.TermValue(esmodel.Product.Fields.Category, "electronics"),
-			query.DateRangeQuery(esmodel.Product.Fields.Date, "2024-06-01", "2024-12-31"),
+			query.DateRangeQuery(esmodel.Product.Fields.Date, query.DateRangeGte("2024-06-01"), query.DateRangeLte("2024-12-31")),
 		).
 		Sort(
 			query.NewSort().

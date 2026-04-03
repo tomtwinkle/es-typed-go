@@ -8,7 +8,6 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
 	"gotest.tools/v3/assert"
 
-	"github.com/tomtwinkle/es-typed-go/estype"
 	"github.com/tomtwinkle/es-typed-go/query"
 )
 
@@ -1006,7 +1005,7 @@ func TestMustFilterPanics(t *testing.T) {
 func TestMultiTermsAgg_Build(t *testing.T) {
 	t.Parallel()
 
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}})
 	aggs := query.Aggs(def).Build()
 
 	agg, ok := aggs["by_category_status"]
@@ -1022,7 +1021,7 @@ func TestMultiTermsAgg_WithSize(t *testing.T) {
 
 	def := query.MultiTermsAgg(
 		"by_category_status",
-		[]estype.Field{FieldCategory, FieldStatus},
+		[]query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}},
 		query.MultiTermsAggSize(100),
 	)
 	aggs := query.Aggs(def).Build()
@@ -1033,13 +1032,32 @@ func TestMultiTermsAgg_WithSize(t *testing.T) {
 	assert.Equal(t, 100, *agg.MultiTerms.Size)
 }
 
+func TestMultiTermsAgg_WithMissing(t *testing.T) {
+	t.Parallel()
+
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{
+		{Field: FieldCategory},
+		{Field: FieldStatus, Missing: "unknown"},
+	})
+	aggs := query.Aggs(def).Build()
+
+	agg, ok := aggs["by_category_status"]
+	assert.Assert(t, ok)
+	assert.Assert(t, agg.MultiTerms != nil)
+	assert.Equal(t, 2, len(agg.MultiTerms.Terms))
+	assert.Equal(t, string(FieldCategory), agg.MultiTerms.Terms[0].Field)
+	assert.Assert(t, agg.MultiTerms.Terms[0].Missing == nil)
+	assert.Equal(t, string(FieldStatus), agg.MultiTerms.Terms[1].Field)
+	assert.Equal(t, "unknown", agg.MultiTerms.Terms[1].Missing)
+}
+
 func TestMultiTermsAgg_WithSubAggs(t *testing.T) {
 	t.Parallel()
 
 	sumDef := query.SumAgg("total_value", FieldValue)
 	def := query.MultiTermsAgg(
 		"by_category_status",
-		[]estype.Field{FieldCategory, FieldStatus},
+		[]query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}},
 		query.MultiTermsAggSubAggs(sumDef),
 	)
 	aggs := query.Aggs(def).Build()
@@ -1054,7 +1072,7 @@ func TestMultiTermsAgg_WithSubAggs(t *testing.T) {
 func TestAggResults_MultiTerms(t *testing.T) {
 	t.Parallel()
 
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}})
 	raw := map[string]types.Aggregate{
 		"by_category_status": &types.MultiTermsAggregate{
 			Buckets: []types.MultiTermsBucket{
@@ -1081,7 +1099,7 @@ func TestAggResults_MultiTermsWithSubAggs(t *testing.T) {
 	t.Parallel()
 
 	sumDef := query.SumAgg("total_value", FieldValue)
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus},
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}},
 		query.MultiTermsAggSubAggs(sumDef),
 	)
 	v := 55.5
@@ -1112,7 +1130,7 @@ func TestAggResults_MultiTermsWithSubAggs(t *testing.T) {
 func TestAggResults_MultiTermsBucketsTypeError(t *testing.T) {
 	t.Parallel()
 
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}})
 	raw := map[string]types.Aggregate{
 		"by_category_status": &types.MultiTermsAggregate{
 			Buckets: map[string]types.MultiTermsBucket{},
@@ -1126,7 +1144,7 @@ func TestAggResults_MultiTermsBucketsTypeError(t *testing.T) {
 func TestMustMultiTermsPanics(t *testing.T) {
 	t.Parallel()
 
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}})
 	assertPanicsWithErrorContains(t, `aggregation "by_category_status" not found`, func() {
 		_ = query.NewAggResults(nil).MustMultiTerms(def)
 	})
@@ -1163,7 +1181,7 @@ func TestMustFilter(t *testing.T) {
 func TestAggResults_MultiTermsEmptyBuckets(t *testing.T) {
 	t.Parallel()
 
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}})
 	raw := map[string]types.Aggregate{
 		"by_category_status": &types.MultiTermsAggregate{
 			Buckets: []types.MultiTermsBucket{},
@@ -1205,7 +1223,7 @@ func TestGetAgg_Filter(t *testing.T) {
 func TestGetAgg_MultiTerms(t *testing.T) {
 	t.Parallel()
 
-	def := query.MultiTermsAgg("by_category_status", []estype.Field{FieldCategory, FieldStatus})
+	def := query.MultiTermsAgg("by_category_status", []query.MultiTermLookup{{Field: FieldCategory}, {Field: FieldStatus}})
 	raw := map[string]types.Aggregate{
 		"by_category_status": &types.MultiTermsAggregate{
 			Buckets: []types.MultiTermsBucket{

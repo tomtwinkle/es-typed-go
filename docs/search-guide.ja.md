@@ -20,7 +20,7 @@ params := query.NewSearch().
     Where(query.TermValue(esmodel.Product.Fields.Status, "active")).
     Where(
         query.TermValue(esmodel.Product.Fields.Category, "electronics"),
-        query.DateRangeQuery(esmodel.Product.Fields.Date, "2024-01-01", "2024-12-31"),
+        query.DateRangeQuery(esmodel.Product.Fields.Date, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31")),
     ).
     Sort(
         query.NewSort().
@@ -129,6 +129,51 @@ for _, bucket := range multi.Buckets() {
 ```go
 query.NewSort().Field(esmodel.Product.Fields.Date, query.SortDesc)
 ```
+
+## クエリ helper リファレンス
+
+### DateRangeQuery
+
+`DateRangeQuery` は functional options を受け取るため、4種類の比較演算子を任意に組み合わせて使えます:
+
+```go
+// Gte + Lte（閉区間）
+query.DateRangeQuery(field, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31"))
+
+// Gt + Lt（開区間）
+query.DateRangeQuery(field, query.DateRangeGt("2024-01-01"), query.DateRangeLt("2025-01-01"))
+
+// 片側のみ
+query.DateRangeQuery(field, query.DateRangeGte("2024-01-01"))
+```
+
+使用可能なオプション: `DateRangeGt`, `DateRangeGte`, `DateRangeLt`, `DateRangeLte`。
+
+### MultiTermsAgg のフィールドごとの Missing
+
+`query.MultiTermLookup` を使うとフィールドごとに設定を行えます。`Missing` には、そのフィールドを持たないドキュメントへの代替値を指定します:
+
+```go
+query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
+    {Field: esmodel.Item.Fields.BusinessDate},
+    {Field: esmodel.Item.Fields.Timezone, Missing: "UTC"},
+})
+```
+
+### Field.Ptr() — typed field を *string に変換
+
+raw go-elasticsearch 型が `*string` を要求する場合（例: `NestedAggregation.Path`、`SumAggregation.Field`）、一時変数の代わりに `Ptr()` を使えます:
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+types.NestedAggregation{Path: &path}
+
+// After
+types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
+```
+
+`Ptr()` は `estype.Alias` と `estype.Index` でも使用できます。
 
 ## 補足
 

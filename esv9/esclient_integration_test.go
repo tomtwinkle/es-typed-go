@@ -1050,7 +1050,7 @@ func TestIntegration_Search_QueryHelpers(t *testing.T) {
 		},
 		{
 			name: "DateRangeQuery",
-			q:    query.DateRangeQuery(fieldCreatedAt, base.AddDate(0, 1, 0).Format(time.RFC3339), ""),
+			q:    query.DateRangeQuery(fieldCreatedAt, query.DateRangeGte(base.AddDate(0, 1, 0).Format(time.RFC3339))),
 			want: 2,
 		},
 		{
@@ -2135,7 +2135,7 @@ func TestIntegration_MultiTermsAgg(t *testing.T) {
 	sumValueAgg := query.SumAgg("total_value", fieldValue)
 	multiTerms := query.MultiTermsAgg(
 		"by_cat_status",
-		[]estype.Field{fieldCategory, fieldStatus},
+		[]query.MultiTermLookup{{Field: fieldCategory}, {Field: fieldStatus}},
 		query.MultiTermsAggSize(10),
 		query.MultiTermsAggSubAggs(sumValueAgg),
 	)

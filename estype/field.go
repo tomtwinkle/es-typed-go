@@ -10,6 +10,14 @@ func (f Field) String() string {
 	return string(f)
 }
 
+// Ptr returns a pointer to the string representation of the Field.
+// This is useful when passing typed Field constants to ES query types that
+// accept *string, such as types.NestedAggregation.Path or types.SumAggregation.Field.
+func (f Field) Ptr() *string {
+	s := string(f)
+	return &s
+}
+
 // FieldNames converts a list of Field values to a []string slice.
 // This is useful when passing typed Field constants to ES query types that
 // accept []string, such as MultiMatchQuery.Fields.

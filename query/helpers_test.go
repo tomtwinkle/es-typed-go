@@ -76,21 +76,35 @@ func TestNestedFilter_MultipleQueries(t *testing.T) {
 
 func TestDateRangeQuery(t *testing.T) {
 	t.Parallel()
-	q := query.DateRangeQuery(FieldDate, "2024-01-01", "2024-12-31")
+	q := query.DateRangeQuery(FieldDate, query.DateRangeGte("2024-01-01"), query.DateRangeLte("2024-12-31"))
 	assert.Assert(t, q.Range != nil)
 	assert.Assert(t, q.Range[string(FieldDate)] != nil)
 }
 
 func TestDateRangeQuery_GteOnly(t *testing.T) {
 	t.Parallel()
-	q := query.DateRangeQuery(FieldDate, "2024-01-01", "")
+	q := query.DateRangeQuery(FieldDate, query.DateRangeGte("2024-01-01"))
 	assert.Assert(t, q.Range != nil)
 	assert.Assert(t, q.Range[string(FieldDate)] != nil)
 }
 
 func TestDateRangeQuery_LteOnly(t *testing.T) {
 	t.Parallel()
-	q := query.DateRangeQuery(FieldDate, "", "2024-12-31")
+	q := query.DateRangeQuery(FieldDate, query.DateRangeLte("2024-12-31"))
+	assert.Assert(t, q.Range != nil)
+	assert.Assert(t, q.Range[string(FieldDate)] != nil)
+}
+
+func TestDateRangeQuery_GtLt(t *testing.T) {
+	t.Parallel()
+	q := query.DateRangeQuery(FieldDate, query.DateRangeGt("2024-01-01"), query.DateRangeLt("2025-01-01"))
+	assert.Assert(t, q.Range != nil)
+	assert.Assert(t, q.Range[string(FieldDate)] != nil)
+}
+
+func TestDateRangeQuery_NoOpts(t *testing.T) {
+	t.Parallel()
+	q := query.DateRangeQuery(FieldDate)
 	assert.Assert(t, q.Range != nil)
 	assert.Assert(t, q.Range[string(FieldDate)] != nil)
 }
