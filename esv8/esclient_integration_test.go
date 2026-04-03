@@ -16,6 +16,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 	"github.com/google/uuid"
 	"gotest.tools/v3/assert"
@@ -2259,4 +2260,163 @@ func TestIntegration_MultiTermsAgg(t *testing.T) {
 			assert.Assert(t, math.Abs(125.0-*sumRes.Value()) < 0.01)
 		}
 	}
+}
+
+// ---------------------------------------------------------------------------
+// NewNestedSort integration tests
+// ---------------------------------------------------------------------------
+
+type nestedSortParentDoc struct {
+	Name  string            `json:"name"`
+	Items []nestedSortChild `json:"items"`
+}
+
+type nestedSortChild struct {
+	Price  float64 `json:"price"`
+	Status string  `json:"status"`
+}
+
+func createNestedSortIndex(t *testing.T, ctx context.Context, client esv8.ESClient, idx estype.Index, alias estype.Alias) {
+	t.Helper()
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			"name":  types.NewKeywordProperty(),
+			"items": types.NewNestedProperty(),
+		},
+	}
+	itemsProp := mappings.Properties["items"].(*types.NestedProperty)
+	itemsProp.Properties = map[string]types.Property{
+		"price":  types.NewDoubleNumberProperty(),
+		"status": types.NewKeywordProperty(),
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+}
+
+func TestIntegration_NewNestedSort_FieldCustom(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	createNestedSortIndex(t, ctx, client, idx, alias)
+
+	const (
+		nsFieldItems      estype.Field = "items"
+		nsFieldItemsPrice estype.Field = "items.price"
+	)
+
+	docs := []nestedSortParentDoc{
+		{Name: "A", Items: []nestedSortChild{{Price: 10, Status: "active"}}},
+		{Name: "B", Items: []nestedSortChild{{Price: 30, Status: "active"}}},
+		{Name: "C", Items: []nestedSortChild{{Price: 5, Status: "active"}}},
+	}
+	for i, doc := range docs {
+		_, err := client.CreateDocument(ctx, alias, fmt.Sprintf("doc-%d", i), doc)
+		assert.NilError(t, err)
+	}
+	_, err := client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	order := sortorder.Asc
+	mode := sortmode.Min
+	sorts := query.NewSort().
+		FieldCustom(nsFieldItemsPrice, types.FieldSort{
+			Order:  &order,
+			Mode:   &mode,
+			Nested: query.NewNestedSort(nsFieldItems),
+		}).
+		Build()
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	req.Sort = sorts
+
+	res, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+	assert.Assert(t, len(res.Hits.Hits) == 3)
+
+	// Expected order ascending by items.price (min): C(5), A(10), B(30)
+	var prev float64
+	for _, hit := range res.Hits.Hits {
+		var doc nestedSortParentDoc
+		assert.NilError(t, json.Unmarshal(hit.Source_, &doc))
+		assert.Assert(t, len(doc.Items) > 0)
+		assert.Assert(t, doc.Items[0].Price >= prev)
+		prev = doc.Items[0].Price
+	}
+}
+
+func TestIntegration_NewNestedSort_WithFilter(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	createNestedSortIndex(t, ctx, client, idx, alias)
+
+	const (
+		nsFieldItems      estype.Field = "items"
+		nsFieldItemsPrice estype.Field = "items.price"
+	)
+
+	// doc A: active item price=100, inactive item price=1  → active min = 100
+	// doc B: active item price=20                          → active min = 20
+	// doc C: active item price=50                          → active min = 50
+	// Without filter, A would sort first (min overall = 1); with filter on "active", order is B(20), C(50), A(100).
+	docs := []nestedSortParentDoc{
+		{Name: "A", Items: []nestedSortChild{{Price: 100, Status: "active"}, {Price: 1, Status: "inactive"}}},
+		{Name: "B", Items: []nestedSortChild{{Price: 20, Status: "active"}}},
+		{Name: "C", Items: []nestedSortChild{{Price: 50, Status: "active"}}},
+	}
+	for i, doc := range docs {
+		_, err := client.CreateDocument(ctx, alias, fmt.Sprintf("doc-%d", i), doc)
+		assert.NilError(t, err)
+	}
+	_, err := client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	filter := types.Query{
+		Term: map[string]types.TermQuery{
+			"items.status": {Value: "active"},
+		},
+	}
+	order := sortorder.Asc
+	mode := sortmode.Min
+	sorts := query.NewSort().
+		FieldCustom(nsFieldItemsPrice, types.FieldSort{
+			Order:  &order,
+			Mode:   &mode,
+			Nested: query.NewNestedSort(nsFieldItems, query.NestedSortFilter(filter)),
+		}).
+		Build()
+
+	q := query.MatchAll()
+	req := search.NewRequest()
+	req.Query = &q
+	size := 10
+	req.Size = &size
+	req.Sort = sorts
+
+	res, err := client.SearchRaw(ctx, alias, req)
+	assert.NilError(t, err)
+	assert.Assert(t, len(res.Hits.Hits) == 3)
+
+	// Filtered to active items only: B(20), C(50), A(100)
+	names := make([]string, 0, 3)
+	for _, hit := range res.Hits.Hits {
+		var doc nestedSortParentDoc
+		assert.NilError(t, json.Unmarshal(hit.Source_, &doc))
+		names = append(names, doc.Name)
+	}
+	assert.Equal(t, "B", names[0])
+	assert.Equal(t, "C", names[1])
+	assert.Equal(t, "A", names[2])
 }
