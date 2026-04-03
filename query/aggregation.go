@@ -1020,10 +1020,18 @@ func (a FilterAggregation) parse(raw map[string]types.Aggregate) (FilterResult, 
 	}, nil
 }
 
+// MultiTermLookup represents a single field entry in a multi_terms aggregation.
+// Set Missing to a non-nil value to specify a replacement for documents that
+// do not have a value for the field.
+type MultiTermLookup struct {
+	Field   estype.Field
+	Missing any // optional; nil means no missing value
+}
+
 // MultiTermsAggregation is a typed multi_terms aggregation definition.
 type MultiTermsAggregation struct {
 	baseAggDefinition
-	fields  []estype.Field
+	fields  []MultiTermLookup
 	size    *int
 	subAggs []AggEntry
 }
@@ -1046,7 +1054,7 @@ func MultiTermsAggSubAggs(defs ...AggEntry) MultiTermsAggOption {
 }
 
 // MultiTermsAgg creates a multi_terms aggregation definition.
-func MultiTermsAgg(name string, fields []estype.Field, opts ...MultiTermsAggOption) MultiTermsAggregation {
+func MultiTermsAgg(name string, fields []MultiTermLookup, opts ...MultiTermsAggOption) MultiTermsAggregation {
 	agg := MultiTermsAggregation{
 		baseAggDefinition: baseAggDefinition{name: name},
 		fields:            fields,
@@ -1061,7 +1069,11 @@ func (a MultiTermsAggregation) build() types.Aggregations {
 	multiAgg := types.NewMultiTermsAggregation()
 	terms := make([]types.MultiTermLookup, 0, len(a.fields))
 	for _, f := range a.fields {
-		terms = append(terms, types.MultiTermLookup{Field: string(f)})
+		lookup := types.MultiTermLookup{Field: string(f.Field)}
+		if f.Missing != nil {
+			lookup.Missing = f.Missing
+		}
+		terms = append(terms, lookup)
 	}
 	multiAgg.Terms = terms
 	if a.size != nil {

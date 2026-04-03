@@ -867,6 +867,14 @@ type FilterAggOption func(*FilterAggregation)
 // MultiTermsAggOption configures a multi_terms aggregation.
 type MultiTermsAggOption func(*MultiTermsAggregation)
 
+// MultiTermLookup represents a single field entry in a multi_terms aggregation.
+// Set Missing to a non-nil value to specify a replacement for documents that
+// do not have a value for the field.
+type MultiTermLookup struct {
+	Field   estype.Field
+	Missing any // optional; nil means no missing value
+}
+
 // NestedAggregation defines a typed nested aggregation.
 type NestedAggregation struct {
 	name string
@@ -982,11 +990,15 @@ func MultiTermsAggSubAggs(defs ...aggDefinitionAny) MultiTermsAggOption {
 }
 
 // MultiTermsAgg creates a typed multi_terms aggregation definition.
-func MultiTermsAgg(name string, fields []estype.Field, opts ...MultiTermsAggOption) MultiTermsAggregation {
+func MultiTermsAgg(name string, fields []MultiTermLookup, opts ...MultiTermsAggOption) MultiTermsAggregation {
 	multiAgg := types.NewMultiTermsAggregation()
 	terms := make([]types.MultiTermLookup, 0, len(fields))
 	for _, f := range fields {
-		terms = append(terms, types.MultiTermLookup{Field: string(f)})
+		lookup := types.MultiTermLookup{Field: string(f.Field)}
+		if f.Missing != nil {
+			lookup.Missing = f.Missing
+		}
+		terms = append(terms, lookup)
 	}
 	multiAgg.Terms = terms
 	def := MultiTermsAggregation{

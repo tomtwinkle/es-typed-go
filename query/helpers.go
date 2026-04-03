@@ -70,15 +70,34 @@ func NestedFilter(path estype.Field, queries ...types.Query) types.Query {
 	}
 }
 
+// DateRangeOption configures a DateRangeQuery.
+type DateRangeOption func(*types.DateRangeQuery)
+
+// DateRangeGt adds a strict greater-than bound to the date range.
+func DateRangeGt(v string) DateRangeOption {
+	return func(rq *types.DateRangeQuery) { rq.Gt = &v }
+}
+
+// DateRangeGte adds a greater-than-or-equal bound to the date range.
+func DateRangeGte(v string) DateRangeOption {
+	return func(rq *types.DateRangeQuery) { rq.Gte = &v }
+}
+
+// DateRangeLt adds a strict less-than bound to the date range.
+func DateRangeLt(v string) DateRangeOption {
+	return func(rq *types.DateRangeQuery) { rq.Lt = &v }
+}
+
+// DateRangeLte adds a less-than-or-equal bound to the date range.
+func DateRangeLte(v string) DateRangeOption {
+	return func(rq *types.DateRangeQuery) { rq.Lte = &v }
+}
+
 // DateRangeQuery creates a date range query for the given field.
-// Both gte and lte are optional — pass empty string to omit.
-func DateRangeQuery(field estype.Field, gte, lte string) types.Query {
+func DateRangeQuery(field estype.Field, opts ...DateRangeOption) types.Query {
 	rq := types.NewDateRangeQuery()
-	if gte != "" {
-		rq.Gte = &gte
-	}
-	if lte != "" {
-		rq.Lte = &lte
+	for _, opt := range opts {
+		opt(rq)
 	}
 	return types.Query{
 		Range: map[string]types.RangeQuery{
