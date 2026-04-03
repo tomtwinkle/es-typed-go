@@ -12,7 +12,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/tomtwinkle/es-typed-go/estype"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
+	"github.com/tomtwinkle/es-typed-go/query"
 )
 
 func TestSearchParams_ToRequest_DefaultSizeUsesElasticsearchDefault(t *testing.T) {

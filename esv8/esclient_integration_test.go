@@ -22,7 +22,7 @@ import (
 
 	"github.com/tomtwinkle/es-typed-go/estype"
 	esv8 "github.com/tomtwinkle/es-typed-go/esv8"
-	"github.com/tomtwinkle/es-typed-go/esv8/query"
+	"github.com/tomtwinkle/es-typed-go/query"
 )
 
 // ---------------------------------------------------------------------------
