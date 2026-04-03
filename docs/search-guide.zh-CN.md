@@ -175,6 +175,52 @@ types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 
 `Ptr()` 同样适用于 `estype.Alias` 和 `estype.Index`。
 
+### NewNestedSort — 类型安全的 NestedSortValue 构建器
+
+使用 `NewNestedSort` 可以避免手动进行 `string(field)` 转换。
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+nested := &types.NestedSortValue{Path: path}
+
+// After
+nested := query.NewNestedSort(esmodel.Item.Fields.Items)
+```
+
+支持 functional options 进行可选配置：
+
+```go
+nested := query.NewNestedSort(
+    esmodel.Item.Fields.Items,
+    query.NestedSortFilter(filterQuery),          // 添加 Filter
+    query.NestedSortMaxChildren(10),               // 限制每个父文档的最大子文档数
+    query.NestedSortNested(innerNestedSortValue),  // 多层嵌套
+)
+```
+
+可与 `FieldCustom`、`WithGeoDistanceNested`、`WithScriptSortNested` 配合使用：
+
+```go
+sorts := query.NewSort().
+    FieldCustom(esmodel.Item.Fields.Items_Price, types.FieldSort{
+        Order:  &order,
+        Mode:   &mode,
+        Nested: query.NewNestedSort(esmodel.Item.Fields.Items),
+    }).
+    Build()
+
+// 与 GeoDistance 配合：
+sorts := query.NewSort().
+    GeoDistance(
+        esmodel.Item.Fields.Items_Location,
+        location,
+        sortorder.Asc,
+        query.WithGeoDistanceNested(query.NewNestedSort(esmodel.Item.Fields.Items)),
+    ).
+    Build()
+```
+
 ## 补充说明
 
 - `Limit(0)` 不返回 hits（适用于仅需 aggregation 或 count 的搜索）。

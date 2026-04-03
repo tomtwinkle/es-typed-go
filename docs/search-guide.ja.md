@@ -175,6 +175,52 @@ types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 
 `Ptr()` は `estype.Alias` と `estype.Index` でも使用できます。
 
+### NewNestedSort — 型安全な NestedSortValue ビルダー
+
+`NewNestedSort` を使うと `string(field)` の手動変換が不要になります。
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+nested := &types.NestedSortValue{Path: path}
+
+// After
+nested := query.NewNestedSort(esmodel.Item.Fields.Items)
+```
+
+functional options で任意設定が可能です:
+
+```go
+nested := query.NewNestedSort(
+    esmodel.Item.Fields.Items,
+    query.NestedSortFilter(filterQuery),          // Filter を追加
+    query.NestedSortMaxChildren(10),               // 親ドキュメントごとの最大子数
+    query.NestedSortNested(innerNestedSortValue),  // ネスト内ネスト
+)
+```
+
+`FieldCustom`、`WithGeoDistanceNested`、`WithScriptSortNested` と組み合わせて使えます:
+
+```go
+sorts := query.NewSort().
+    FieldCustom(esmodel.Item.Fields.Items_Price, types.FieldSort{
+        Order:  &order,
+        Mode:   &mode,
+        Nested: query.NewNestedSort(esmodel.Item.Fields.Items),
+    }).
+    Build()
+
+// GeoDistance と組み合わせる場合:
+sorts := query.NewSort().
+    GeoDistance(
+        esmodel.Item.Fields.Items_Location,
+        location,
+        sortorder.Asc,
+        query.WithGeoDistanceNested(query.NewNestedSort(esmodel.Item.Fields.Items)),
+    ).
+    Build()
+```
+
 ## 補足
 
 - `Limit(0)` は hits を返しません（aggregation のみ・件数確認のみの検索に便利）。

@@ -268,7 +268,7 @@ func TestSortBuilder_GeoDistance_WithNested(t *testing.T) {
 			FieldItemsLocation,
 			types.LatLonGeoLocation{Lat: 40.7, Lon: -74.0},
 			sortorder.Asc,
-			query.WithGeoDistanceNested(&types.NestedSortValue{Path: string(FieldItems)}),
+			query.WithGeoDistanceNested(query.NewNestedSort(FieldItems)),
 		).
 		Build()
 
@@ -354,7 +354,7 @@ func TestSortBuilder_Script_WithNested(t *testing.T) {
 			types.Script{Source: &source},
 			scriptsorttype.Number,
 			sortorder.Desc,
-			query.WithScriptSortNested(&types.NestedSortValue{Path: string(FieldItems)}),
+			query.WithScriptSortNested(query.NewNestedSort(FieldItems)),
 		).
 		Build()
 
@@ -422,4 +422,68 @@ func TestSortBuilder_Chaining_AllSortTypes(t *testing.T) {
 	so4, ok := sorts[4].(types.SortOptions)
 	assert.Assert(t, ok)
 	assert.Assert(t, so4.Doc_ != nil)
+}
+
+func TestNewNestedSort_PathOnly(t *testing.T) {
+	t.Parallel()
+	nsv := query.NewNestedSort(FieldItems)
+	assert.Assert(t, nsv != nil)
+	assert.Equal(t, string(FieldItems), nsv.Path)
+	assert.Assert(t, nsv.Filter == nil)
+	assert.Assert(t, nsv.MaxChildren == nil)
+	assert.Assert(t, nsv.Nested == nil)
+}
+
+func TestNewNestedSort_WithFilter(t *testing.T) {
+	t.Parallel()
+	termVal := "active"
+	filter := types.Query{Term: map[string]types.TermQuery{
+		string(FieldStatus): {Value: termVal},
+	}}
+	nsv := query.NewNestedSort(FieldItems, query.NestedSortFilter(filter))
+	assert.Assert(t, nsv != nil)
+	assert.Equal(t, string(FieldItems), nsv.Path)
+	assert.Assert(t, nsv.Filter != nil)
+}
+
+func TestNewNestedSort_WithMaxChildren(t *testing.T) {
+	t.Parallel()
+	nsv := query.NewNestedSort(FieldItems, query.NestedSortMaxChildren(5))
+	assert.Assert(t, nsv != nil)
+	assert.Equal(t, string(FieldItems), nsv.Path)
+	assert.Assert(t, nsv.MaxChildren != nil)
+	assert.Equal(t, 5, *nsv.MaxChildren)
+}
+
+func TestNewNestedSort_WithInnerNested(t *testing.T) {
+	t.Parallel()
+	inner := query.NewNestedSort(FieldItemsDate)
+	nsv := query.NewNestedSort(FieldItems, query.NestedSortNested(inner))
+	assert.Assert(t, nsv != nil)
+	assert.Equal(t, string(FieldItems), nsv.Path)
+	assert.Assert(t, nsv.Nested != nil)
+	assert.Equal(t, string(FieldItemsDate), nsv.Nested.Path)
+}
+
+func TestSortBuilder_FieldCustom_WithNewNestedSort(t *testing.T) {
+	t.Parallel()
+	order := sortorder.Desc
+	mode := sortmode.Min
+	sorts := query.NewSort().
+		FieldCustom(FieldItemsDate, types.FieldSort{
+			Order:  &order,
+			Mode:   &mode,
+			Nested: query.NewNestedSort(FieldItems),
+		}).
+		Build()
+
+	assert.Assert(t, len(sorts) == 1)
+	so, ok := sorts[0].(types.SortOptions)
+	assert.Assert(t, ok)
+	fs, ok := so.SortOptions[string(FieldItemsDate)]
+	assert.Assert(t, ok)
+	assert.Equal(t, sortorder.Desc, *fs.Order)
+	assert.Equal(t, sortmode.Min, *fs.Mode)
+	assert.Assert(t, fs.Nested != nil)
+	assert.Equal(t, string(FieldItems), fs.Nested.Path)
 }

@@ -162,7 +162,7 @@ query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
 
 ### Field.Ptr() — typed field to *string
 
-When a raw go-elasticsearch type requires a `*string` (e.g. `NestedAggregation.Path`, `SumAggregation.Field`), use `Ptr()` instead of a temporary variable:
+When a raw go-elasticsearch type requires `*string` (e.g. `NestedAggregation.Path`, `SumAggregation.Field`), use `Ptr()` instead of a temporary variable:
 
 ```go
 // Before
@@ -174,6 +174,52 @@ types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 ```
 
 `Ptr()` is also available on `estype.Alias` and `estype.Index`.
+
+### NewNestedSort — typed NestedSortValue builder
+
+Use `NewNestedSort` when constructing `NestedSortValue` to avoid manual `string(field)` conversions.
+
+```go
+// Before
+path := string(esmodel.Item.Fields.Items)
+nested := &types.NestedSortValue{Path: path}
+
+// After
+nested := query.NewNestedSort(esmodel.Item.Fields.Items)
+```
+
+Optional configuration via functional options:
+
+```go
+nested := query.NewNestedSort(
+    esmodel.Item.Fields.Items,
+    query.NestedSortFilter(filterQuery),          // adds a Filter
+    query.NestedSortMaxChildren(10),               // limits children per parent
+    query.NestedSortNested(innerNestedSortValue),  // nested-within-nested
+)
+```
+
+Use it with `FieldCustom`, `WithGeoDistanceNested`, or `WithScriptSortNested`:
+
+```go
+sorts := query.NewSort().
+    FieldCustom(esmodel.Item.Fields.Items_Price, types.FieldSort{
+        Order:  &order,
+        Mode:   &mode,
+        Nested: query.NewNestedSort(esmodel.Item.Fields.Items),
+    }).
+    Build()
+
+// Or with GeoDistance:
+sorts := query.NewSort().
+    GeoDistance(
+        esmodel.Item.Fields.Items_Location,
+        location,
+        sortorder.Asc,
+        query.WithGeoDistanceNested(query.NewNestedSort(esmodel.Item.Fields.Items)),
+    ).
+    Build()
+```
 
 ## Notes
 
