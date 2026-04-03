@@ -68,6 +68,60 @@ for _, bucket := range terms.Buckets() {
 }
 ```
 
+### Nested aggregation
+
+统计嵌套对象内的文档并在该范围内运行子聚合：
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Order.Fields.Items.Price)
+nestedDef := query.NestedAgg("items", esmodel.Order.Fields.Items,
+    query.NestedAggSubAggs(avgDef))
+
+// ... 执行搜索 ...
+
+nested := resp.Aggregations.MustNested(nestedDef)
+// nested.DocCount()  — 嵌套文档总数
+avg, _ := nested.Aggregations().GetAvg(avgDef)
+```
+
+### Filter aggregation
+
+将聚合范围限定为匹配查询的文档：
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Product.Fields.Price)
+filterDef := query.FilterAgg("active_products",
+    query.TermValue(esmodel.Product.Fields.Status, "active"),
+    query.FilterAggSubAggs(avgDef),
+)
+
+// ... 执行搜索 ...
+
+filtered := resp.Aggregations.MustFilter(filterDef)
+// filtered.DocCount()
+avg, _ := filtered.Aggregations().GetAvg(avgDef)
+```
+
+### Multi-terms aggregation
+
+按多个字段同时对文档进行分组：
+
+```go
+multiDef := query.MultiTermsAgg("by_category_status",
+    []estype.Field{esmodel.Product.Fields.Category, esmodel.Product.Fields.Status},
+    query.MultiTermsAggSize(10),
+)
+
+// ... 执行搜索 ...
+
+multi := resp.Aggregations.MustMultiTerms(multiDef)
+for _, bucket := range multi.Buckets() {
+    // bucket.Keys()     — 复合键值 []string
+    // bucket.DocCount() — 该键组合的文档数
+    fmt.Println(bucket.Keys(), bucket.DocCount())
+}
+```
+
 ## 排序方向
 
 使用 `query.SortAsc` / `query.SortDesc`，无需导入版本特定的 `sortorder` 包：

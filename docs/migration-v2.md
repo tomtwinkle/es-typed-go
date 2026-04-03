@@ -134,7 +134,7 @@ func (p MyParams) ToV8Request() *v8search.Request { ... }
 func (p MyParams) ToV9Request() *v9search.Request { ... }
 ```
 
-`esv8.SearchParams`, `esv9.SearchParams`, `esv8/query.SearchParams`, `esv9/query.SearchParams`, and `query.SearchParams` all implement both `ToV8Request()` and `ToV9Request()` — no change needed for standard usage.
+`esv8.SearchParams`, `esv9.SearchParams`, and `query.SearchParams` all implement both `ToV8Request()` and `ToV9Request()` — no change needed for standard usage.
 
 ### Generated esmodel format changed
 
@@ -144,11 +144,10 @@ The generated model variable structure changed from a flat struct to a nested `F
 
 ## Backward Compatibility
 
-The following remain available with deprecation notices to ease gradual migration:
-
-- `esv8/query` and `esv9/query` packages are kept as thin wrappers re-exporting from the top-level `query` package.
 - `esv8.SearchParams.ToRequest()` and `esv9.SearchParams.ToRequest()` are kept as deprecated aliases.
 - The old constant-mode and group-mode estyped output (without `Alias`/`Index`) remains available if the definition struct does not implement `AliasProvider` or `IndexProvider`.
+
+> **Note:** The `esv8/query` package has been removed. Import `github.com/tomtwinkle/es-typed-go/query` directly.
 
 ---
 

@@ -68,6 +68,60 @@ for _, bucket := range terms.Buckets() {
 }
 ```
 
+### Nested aggregation
+
+Count documents inside a nested object and run sub-aggregations within that scope:
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Order.Fields.Items.Price)
+nestedDef := query.NestedAgg("items", esmodel.Order.Fields.Items,
+    query.NestedAggSubAggs(avgDef))
+
+// ... run search ...
+
+nested := resp.Aggregations.MustNested(nestedDef)
+// nested.DocCount()  — total nested document count
+avg, _ := nested.Aggregations().GetAvg(avgDef)
+```
+
+### Filter aggregation
+
+Restrict an aggregation to documents matching a query:
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Product.Fields.Price)
+filterDef := query.FilterAgg("active_products",
+    query.TermValue(esmodel.Product.Fields.Status, "active"),
+    query.FilterAggSubAggs(avgDef),
+)
+
+// ... run search ...
+
+filtered := resp.Aggregations.MustFilter(filterDef)
+// filtered.DocCount()
+avg, _ := filtered.Aggregations().GetAvg(avgDef)
+```
+
+### Multi-terms aggregation
+
+Group documents by multiple fields simultaneously:
+
+```go
+multiDef := query.MultiTermsAgg("by_category_status",
+    []estype.Field{esmodel.Product.Fields.Category, esmodel.Product.Fields.Status},
+    query.MultiTermsAggSize(10),
+)
+
+// ... run search ...
+
+multi := resp.Aggregations.MustMultiTerms(multiDef)
+for _, bucket := range multi.Buckets() {
+    // bucket.Keys()     — []string composite key values
+    // bucket.DocCount() — document count for this key combination
+    fmt.Println(bucket.Keys(), bucket.DocCount())
+}
+```
+
 ## Sort directions
 
 Use `query.SortAsc` and `query.SortDesc` — no need to import a version-specific `sortorder` package:
