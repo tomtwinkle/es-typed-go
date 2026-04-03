@@ -1054,7 +1054,7 @@ func TestIntegration_Search_HelperCoverage(t *testing.T) {
 
 	t.Run("DateRangeQuery", func(t *testing.T) {
 		t.Parallel()
-		q := query.DateRangeQuery("created_at", "2024-01-09T00:00:00Z", "2024-01-10T23:59:59Z")
+		q := query.DateRangeQuery("created_at", query.DateRangeGte("2024-01-09T00:00:00Z"), query.DateRangeLte("2024-01-10T23:59:59Z"))
 		req := search.NewRequest()
 		req.Query = &q
 		size := 10
@@ -1336,7 +1336,7 @@ func TestIntegration_SearchBuilder_Composition(t *testing.T) {
 					query.NewBoolQuery().
 						Filter(
 							query.NestedFilter("items", query.TermValue("items.status", "active")),
-							query.DateRangeQuery("created_at", "2024-01-08T00:00:00Z", "2024-01-11T23:59:59Z"),
+							query.DateRangeQuery("created_at", query.DateRangeGte("2024-01-08T00:00:00Z"), query.DateRangeLte("2024-01-11T23:59:59Z")),
 						).
 						Should(
 							query.IdsQuery("doc-1"),
@@ -2228,7 +2228,7 @@ func TestIntegration_MultiTermsAgg(t *testing.T) {
 	sumValueAgg := query.SumAgg("total_value", estype.Field("value"))
 	multiTerms := query.MultiTermsAgg(
 		"by_cat_status",
-		[]estype.Field{estype.Field("category"), estype.Field("status")},
+		[]query.MultiTermLookup{{Field: estype.Field("category")}, {Field: estype.Field("status")}},
 		query.MultiTermsAggSize(10),
 		query.MultiTermsAggSubAggs(sumValueAgg),
 	)
