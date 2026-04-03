@@ -160,7 +160,7 @@ query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
 })
 ```
 
-### Field.Ptr() / Field.String() — typed field 转换
+### Field.Ptr() — typed field 转 *string
 
 当 raw go-elasticsearch 类型需要 `*string` 时（如 `NestedAggregation.Path`、`SumAggregation.Field`），可使用 `Ptr()` 代替临时变量：
 
@@ -173,20 +173,11 @@ types.NestedAggregation{Path: &path}
 types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 ```
 
-当字段为 `string` 类型（非 `*string`）时，如 `types.NestedSortValue.Path`，应使用 `String()`（`Ptr()` 不可用）：
-
-```go
-// NestedSortValue.Path 为 string 类型 — 不能使用 Ptr()
-types.NestedSortValue{Path: esmodel.Item.Fields.Items.String()}
-```
-
-对于 `NestedSortValue`，建议使用下面介绍的 `NewNestedSort`，更加简洁。
-
-`Ptr()` 和 `String()` 同样适用于 `estype.Alias` 和 `estype.Index`。
+`Ptr()` 同样适用于 `estype.Alias` 和 `estype.Index`。
 
 ### NewNestedSort — 类型安全的 NestedSortValue 构建器
 
-使用 `NewNestedSort` 可以避免手动进行 `string(field)` 或 `.String()` 转换。
+使用 `NewNestedSort` 可以避免手动进行 `string(field)` 转换。
 
 ```go
 // Before
