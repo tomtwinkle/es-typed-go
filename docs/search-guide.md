@@ -106,9 +106,9 @@ query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
 })
 ```
 
-### Field.Ptr() — typed field to *string
+### Field.Ptr() and Field.String() — typed field conversion
 
-When a raw go-elasticsearch type requires a `*string` (e.g. `NestedAggregation.Path`, `SumAggregation.Field`), use `Ptr()` instead of a temporary variable:
+When a raw go-elasticsearch type requires `*string` (e.g. `NestedAggregation.Path`, `SumAggregation.Field`), use `Ptr()` instead of a temporary variable:
 
 ```go
 // Before
@@ -119,7 +119,14 @@ types.NestedAggregation{Path: &path}
 types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 ```
 
-`Ptr()` is also available on `estype.Alias` and `estype.Index`.
+When a field is `string` (not `*string`), e.g. `types.NestedSortValue.Path`, use `String()` instead:
+
+```go
+// NestedSortValue.Path is string, not *string — Ptr() cannot be used here
+types.NestedSortValue{Path: esmodel.Item.Fields.Items.String()}
+```
+
+`Ptr()` and `String()` are also available on `estype.Alias` and `estype.Index`.
 
 ## Notes
 
