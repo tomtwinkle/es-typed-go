@@ -68,6 +68,60 @@ for _, bucket := range terms.Buckets() {
 }
 ```
 
+### Nested aggregation
+
+ネストされたオブジェクト内のドキュメントを集計し、そのスコープでサブ集計を実行します:
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Order.Fields.Items.Price)
+nestedDef := query.NestedAgg("items", esmodel.Order.Fields.Items,
+    query.NestedAggSubAggs(avgDef))
+
+// ... 検索実行 ...
+
+nested := resp.Aggregations.MustNested(nestedDef)
+// nested.DocCount()  — ネストドキュメントの総数
+avg, _ := nested.Aggregations().GetAvg(avgDef)
+```
+
+### Filter aggregation
+
+クエリにマッチするドキュメントに集計を絞り込みます:
+
+```go
+avgDef := query.AvgAgg("avg_price", esmodel.Product.Fields.Price)
+filterDef := query.FilterAgg("active_products",
+    query.TermValue(esmodel.Product.Fields.Status, "active"),
+    query.FilterAggSubAggs(avgDef),
+)
+
+// ... 検索実行 ...
+
+filtered := resp.Aggregations.MustFilter(filterDef)
+// filtered.DocCount()
+avg, _ := filtered.Aggregations().GetAvg(avgDef)
+```
+
+### Multi-terms aggregation
+
+複数フィールドでドキュメントをまとめてグループ化します:
+
+```go
+multiDef := query.MultiTermsAgg("by_category_status",
+    []estype.Field{esmodel.Product.Fields.Category, esmodel.Product.Fields.Status},
+    query.MultiTermsAggSize(10),
+)
+
+// ... 検索実行 ...
+
+multi := resp.Aggregations.MustMultiTerms(multiDef)
+for _, bucket := range multi.Buckets() {
+    // bucket.Keys()     — 複合キーの値 []string
+    // bucket.DocCount() — このキーの組み合わせのドキュメント数
+    fmt.Println(bucket.Keys(), bucket.DocCount())
+}
+```
+
 ## ソート方向
 
 `query.SortAsc` / `query.SortDesc` を使います。バージョン固有の `sortorder` パッケージのインポートは不要です:

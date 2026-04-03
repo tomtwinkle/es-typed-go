@@ -10,7 +10,8 @@ applyTo: "**/*.go"
 - `estype/` — core types shared across ES versions (`Field`, `Index`, `Alias`, `DateFormat`, mapping parser)
 - `esv8/` — Elasticsearch v8 client wrapper and property builders
 - `esv9/` — Elasticsearch v9 client wrapper and property builders
-- `esv8/query/`, `esv9/query/` — query/sort/aggregation builders
+- `query/` — shared query/sort/aggregation builders (version-agnostic; uses go-elasticsearch/v8 types internally)
+- `esv9/query/` — v9-specific query/sort/aggregation builders
 - `cmd/estyped/` — CLI code generator that produces typed `Field` constants from ES mapping JSON
 
 ## Type Safety

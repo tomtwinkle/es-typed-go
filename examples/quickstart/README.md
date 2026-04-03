@@ -7,7 +7,7 @@ It shows how to:
 1. define a document struct
 2. generate typed field constants with `estyped`
 3. seed example documents into Elasticsearch
-4. build type-safe queries and aggregations with `esv8/query`
+4. build type-safe queries and aggregations with `github.com/tomtwinkle/es-typed-go/query`
 5. run a high-level typed search with `esv8.Search[T](...)`
 6. demonstrate pagination by returning fewer hits than the total match count
 
