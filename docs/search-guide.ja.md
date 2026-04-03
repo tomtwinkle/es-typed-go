@@ -160,7 +160,7 @@ query.MultiTermsAgg("by_date_tz", []query.MultiTermLookup{
 })
 ```
 
-### Field.Ptr() — typed field を *string に変換
+### Field.Ptr() / Field.String() — typed field の変換
 
 raw go-elasticsearch 型が `*string` を要求する場合（例: `NestedAggregation.Path`、`SumAggregation.Field`）、一時変数の代わりに `Ptr()` を使えます:
 
@@ -173,7 +173,14 @@ types.NestedAggregation{Path: &path}
 types.NestedAggregation{Path: esmodel.Item.Fields.Items.Ptr()}
 ```
 
-`Ptr()` は `estype.Alias` と `estype.Index` でも使用できます。
+フィールドが `string`（`*string` ではない）の場合、例えば `types.NestedSortValue.Path` では `String()` を使います（`Ptr()` は使用できません）:
+
+```go
+// NestedSortValue.Path は string 型 — Ptr() は使用不可
+types.NestedSortValue{Path: esmodel.Item.Fields.Items.String()}
+```
+
+`Ptr()` と `String()` は `estype.Alias` と `estype.Index` でも使用できます。
 
 ## 補足
 
