@@ -3,7 +3,6 @@ package query
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
@@ -1070,17 +1069,8 @@ func (a MultiTermsAggregation) build() types.Aggregations {
 	multiAgg := types.NewMultiTermsAggregation()
 	terms := make([]types.MultiTermLookup, 0, len(a.fields))
 	for _, f := range a.fields {
-		lookup := types.MultiTermLookup{}
-		lookupField := reflect.ValueOf(&lookup).Elem().FieldByName("Field")
 		field := string(f.Field)
-		switch lookupField.Kind() {
-		case reflect.String:
-			lookupField.SetString(field)
-		case reflect.Pointer:
-			lookupField.Set(reflect.ValueOf(&field))
-		default:
-			panic(fmt.Errorf("query: unsupported MultiTermLookup.Field kind %s", lookupField.Kind()))
-		}
+		lookup := types.MultiTermLookup{Field: &field}
 		if f.Missing != nil {
 			lookup.Missing = f.Missing
 		}
