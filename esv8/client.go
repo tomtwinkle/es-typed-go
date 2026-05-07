@@ -524,3 +524,59 @@ func (c *esClient) performRaw(ctx context.Context, method, path string, body jso
 
 	return json.RawMessage(data), nil
 }
+
+func performSuccess(ctx context.Context, op string, perform func(context.Context) (*http.Response, error)) (bool, error) {
+	res, err := perform(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer res.Body.Close()
+
+	if _, err := io.Copy(io.Discard, res.Body); err != nil {
+		return false, err
+	}
+
+	if res.StatusCode >= 200 && res.StatusCode < 300 {
+		return true, nil
+	}
+
+	if res.StatusCode == http.StatusNotFound {
+		return false, nil
+	}
+
+	return false, fmt.Errorf("an error happened during the %s query execution, status code: %d", op, res.StatusCode)
+}
+
+func performSupportedBool(ctx context.Context, op string, perform func(context.Context) (*http.Response, error)) (bool, error) {
+	res, err := perform(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer res.Body.Close()
+
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return false, err
+	}
+
+	if res.StatusCode >= 400 {
+		if res.StatusCode == http.StatusNotFound {
+			return false, nil
+		}
+		return false, fmt.Errorf("an error happened during the %s query execution, status code: %d", op, res.StatusCode)
+	}
+
+	var rawBool bool
+	if err := json.Unmarshal(data, &rawBool); err == nil {
+		return rawBool, nil
+	}
+
+	var payload struct {
+		Supported *bool `json:"supported"`
+	}
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return false, fmt.Errorf("decoding %s response: %w", op, err)
+	}
+
+	return payload.Supported != nil && *payload.Supported, nil
+}

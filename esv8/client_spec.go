@@ -509,7 +509,7 @@ func (c *esClient) AutoscalingPutAutoscalingPolicy(ctx context.Context, name str
 }
 
 func (c *esClient) Capabilities(ctx context.Context) (bool, error) {
-	return c.typedClient.Capabilities.Capabilities().Do(ctx)
+	return performSupportedBool(ctx, "Capabilities", c.typedClient.Capabilities().Perform)
 }
 
 func (c *esClient) CcrDeleteAutoFollowPattern(ctx context.Context, name string) (*ccr_delete_auto_follow_pattern.Response, error) {
@@ -633,7 +633,7 @@ func (c *esClient) ConnectorPut(ctx context.Context, req *connector_put.Request)
 }
 
 func (c *esClient) ConnectorSecretPost(ctx context.Context) (bool, error) {
-	return c.typedClient.Connector.SecretPost().Do(ctx)
+	return performSuccess(ctx, "SecretPost", c.typedClient.Connector.SecretPost().Perform)
 }
 
 func (c *esClient) ConnectorSecretDelete(ctx context.Context, id string) (json.RawMessage, error) {
@@ -873,7 +873,7 @@ func (c *esClient) FleetMsearch(ctx context.Context, req *fleet_msearch.Request)
 }
 
 func (c *esClient) FleetPostSecret(ctx context.Context) (bool, error) {
-	return c.typedClient.Fleet.PostSecret().Do(ctx)
+	return performSuccess(ctx, "PostSecret", c.typedClient.Fleet.PostSecret().Perform)
 }
 
 func (c *esClient) FleetDeleteSecret(ctx context.Context, id string) (json.RawMessage, error) {
@@ -1826,19 +1826,19 @@ func (c *esClient) Ping(ctx context.Context) (bool, error) {
 }
 
 func (c *esClient) ProfilingFlamegraph(ctx context.Context) (bool, error) {
-	return c.typedClient.Profiling.Flamegraph().Do(ctx)
+	return performSuccess(ctx, "Flamegraph", c.typedClient.Profiling.Flamegraph().Perform)
 }
 
 func (c *esClient) ProfilingStacktraces(ctx context.Context) (bool, error) {
-	return c.typedClient.Profiling.Stacktraces().Do(ctx)
+	return performSuccess(ctx, "Stacktraces", c.typedClient.Profiling.Stacktraces().Perform)
 }
 
 func (c *esClient) ProfilingStatus(ctx context.Context) (bool, error) {
-	return c.typedClient.Profiling.Status().Do(ctx)
+	return c.typedClient.Profiling.Status().IsSuccess(ctx)
 }
 
 func (c *esClient) ProfilingTopnFunctions(ctx context.Context) (bool, error) {
-	return c.typedClient.Profiling.TopnFunctions().Do(ctx)
+	return performSuccess(ctx, "TopnFunctions", c.typedClient.Profiling.TopnFunctions().Perform)
 }
 
 func (c *esClient) ProjectCreateManyRouting(ctx context.Context, req json.RawMessage) (json.RawMessage, error) {
@@ -2415,15 +2415,15 @@ func (c *esClient) SslCertificates(ctx context.Context) (ssl_certificates.Respon
 }
 
 func (c *esClient) StreamsLogsDisable(ctx context.Context) (bool, error) {
-	return c.typedClient.Streams.LogsDisable().Do(ctx)
+	return c.typedClient.Streams.LogsDisable().IsSuccess(ctx)
 }
 
 func (c *esClient) StreamsLogsEnable(ctx context.Context) (bool, error) {
-	return c.typedClient.Streams.LogsEnable().Do(ctx)
+	return c.typedClient.Streams.LogsEnable().IsSuccess(ctx)
 }
 
 func (c *esClient) StreamsStatus(ctx context.Context) (bool, error) {
-	return c.typedClient.Streams.Status().Do(ctx)
+	return c.typedClient.Streams.Status().IsSuccess(ctx)
 }
 
 func (c *esClient) SynonymsDeleteSynonym(ctx context.Context, id string) (*synonyms_delete_synonym.Response, error) {
@@ -2487,7 +2487,7 @@ func (c *esClient) TransformDeleteTransform(ctx context.Context, transformid str
 }
 
 func (c *esClient) TransformGetNodeStats(ctx context.Context) (bool, error) {
-	return c.typedClient.Transform.GetNodeStats().Do(ctx)
+	return c.typedClient.Transform.GetNodeStats().IsSuccess(ctx)
 }
 
 func (c *esClient) TransformGetTransform(ctx context.Context) (*transform_get_transform.Response, error) {

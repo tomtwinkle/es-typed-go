@@ -1069,7 +1069,8 @@ func (a MultiTermsAggregation) build() types.Aggregations {
 	multiAgg := types.NewMultiTermsAggregation()
 	terms := make([]types.MultiTermLookup, 0, len(a.fields))
 	for _, f := range a.fields {
-		lookup := types.MultiTermLookup{Field: string(f.Field)}
+		field := string(f.Field)
+		lookup := types.MultiTermLookup{Field: &field}
 		if f.Missing != nil {
 			lookup.Missing = f.Missing
 		}

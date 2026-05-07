@@ -1012,8 +1012,10 @@ func TestMultiTermsAgg_Build(t *testing.T) {
 	assert.Assert(t, ok)
 	assert.Assert(t, agg.MultiTerms != nil)
 	assert.Equal(t, 2, len(agg.MultiTerms.Terms))
-	assert.Equal(t, string(FieldCategory), agg.MultiTerms.Terms[0].Field)
-	assert.Equal(t, string(FieldStatus), agg.MultiTerms.Terms[1].Field)
+	assert.Assert(t, agg.MultiTerms.Terms[0].Field != nil)
+	assert.Equal(t, string(FieldCategory), *agg.MultiTerms.Terms[0].Field)
+	assert.Assert(t, agg.MultiTerms.Terms[1].Field != nil)
+	assert.Equal(t, string(FieldStatus), *agg.MultiTerms.Terms[1].Field)
 }
 
 func TestMultiTermsAgg_WithSize(t *testing.T) {
@@ -1045,9 +1047,11 @@ func TestMultiTermsAgg_WithMissing(t *testing.T) {
 	assert.Assert(t, ok)
 	assert.Assert(t, agg.MultiTerms != nil)
 	assert.Equal(t, 2, len(agg.MultiTerms.Terms))
-	assert.Equal(t, string(FieldCategory), agg.MultiTerms.Terms[0].Field)
+	assert.Assert(t, agg.MultiTerms.Terms[0].Field != nil)
+	assert.Equal(t, string(FieldCategory), *agg.MultiTerms.Terms[0].Field)
 	assert.Assert(t, agg.MultiTerms.Terms[0].Missing == nil)
-	assert.Equal(t, string(FieldStatus), agg.MultiTerms.Terms[1].Field)
+	assert.Assert(t, agg.MultiTerms.Terms[1].Field != nil)
+	assert.Equal(t, string(FieldStatus), *agg.MultiTerms.Terms[1].Field)
 	assert.Equal(t, "unknown", agg.MultiTerms.Terms[1].Missing)
 }
 
