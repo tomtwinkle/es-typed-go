@@ -2,6 +2,7 @@ package query_test
 
 import (
 	"math"
+	"reflect"
 	"testing"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
@@ -24,6 +25,22 @@ func assertPanicsWithErrorContains(t *testing.T, want string, fn func()) {
 	}()
 
 	fn()
+}
+
+func multiTermFieldValue(t *testing.T, lookup types.MultiTermLookup) string {
+	t.Helper()
+
+	field := reflect.ValueOf(lookup).FieldByName("Field")
+	switch field.Kind() {
+	case reflect.String:
+		return field.String()
+	case reflect.Pointer:
+		assert.Assert(t, !field.IsNil())
+		return field.Elem().String()
+	default:
+		t.Fatalf("unexpected MultiTermLookup.Field kind %s", field.Kind())
+		return ""
+	}
 }
 
 func TestAggs_Empty(t *testing.T) {
@@ -1012,8 +1029,8 @@ func TestMultiTermsAgg_Build(t *testing.T) {
 	assert.Assert(t, ok)
 	assert.Assert(t, agg.MultiTerms != nil)
 	assert.Equal(t, 2, len(agg.MultiTerms.Terms))
-	assert.Equal(t, string(FieldCategory), agg.MultiTerms.Terms[0].Field)
-	assert.Equal(t, string(FieldStatus), agg.MultiTerms.Terms[1].Field)
+	assert.Equal(t, string(FieldCategory), multiTermFieldValue(t, agg.MultiTerms.Terms[0]))
+	assert.Equal(t, string(FieldStatus), multiTermFieldValue(t, agg.MultiTerms.Terms[1]))
 }
 
 func TestMultiTermsAgg_WithSize(t *testing.T) {
@@ -1045,9 +1062,9 @@ func TestMultiTermsAgg_WithMissing(t *testing.T) {
 	assert.Assert(t, ok)
 	assert.Assert(t, agg.MultiTerms != nil)
 	assert.Equal(t, 2, len(agg.MultiTerms.Terms))
-	assert.Equal(t, string(FieldCategory), agg.MultiTerms.Terms[0].Field)
+	assert.Equal(t, string(FieldCategory), multiTermFieldValue(t, agg.MultiTerms.Terms[0]))
 	assert.Assert(t, agg.MultiTerms.Terms[0].Missing == nil)
-	assert.Equal(t, string(FieldStatus), agg.MultiTerms.Terms[1].Field)
+	assert.Equal(t, string(FieldStatus), multiTermFieldValue(t, agg.MultiTerms.Terms[1]))
 	assert.Equal(t, "unknown", agg.MultiTerms.Terms[1].Missing)
 }
 
