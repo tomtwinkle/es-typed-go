@@ -16,6 +16,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/calendarinterval"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/functionboostmode"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortmode"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 	"github.com/google/uuid"
@@ -875,6 +876,110 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 	}
 }
 
+func TestIntegration_Search_ScoreBuilders(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	const (
+		fieldID       estype.Field = "id"
+		fieldName     estype.Field = "name"
+		fieldCategory estype.Field = "category"
+		fieldPrice    estype.Field = "price"
+	)
+
+	type scoreSortDoc struct {
+		ID       string  `json:"id"`
+		Name     string  `json:"name"`
+		Category string  `json:"category"`
+		Price    float64 `json:"price"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldID):       types.NewKeywordProperty(),
+			string(fieldName):     types.NewTextProperty(),
+			string(fieldCategory): types.NewKeywordProperty(),
+			string(fieldPrice):    types.NewDoubleNumberProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	for _, doc := range []scoreSortDoc{
+		{ID: "doc-1", Name: "alpha alpha alpha", Category: "electronics", Price: 10},
+		{ID: "doc-2", Name: "alpha alpha", Category: "electronics", Price: 30},
+		{ID: "doc-3", Name: "alpha alpha", Category: "electronics", Price: 20},
+		{ID: "doc-4", Name: "alpha", Category: "electronics", Price: 40},
+		{ID: "doc-5", Name: "beta beta", Category: "kitchen", Price: 50},
+	} {
+		_, err = client.CreateDocument(ctx, alias, doc.ID, doc)
+		assert.NilError(t, err)
+	}
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	hitID := func(t *testing.T, hit types.Hit) string {
+		t.Helper()
+		assert.Assert(t, hit.Id_ != nil)
+		return *hit.Id_
+	}
+
+	t.Run("FunctionScoreBuilder", func(t *testing.T) {
+		t.Parallel()
+		params := query.NewSearch().
+			Query(
+				query.NewFunctionScore().
+					Query(query.TermValue(fieldCategory, "electronics")).
+					Add(
+						query.NewScoreFunction().
+							FieldValueFactor(fieldPrice, query.WithFieldValueFactorFactor(1)).
+							Build(),
+					).
+					BoostMode(functionboostmode.Replace).
+					BuildQuery(),
+			).
+			Sort(query.NewSort().ScoreDesc().Build()...).
+			Limit(10).
+			Build()
+
+		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
+		assert.NilError(t, err)
+		assert.Equal(t, int64(4), res.Hits.Total.Value)
+		assert.Equal(t, 4, len(res.Hits.Hits))
+		assert.Equal(t, "doc-4", hitID(t, res.Hits.Hits[0]))
+		assert.Equal(t, "doc-2", hitID(t, res.Hits.Hits[1]))
+		assert.Equal(t, "doc-3", hitID(t, res.Hits.Hits[2]))
+		assert.Equal(t, "doc-1", hitID(t, res.Hits.Hits[3]))
+	})
+
+	t.Run("ScriptScoreQueryBuilder", func(t *testing.T) {
+		t.Parallel()
+		params := query.NewSearch().
+			Query(
+				query.NewScriptScoreQuery().
+					Query(query.TermValue(fieldCategory, "electronics")).
+					ScriptSource("doc['price'].value").
+					MinScore(25).
+					BuildQuery(),
+			).
+			Sort(query.NewSort().ScoreDesc().Build()...).
+			Limit(10).
+			Build()
+
+		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+		assert.Equal(t, 2, len(res.Hits.Hits))
+		assert.Equal(t, "doc-4", hitID(t, res.Hits.Hits[0]))
+		assert.Equal(t, "doc-2", hitID(t, res.Hits.Hits[1]))
+	})
+}
+
 func TestIntegration_Search_WithPagination(t *testing.T) {
 	t.Parallel()
 	client := newTestClient(t)
@@ -1237,6 +1342,7 @@ func TestIntegration_Search_HelperCoverage(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, int64(2), res.Hits.Total.Value)
 	})
+
 }
 
 func TestIntegration_SearchBuilder_Composition(t *testing.T) {

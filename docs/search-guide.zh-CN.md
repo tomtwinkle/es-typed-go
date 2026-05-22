@@ -46,6 +46,42 @@ resp, err := esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
 resp, err := esv9.Search[Product](ctx, client, esmodel.Product.Alias, params)
 ```
 
+## 基于 score 的排序控制
+
+需要控制 score 计算时，可以继续使用类型安全的 builder，而不是回退到原始 field name 字符串：
+
+```go
+params := query.NewSearch().
+    Query(
+        query.NewFunctionScore().
+            Query(
+                query.BoolQuery(
+                    query.NewBoolQuery().
+                        Filter(query.TermValue(esmodel.Product.Fields.Category, "electronics")).
+                        Should(query.MatchPhrase(esmodel.Product.Fields.Name, "alpha")).
+                        MinimumShouldMatch(1).
+                        Build(),
+                ),
+            ).
+            Add(
+                query.NewScoreFunction().
+                    FieldValueFactor(esmodel.Product.Fields.Price,
+                        query.WithFieldValueFactorFactor(0.01)).
+                    Build(),
+            ).
+            BuildQuery(),
+    ).
+    Sort(
+        query.NewSort().
+            ScoreDesc().
+            Field(esmodel.Product.Fields.Date, query.SortDesc).
+            Build()...,
+    ).
+    Build()
+```
+
+如果需要 `script_score`，可以使用 `query.NewScriptScoreQuery().Query(...).ScriptSource("doc['price'].value").BuildQuery()`。把 `_score desc` 放在最前面，可以让 score 决定第一层排序，同时保留显式 field sort 作为同分时的次级排序键。
+
 ## 在 v8 与 v9 之间切换
 
 由于查询构建使用共享的 `query/` 包，切换 Elasticsearch 版本只需修改客户端 import。完整变更列表请参阅 [migration-v2.md](migration-v2.md)。
