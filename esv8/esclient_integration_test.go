@@ -875,6 +875,120 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 	}
 }
 
+func TestIntegration_Search_WithScoreSorting(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t)
+	ctx := context.Background()
+	idx := uniqueIndex(t, client)
+	alias := uniqueAlias(t)
+
+	const (
+		fieldID       estype.Field = "id"
+		fieldName     estype.Field = "name"
+		fieldCategory estype.Field = "category"
+		fieldPrice    estype.Field = "price"
+	)
+
+	type scoreSortDoc struct {
+		ID       string  `json:"id"`
+		Name     string  `json:"name"`
+		Category string  `json:"category"`
+		Price    float64 `json:"price"`
+	}
+
+	mappings := &types.TypeMapping{
+		Properties: map[string]types.Property{
+			string(fieldID):       types.NewKeywordProperty(),
+			string(fieldName):     types.NewTextProperty(),
+			string(fieldCategory): types.NewKeywordProperty(),
+			string(fieldPrice):    types.NewDoubleNumberProperty(),
+		},
+	}
+	_, err := client.CreateIndex(ctx, idx, noReplicaSettings(), mappings)
+	assert.NilError(t, err)
+	_, err = client.CreateAlias(ctx, idx, alias, estype.WriteIndexEnabled)
+	assert.NilError(t, err)
+
+	for _, doc := range []scoreSortDoc{
+		{ID: "doc-1", Name: "alpha alpha alpha", Category: "electronics", Price: 10},
+		{ID: "doc-2", Name: "alpha alpha", Category: "electronics", Price: 30},
+		{ID: "doc-3", Name: "alpha alpha", Category: "electronics", Price: 20},
+		{ID: "doc-4", Name: "alpha", Category: "electronics", Price: 40},
+		{ID: "doc-5", Name: "beta beta", Category: "kitchen", Price: 50},
+	} {
+		_, err = client.CreateDocument(ctx, alias, doc.ID, doc)
+		assert.NilError(t, err)
+	}
+	_, err = client.IndexRefresh(ctx, idx)
+	assert.NilError(t, err)
+
+	hitID := func(t *testing.T, hit types.Hit) string {
+		t.Helper()
+		assert.Assert(t, hit.Id_ != nil)
+		return *hit.Id_
+	}
+
+	hitScore := func(t *testing.T, hit types.Hit) float64 {
+		t.Helper()
+		assert.Assert(t, hit.Score_ != nil)
+		return float64(*hit.Score_)
+	}
+
+	searchHits := func(t *testing.T, sorts ...types.SortCombinations) []types.Hit {
+		t.Helper()
+		params := query.NewSearch().
+			Where(query.TermValue(fieldCategory, "electronics")).
+			Must(query.MatchValue(fieldName, "alpha")).
+			Sort(sorts...).
+			Limit(10).
+			Build()
+
+		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
+		assert.NilError(t, err)
+		assert.Equal(t, int64(4), res.Hits.Total.Value)
+		assert.Equal(t, 4, len(res.Hits.Hits))
+		return res.Hits.Hits
+	}
+
+	t.Run("score desc orders hits by relevance", func(t *testing.T) {
+		t.Parallel()
+		hits := searchHits(t, query.NewSort().ScoreDesc().Build()...)
+		assert.Equal(t, "doc-1", hitID(t, hits[0]))
+		assert.Equal(t, "doc-4", hitID(t, hits[3]))
+
+		prev := math.Inf(1)
+		for _, hit := range hits {
+			score := hitScore(t, hit)
+			assert.Assert(t, score <= prev)
+			prev = score
+		}
+	})
+
+	t.Run("score asc reverses relevance order", func(t *testing.T) {
+		t.Parallel()
+		hits := searchHits(t, query.NewSort().ScoreAsc().Build()...)
+		assert.Equal(t, "doc-4", hitID(t, hits[0]))
+		assert.Equal(t, "doc-1", hitID(t, hits[3]))
+
+		prev := math.Inf(-1)
+		for _, hit := range hits {
+			score := hitScore(t, hit)
+			assert.Assert(t, score >= prev)
+			prev = score
+		}
+	})
+
+	t.Run("score desc keeps secondary field sort within tie bucket", func(t *testing.T) {
+		t.Parallel()
+		hits := searchHits(t, query.NewSort().ScoreDesc().Field(fieldPrice, sortorder.Desc).Build()...)
+		assert.Equal(t, "doc-1", hitID(t, hits[0]))
+		assert.Equal(t, "doc-2", hitID(t, hits[1]))
+		assert.Equal(t, "doc-3", hitID(t, hits[2]))
+		assert.Equal(t, "doc-4", hitID(t, hits[3]))
+		assert.Assert(t, math.Abs(hitScore(t, hits[1])-hitScore(t, hits[2])) < 1e-9)
+	})
+}
+
 func TestIntegration_Search_WithPagination(t *testing.T) {
 	t.Parallel()
 	client := newTestClient(t)
