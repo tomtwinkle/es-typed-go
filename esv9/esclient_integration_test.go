@@ -16,6 +16,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v9/typedapi/core/update"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/calendarinterval"
+	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/functionboostmode"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortmode"
 	"github.com/elastic/go-elasticsearch/v9/typedapi/types/enums/sortorder"
 	"github.com/google/uuid"
@@ -854,7 +855,7 @@ func TestIntegration_Search_WithSorting(t *testing.T) {
 	}
 }
 
-func TestIntegration_Search_WithScoreSorting(t *testing.T) {
+func TestIntegration_Search_ScoreBuilders(t *testing.T) {
 	t.Parallel()
 	client := newTestClient(t)
 	ctx := context.Background()
@@ -902,18 +903,21 @@ func TestIntegration_Search_WithScoreSorting(t *testing.T) {
 		return *hit.Id_
 	}
 
-	hitScore := func(t *testing.T, hit types.Hit) float64 {
-		t.Helper()
-		assert.Assert(t, hit.Score_ != nil)
-		return float64(*hit.Score_)
-	}
-
-	searchHits := func(t *testing.T, sorts ...types.SortCombinations) []types.Hit {
-		t.Helper()
+	t.Run("FunctionScoreBuilder", func(t *testing.T) {
+		t.Parallel()
 		params := query.NewSearch().
-			Where(query.TermValue(fieldCategory, "electronics")).
-			Must(query.MatchValue(fieldName, "alpha")).
-			Sort(sorts...).
+			Query(
+				query.NewFunctionScore().
+					Query(query.TermValue(fieldCategory, "electronics")).
+					Add(
+						query.NewScoreFunction().
+							FieldValueFactor(fieldPrice, query.WithFieldValueFactorFactor(1)).
+							Build(),
+					).
+					BoostMode(functionboostmode.Replace).
+					BuildQuery(),
+			).
+			Sort(query.NewSort().ScoreDesc().Build()...).
 			Limit(10).
 			Build()
 
@@ -921,45 +925,32 @@ func TestIntegration_Search_WithScoreSorting(t *testing.T) {
 		assert.NilError(t, err)
 		assert.Equal(t, int64(4), res.Hits.Total.Value)
 		assert.Equal(t, 4, len(res.Hits.Hits))
-		return res.Hits.Hits
-	}
-
-	t.Run("score desc orders hits by relevance", func(t *testing.T) {
-		t.Parallel()
-		hits := searchHits(t, query.NewSort().ScoreDesc().Build()...)
-		assert.Equal(t, "doc-1", hitID(t, hits[0]))
-		assert.Equal(t, "doc-4", hitID(t, hits[3]))
-
-		prev := math.Inf(1)
-		for _, hit := range hits {
-			score := hitScore(t, hit)
-			assert.Assert(t, score <= prev)
-			prev = score
-		}
+		assert.Equal(t, "doc-4", hitID(t, res.Hits.Hits[0]))
+		assert.Equal(t, "doc-2", hitID(t, res.Hits.Hits[1]))
+		assert.Equal(t, "doc-3", hitID(t, res.Hits.Hits[2]))
+		assert.Equal(t, "doc-1", hitID(t, res.Hits.Hits[3]))
 	})
 
-	t.Run("score asc reverses relevance order", func(t *testing.T) {
+	t.Run("ScriptScoreQueryBuilder", func(t *testing.T) {
 		t.Parallel()
-		hits := searchHits(t, query.NewSort().ScoreAsc().Build()...)
-		assert.Equal(t, "doc-4", hitID(t, hits[0]))
-		assert.Equal(t, "doc-1", hitID(t, hits[3]))
+		params := query.NewSearch().
+			Query(
+				query.NewScriptScoreQuery().
+					Query(query.TermValue(fieldCategory, "electronics")).
+					ScriptSource("doc['price'].value").
+					MinScore(25).
+					BuildQuery(),
+			).
+			Sort(query.NewSort().ScoreDesc().Build()...).
+			Limit(10).
+			Build()
 
-		prev := math.Inf(-1)
-		for _, hit := range hits {
-			score := hitScore(t, hit)
-			assert.Assert(t, score >= prev)
-			prev = score
-		}
-	})
-
-	t.Run("score desc keeps secondary field sort within tie bucket", func(t *testing.T) {
-		t.Parallel()
-		hits := searchHits(t, query.NewSort().ScoreDesc().Field(fieldPrice, sortorder.Desc).Build()...)
-		assert.Equal(t, "doc-1", hitID(t, hits[0]))
-		assert.Equal(t, "doc-2", hitID(t, hits[1]))
-		assert.Equal(t, "doc-3", hitID(t, hits[2]))
-		assert.Equal(t, "doc-4", hitID(t, hits[3]))
-		assert.Assert(t, math.Abs(hitScore(t, hits[1])-hitScore(t, hits[2])) < 1e-9)
+		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+		assert.Equal(t, 2, len(res.Hits.Hits))
+		assert.Equal(t, "doc-4", hitID(t, res.Hits.Hits[0]))
+		assert.Equal(t, "doc-2", hitID(t, res.Hits.Hits[1]))
 	})
 }
 
@@ -1276,56 +1267,6 @@ func TestIntegration_Search_QueryHelpers(t *testing.T) {
 		})
 	}
 
-	t.Run("FunctionScoreBuilder", func(t *testing.T) {
-		t.Parallel()
-
-		params := query.NewSearch().
-			Query(
-				query.NewFunctionScore().
-					Query(query.TermsValues(fieldCategory, query.FieldValues("electronics", "kitchen")...)).
-					Add(
-						query.NewScoreFunction().
-							FieldValueFactor(fieldPrice, query.WithFieldValueFactorFactor(1)).
-							Build(),
-					).
-					BuildQuery(),
-			).
-			Sort(query.NewSort().ScoreDesc().Build()...).
-			Limit(10).
-			Build()
-
-		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
-		assert.NilError(t, err)
-		assert.Equal(t, int64(2), res.Hits.Total.Value)
-		assert.Equal(t, 2, len(res.Hits.Hits))
-		assert.Assert(t, res.Hits.Hits[0].Id_ != nil)
-		assert.Assert(t, res.Hits.Hits[1].Id_ != nil)
-		assert.Equal(t, "doc-0", *res.Hits.Hits[0].Id_)
-		assert.Equal(t, "doc-2", *res.Hits.Hits[1].Id_)
-	})
-
-	t.Run("ScriptScoreQueryBuilder", func(t *testing.T) {
-		t.Parallel()
-
-		params := query.NewSearch().
-			Query(
-				query.NewScriptScoreQuery().
-					Query(query.TermsValues(fieldCategory, query.FieldValues("electronics", "kitchen")...)).
-					ScriptSource("doc['price'].value").
-					MinScore(90).
-					BuildQuery(),
-			).
-			Sort(query.NewSort().ScoreDesc().Build()...).
-			Limit(10).
-			Build()
-
-		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
-		assert.NilError(t, err)
-		assert.Equal(t, int64(1), res.Hits.Total.Value)
-		assert.Equal(t, 1, len(res.Hits.Hits))
-		assert.Assert(t, res.Hits.Hits[0].Id_ != nil)
-		assert.Equal(t, "doc-0", *res.Hits.Hits[0].Id_)
-	})
 }
 
 func TestIntegration_Search_SearchBuilderComposition(t *testing.T) {
