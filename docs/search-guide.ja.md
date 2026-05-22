@@ -46,6 +46,42 @@ resp, err := esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
 resp, err := esv9.Search[Product](ctx, client, esmodel.Product.Alias, params)
 ```
 
+## score ベースの順位制御
+
+score 計算も raw string ベースの SDK struct に直接降りず、型付き builder で組み立てられます:
+
+```go
+params := query.NewSearch().
+    Query(
+        query.NewFunctionScore().
+            Query(
+                query.BoolQuery(
+                    query.NewBoolQuery().
+                        Filter(query.TermValue(esmodel.Product.Fields.Category, "electronics")).
+                        Should(query.MatchPhrase(esmodel.Product.Fields.Name, "alpha")).
+                        MinimumShouldMatch(1).
+                        Build(),
+                ),
+            ).
+            Add(
+                query.NewScoreFunction().
+                    FieldValueFactor(esmodel.Product.Fields.Price,
+                        query.WithFieldValueFactorFactor(0.01)).
+                    Build(),
+            ).
+            BuildQuery(),
+    ).
+    Sort(
+        query.NewSort().
+            ScoreDesc().
+            Field(esmodel.Product.Fields.Date, query.SortDesc).
+            Build()...,
+    ).
+    Build()
+```
+
+inline script が必要な場合は `query.NewScriptScoreQuery().Query(...).ScriptSource("doc['price'].value").BuildQuery()` を使います。`_score desc` を先頭に置くと、score を第一キーにしつつ既存の field sort を同点時の副次キーとして使えます。
+
 ## v8 と v9 の切り替え
 
 クエリ構築が共通の `query/` パッケージを使うため、バージョン切り替えはクライアントの import 変更のみで済みます。変更点の全体像は [migration-v2.md](migration-v2.md) を参照してください。

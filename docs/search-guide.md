@@ -46,6 +46,42 @@ resp, err := esv8.Search[Product](ctx, client, esmodel.Product.Alias, params)
 resp, err := esv9.Search[Product](ctx, client, esmodel.Product.Alias, params)
 ```
 
+## Score-based ranking
+
+When you need typed control over score calculation, use the score builders instead of dropping down to raw field-name strings:
+
+```go
+params := query.NewSearch().
+    Query(
+        query.NewFunctionScore().
+            Query(
+                query.BoolQuery(
+                    query.NewBoolQuery().
+                        Filter(query.TermValue(esmodel.Product.Fields.Category, "electronics")).
+                        Should(query.MatchPhrase(esmodel.Product.Fields.Name, "alpha")).
+                        MinimumShouldMatch(1).
+                        Build(),
+                ),
+            ).
+            Add(
+                query.NewScoreFunction().
+                    FieldValueFactor(esmodel.Product.Fields.Price,
+                        query.WithFieldValueFactorFactor(0.01)).
+                    Build(),
+            ).
+            BuildQuery(),
+    ).
+    Sort(
+        query.NewSort().
+            ScoreDesc().
+            Field(esmodel.Product.Fields.Date, query.SortDesc).
+            Build()...,
+    ).
+    Build()
+```
+
+Use `query.NewScriptScoreQuery().Query(...).ScriptSource("doc['price'].value").BuildQuery()` when the score needs an inline script. Putting `_score desc` first lets score decide the primary bucket while keeping explicit field sorts as secondary tie-breakers.
+
 ## Switching between v8 and v9
 
 Because all query building uses the shared `query/` package, switching Elasticsearch versions only requires changing the client import and instantiation. See [migration-v2.md](migration-v2.md) for the full list of changes.

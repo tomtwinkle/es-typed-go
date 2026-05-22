@@ -1275,6 +1275,57 @@ func TestIntegration_Search_QueryHelpers(t *testing.T) {
 			assert.Equal(t, int64(tt.want), res.Hits.Total.Value)
 		})
 	}
+
+	t.Run("FunctionScoreBuilder", func(t *testing.T) {
+		t.Parallel()
+
+		params := query.NewSearch().
+			Query(
+				query.NewFunctionScore().
+					Query(query.TermsValues(fieldCategory, query.FieldValues("electronics", "kitchen")...)).
+					Add(
+						query.NewScoreFunction().
+							FieldValueFactor(fieldPrice, query.WithFieldValueFactorFactor(1)).
+							Build(),
+					).
+					BuildQuery(),
+			).
+			Sort(query.NewSort().ScoreDesc().Build()...).
+			Limit(10).
+			Build()
+
+		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
+		assert.NilError(t, err)
+		assert.Equal(t, int64(2), res.Hits.Total.Value)
+		assert.Equal(t, 2, len(res.Hits.Hits))
+		assert.Assert(t, res.Hits.Hits[0].Id_ != nil)
+		assert.Assert(t, res.Hits.Hits[1].Id_ != nil)
+		assert.Equal(t, "doc-0", *res.Hits.Hits[0].Id_)
+		assert.Equal(t, "doc-2", *res.Hits.Hits[1].Id_)
+	})
+
+	t.Run("ScriptScoreQueryBuilder", func(t *testing.T) {
+		t.Parallel()
+
+		params := query.NewSearch().
+			Query(
+				query.NewScriptScoreQuery().
+					Query(query.TermsValues(fieldCategory, query.FieldValues("electronics", "kitchen")...)).
+					ScriptSource("doc['price'].value").
+					MinScore(90).
+					BuildQuery(),
+			).
+			Sort(query.NewSort().ScoreDesc().Build()...).
+			Limit(10).
+			Build()
+
+		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
+		assert.NilError(t, err)
+		assert.Equal(t, int64(1), res.Hits.Total.Value)
+		assert.Equal(t, 1, len(res.Hits.Hits))
+		assert.Assert(t, res.Hits.Hits[0].Id_ != nil)
+		assert.Equal(t, "doc-0", *res.Hits.Hits[0].Id_)
+	})
 }
 
 func TestIntegration_Search_SearchBuilderComposition(t *testing.T) {
