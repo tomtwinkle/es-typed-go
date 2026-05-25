@@ -884,10 +884,11 @@ func TestIntegration_Search_ScoreBuilders(t *testing.T) {
 	alias := uniqueAlias(t)
 
 	const (
-		fieldID       estype.Field = "id"
-		fieldName     estype.Field = "name"
-		fieldCategory estype.Field = "category"
-		fieldPrice    estype.Field = "price"
+		fieldID          estype.Field = "id"
+		fieldName        estype.Field = "name"
+		fieldNameKeyword estype.Field = "name.keyword"
+		fieldCategory    estype.Field = "category"
+		fieldPrice       estype.Field = "price"
 	)
 
 	type scoreSortDoc struct {
@@ -897,10 +898,15 @@ func TestIntegration_Search_ScoreBuilders(t *testing.T) {
 		Price    float64 `json:"price"`
 	}
 
+	nameProperty := types.NewTextProperty()
+	nameProperty.Fields = map[string]types.Property{
+		"keyword": types.NewKeywordProperty(),
+	}
+
 	mappings := &types.TypeMapping{
 		Properties: map[string]types.Property{
 			string(fieldID):       types.NewKeywordProperty(),
-			string(fieldName):     types.NewTextProperty(),
+			string(fieldName):     nameProperty,
 			string(fieldCategory): types.NewKeywordProperty(),
 			string(fieldPrice):    types.NewDoubleNumberProperty(),
 		},
@@ -911,11 +917,11 @@ func TestIntegration_Search_ScoreBuilders(t *testing.T) {
 	assert.NilError(t, err)
 
 	for _, doc := range []scoreSortDoc{
-		{ID: "doc-1", Name: "alpha alpha alpha", Category: "electronics", Price: 10},
-		{ID: "doc-2", Name: "alpha alpha", Category: "electronics", Price: 30},
-		{ID: "doc-3", Name: "alpha alpha", Category: "electronics", Price: 20},
-		{ID: "doc-4", Name: "alpha", Category: "electronics", Price: 40},
-		{ID: "doc-5", Name: "beta beta", Category: "kitchen", Price: 50},
+		{ID: "doc-1", Name: "alpha beta", Category: "electronics", Price: 10},
+		{ID: "doc-2", Name: "alpha", Category: "electronics", Price: 30},
+		{ID: "doc-3", Name: "beta", Category: "electronics", Price: 20},
+		{ID: "doc-4", Name: "gamma", Category: "electronics", Price: 40},
+		{ID: "doc-5", Name: "alpha beta", Category: "kitchen", Price: 50},
 	} {
 		_, err = client.CreateDocument(ctx, alias, doc.ID, doc)
 		assert.NilError(t, err)
@@ -959,24 +965,31 @@ func TestIntegration_Search_ScoreBuilders(t *testing.T) {
 
 	t.Run("ScriptScoreQueryBuilder", func(t *testing.T) {
 		t.Parallel()
+		keywordsJSON, err := json.Marshal([]string{"alpha", "beta"})
+		assert.NilError(t, err)
+
+		script := query.InlineScript("String name = doc['name.keyword'].size() == 0 ? '' : doc['name.keyword'].value; double matches = 0; for (kw in params.keywords) { if (name.contains(kw)) { matches += 1; } } return matches;")
+		script.Params = map[string]json.RawMessage{"keywords": keywordsJSON}
+
 		params := query.NewSearch().
 			Query(
 				query.NewScriptScoreQuery().
-					Query(query.TermValue(fieldCategory, "electronics")).
-					ScriptSource("doc['price'].value").
-					MinScore(25).
+					Query(query.BoolFilter(query.TermValue(fieldCategory, "electronics"))).
+					Script(script).
 					BuildQuery(),
 			).
-			Sort(query.NewSort().ScoreDesc().Build()...).
+			Sort(query.NewSort().ScoreDesc().Field(fieldNameKeyword, sortorder.Asc).Build()...).
 			Limit(10).
 			Build()
 
 		res, err := client.SearchRaw(ctx, alias, params.ToRequest())
 		assert.NilError(t, err)
-		assert.Equal(t, int64(2), res.Hits.Total.Value)
-		assert.Equal(t, 2, len(res.Hits.Hits))
-		assert.Equal(t, "doc-4", hitID(t, res.Hits.Hits[0]))
+		assert.Equal(t, int64(4), res.Hits.Total.Value)
+		assert.Equal(t, 4, len(res.Hits.Hits))
+		assert.Equal(t, "doc-1", hitID(t, res.Hits.Hits[0]))
 		assert.Equal(t, "doc-2", hitID(t, res.Hits.Hits[1]))
+		assert.Equal(t, "doc-3", hitID(t, res.Hits.Hits[2]))
+		assert.Equal(t, "doc-4", hitID(t, res.Hits.Hits[3]))
 	})
 }
 
