@@ -55,16 +55,35 @@ func TestAlias_Ptr(t *testing.T) {
 func TestParseESAlias(t *testing.T) {
 	t.Parallel()
 
-	t.Run("valid alias name", func(t *testing.T) {
+	t.Run("single alias name", func(t *testing.T) {
 		t.Parallel()
 		alias, err := estype.ParseESAlias("my-alias")
 		assert.NilError(t, err)
 		assert.Equal(t, estype.Alias("my-alias"), alias)
 	})
 
+	t.Run("multiple alias names joined with comma", func(t *testing.T) {
+		t.Parallel()
+		alias, err := estype.ParseESAlias("orders", "archive")
+		assert.NilError(t, err)
+		assert.Equal(t, estype.Alias("orders,archive"), alias)
+	})
+
 	t.Run("empty alias name returns error", func(t *testing.T) {
 		t.Parallel()
 		_, err := estype.ParseESAlias("")
+		assert.Assert(t, err != nil)
+	})
+
+	t.Run("one of multiple names empty returns error", func(t *testing.T) {
+		t.Parallel()
+		_, err := estype.ParseESAlias("orders", "")
+		assert.Assert(t, err != nil)
+	})
+
+	t.Run("no names returns error", func(t *testing.T) {
+		t.Parallel()
+		_, err := estype.ParseESAlias()
 		assert.Assert(t, err != nil)
 	})
 }
