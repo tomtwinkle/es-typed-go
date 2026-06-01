@@ -98,6 +98,7 @@ type SearchHit[T any] struct {
 	ID     string
 	Index  string
 	Score  *float64
+	Sort   []types.FieldValue
 	Source T
 	Raw    types.Hit
 }
@@ -179,6 +180,7 @@ func Search[T any](
 			ID:     id,
 			Index:  hit.Index_,
 			Score:  score,
+			Sort:   append([]types.FieldValue(nil), hit.Sort...),
 			Source: src,
 			Raw:    hit,
 		})

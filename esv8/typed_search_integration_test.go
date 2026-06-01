@@ -118,4 +118,41 @@ func TestIntegration_TypedSearch_RequestOptions(t *testing.T) {
 		assert.Equal(t, "Beta", got.Name)
 		assert.Equal(t, "", got.Category)
 	})
+
+	t.Run("typed search exposes hit sort values for search_after pagination", func(t *testing.T) {
+		t.Parallel()
+
+		sorts := query.NewSort().
+			Field(typedSearchFieldID, sortorder.Asc).
+			Build()
+
+		page1, err := esv8.Search[typedSearchDoc](ctx, client, alias, esv8.SearchParams{
+			Query:          query.TermValue(typedSearchFieldCategory, "kitchen"),
+			Sort:           sorts,
+			Size:           1,
+			HasSize:        true,
+			TrackTotalHits: true,
+			Source:         types.SourceFilter{Includes: []string{"id", "name"}},
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, int64(3), page1.Total)
+		assert.Equal(t, 1, len(page1.Hits))
+		assert.Equal(t, "doc-1", page1.Hits[0].Source.ID)
+		assert.DeepEqual(t, []types.FieldValue{"doc-1"}, page1.Hits[0].Sort)
+
+		page2, err := esv8.Search[typedSearchDoc](ctx, client, alias, esv8.SearchParams{
+			Query:          query.TermValue(typedSearchFieldCategory, "kitchen"),
+			Sort:           sorts,
+			Size:           1,
+			HasSize:        true,
+			SearchAfter:    page1.Hits[0].Sort,
+			TrackTotalHits: true,
+			Source:         types.SourceFilter{Includes: []string{"id", "name"}},
+		})
+		assert.NilError(t, err)
+		assert.Equal(t, int64(3), page2.Total)
+		assert.Equal(t, 1, len(page2.Hits))
+		assert.Equal(t, "doc-2", page2.Hits[0].Source.ID)
+		assert.DeepEqual(t, []types.FieldValue{"doc-2"}, page2.Hits[0].Sort)
+	})
 }

@@ -316,7 +316,52 @@ func TestSearch_HitWithoutIDOrScoreOrSource(t *testing.T) {
 	assert.Equal(t, "", resp.Hits[0].ID)
 	assert.Equal(t, "products-000001", resp.Hits[0].Index)
 	assert.Assert(t, resp.Hits[0].Score == nil)
+	assert.Assert(t, resp.Hits[0].Sort == nil)
 	assert.Equal(t, searchTestDoc{}, resp.Hits[0].Source)
+}
+
+func TestSearch_CopiesHitSortValues(t *testing.T) {
+	t.Parallel()
+
+	client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
+		src, err := json.Marshal(searchTestDoc{
+			ID:    "doc-1",
+			Name:  "Widget",
+			Price: 42,
+		})
+		assert.NilError(t, err)
+
+		id := "doc-1"
+		score := types.Float64(1.5)
+		rawSort := []types.FieldValue{"cursor-1", 42}
+
+		return &searchapi.Response{
+			Hits: types.HitsMetadata{
+				Total: &types.TotalHits{Value: 1},
+				Hits: []types.Hit{
+					{
+						Id_:     &id,
+						Index_:  "products-000001",
+						Score_:  &score,
+						Sort:    rawSort,
+						Source_: src,
+					},
+				},
+			},
+		}, nil
+	})
+
+	resp, err := Search[searchTestDoc](context.Background(), client, estype.Alias("products"), SearchParams{})
+	assert.NilError(t, err)
+	assert.Assert(t, resp != nil)
+	assert.Equal(t, 1, len(resp.Hits))
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, resp.Hits[0].Sort)
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, resp.Hits[0].Raw.Sort)
+
+	resp.Hits[0].Sort[0] = "changed"
+
+	assert.DeepEqual(t, []types.FieldValue{"changed", 42}, resp.Hits[0].Sort)
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, resp.Hits[0].Raw.Sort)
 }
 
 func TestSearch_PropagatesClientError(t *testing.T) {
