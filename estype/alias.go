@@ -32,8 +32,9 @@ func ParseESAlias(names ...string) (Alias, error) {
 	}
 	for i, name := range names {
 		if name == "" {
-			return "", fmt.Errorf("alias name at position %d must not be empty", i)
+			return "", fmt.Errorf("alias name at position %d must not be empty", i+1)
 		}
+	}
 	}
 	return Alias(strings.Join(names, ",")), nil
 }
