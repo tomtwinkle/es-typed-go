@@ -253,6 +253,12 @@ func TestSearchParams_ToV9Request_AdvancedOptions(t *testing.T) {
 	assert.DeepEqual(t, []types.FieldValue{"cursor-1", "cursor-2"}, req.SearchAfter)
 	assert.Assert(t, req.TrackTotalHits != nil)
 	assert.Equal(t, false, req.TrackTotalHits)
+	rawSource, ok := req.Source_.(types.SourceFilter)
+	assert.Assert(t, ok)
+	assert.DeepEqual(t, types.SourceFilter{
+		Includes: []string{"title"},
+		Excludes: []string{"tags"},
+	}, rawSource)
 	assert.Assert(t, req.Timeout != nil)
 	assert.Equal(t, "30s", *req.Timeout)
 }

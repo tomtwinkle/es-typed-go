@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	typedSearchFieldID       estype.Field = "id"
-	typedSearchFieldName     estype.Field = "name"
-	typedSearchFieldCategory estype.Field = "category"
+	typedSearchFieldID       = estype.Field("id")
+	typedSearchFieldName     = estype.Field("name")
+	typedSearchFieldCategory = estype.Field("category")
 )
 
 type typedSearchDoc struct {
