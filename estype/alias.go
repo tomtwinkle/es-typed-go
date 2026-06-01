@@ -1,6 +1,7 @@
 package estype
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -27,11 +28,11 @@ func (a Alias) Ptr() *string {
 // Returns an error if no names are provided or any name is empty.
 func ParseESAlias(names ...string) (Alias, error) {
 	if len(names) == 0 {
-		return "", fmt.Errorf("at least one alias name must be provided")
+		return "", errors.New("at least one alias name must be provided")
 	}
-	for _, name := range names {
+	for i, name := range names {
 		if name == "" {
-			return "", fmt.Errorf("alias name must not be empty")
+			return "", fmt.Errorf("alias name at position %d must not be empty", i)
 		}
 	}
 	return Alias(strings.Join(names, ",")), nil
