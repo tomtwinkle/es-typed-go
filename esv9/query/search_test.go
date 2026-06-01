@@ -24,6 +24,12 @@ func TestNewSearch_Empty(t *testing.T) {
 	assert.Assert(t, params.ScriptFields == nil)
 	assert.Equal(t, 0, params.Size)
 	assert.Equal(t, 0, params.From)
+	assert.Assert(t, !params.HasSize)
+	assert.Assert(t, !params.HasFrom)
+	assert.Assert(t, params.SearchAfter == nil)
+	assert.Assert(t, params.TrackTotalHits == nil)
+	assert.Assert(t, params.Source == nil)
+	assert.Assert(t, params.Timeout == nil)
 }
 
 func TestSearchParams_ToRequest_EmptyQueryOmitsQuery(t *testing.T) {
@@ -154,6 +160,101 @@ func TestSearchBuilder_LimitAndOffset(t *testing.T) {
 
 	assert.Equal(t, 20, params.Size)
 	assert.Equal(t, 40, params.From)
+	assert.Assert(t, params.HasSize)
+	assert.Assert(t, params.HasFrom)
+}
+
+func TestSearchBuilder_AdvancedOptions(t *testing.T) {
+	t.Parallel()
+
+	searchAfter := []types.FieldValue{"cursor-1", 42}
+	params := query.NewSearch().
+		Limit(0).
+		Offset(0).
+		SearchAfter("stale").
+		SearchAfter(searchAfter...).
+		TrackTotalHits(true).
+		TrackTotalHits(100).
+		Source(true).
+		Source(false).
+		Timeout("5s").
+		Timeout("30s").
+		Build()
+
+	searchAfter[0] = "mutated"
+
+	assert.Equal(t, 0, params.Size)
+	assert.Assert(t, params.HasSize)
+	assert.Equal(t, 0, params.From)
+	assert.Assert(t, params.HasFrom)
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, params.SearchAfter)
+	assert.Equal(t, 100, params.TrackTotalHits)
+	assert.Equal(t, false, params.Source)
+	assert.Assert(t, params.Timeout != nil)
+	assert.Equal(t, "30s", *params.Timeout)
+}
+
+func TestSearchParams_ToRequest_AdvancedOptions(t *testing.T) {
+	t.Parallel()
+
+	timeout := "30s"
+	source := types.SourceFilter{
+		Includes: []string{"title"},
+		Excludes: []string{"tags"},
+	}
+
+	req := (query.SearchParams{
+		Size:           0,
+		HasSize:        true,
+		From:           0,
+		HasFrom:        true,
+		SearchAfter:    []types.FieldValue{"cursor-1", 42},
+		TrackTotalHits: false,
+		Source:         source,
+		Timeout:        &timeout,
+	}).ToRequest()
+
+	assert.Assert(t, req != nil)
+	assert.Assert(t, req.Size != nil)
+	assert.Equal(t, 0, *req.Size)
+	assert.Assert(t, req.From != nil)
+	assert.Equal(t, 0, *req.From)
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, req.SearchAfter)
+	assert.Assert(t, req.TrackTotalHits != nil)
+	assert.Equal(t, false, req.TrackTotalHits)
+	assert.DeepEqual(t, source, req.Source_)
+	assert.Assert(t, req.Timeout != nil)
+	assert.Equal(t, "30s", *req.Timeout)
+}
+
+func TestSearchParams_ToV9Request_AdvancedOptions(t *testing.T) {
+	t.Parallel()
+
+	timeout := "30s"
+	req := (query.SearchParams{
+		Size:           0,
+		HasSize:        true,
+		From:           0,
+		HasFrom:        true,
+		SearchAfter:    []types.FieldValue{"cursor-1", "cursor-2"},
+		TrackTotalHits: false,
+		Source: types.SourceFilter{
+			Includes: []string{"title"},
+			Excludes: []string{"tags"},
+		},
+		Timeout: &timeout,
+	}).ToV9Request()
+
+	assert.Assert(t, req != nil)
+	assert.Assert(t, req.Size != nil)
+	assert.Equal(t, 0, *req.Size)
+	assert.Assert(t, req.From != nil)
+	assert.Equal(t, 0, *req.From)
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", "cursor-2"}, req.SearchAfter)
+	assert.Assert(t, req.TrackTotalHits != nil)
+	assert.Equal(t, false, req.TrackTotalHits)
+	assert.Assert(t, req.Timeout != nil)
+	assert.Equal(t, "30s", *req.Timeout)
 }
 
 func TestSearchBuilder_Aggregation(t *testing.T) {

@@ -46,29 +46,72 @@ func TestSearchHelpers_WithDirectParams(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
-		name   string
-		params func() SearchRequest
-		size   int
+		name          string
+		params        func() SearchRequest
+		assertRequest func(t *testing.T, req *searchapi.Request)
 	}{
 		{
 			name: "package_search_params",
 			params: func() SearchRequest {
+				timeout := "30s"
 				return SearchParams{
-					Query: query.TermValue(estype.Field("status"), "active"),
-					Size:  2,
+					Query:          query.TermValue(estype.Field("status"), "active"),
+					Size:           0,
+					HasSize:        true,
+					From:           0,
+					HasFrom:        true,
+					SearchAfter:    []types.FieldValue{"cursor-1", 42},
+					TrackTotalHits: false,
+					Source:         false,
+					Timeout:        &timeout,
 				}
 			},
-			size: 2,
+			assertRequest: func(t *testing.T, req *searchapi.Request) {
+				t.Helper()
+				assert.Assert(t, req.Query != nil)
+				assert.Assert(t, req.Query.Term != nil)
+				assert.Equal(t, "active", req.Query.Term["status"].Value)
+				assert.Assert(t, req.Size != nil)
+				assert.Equal(t, 0, *req.Size)
+				assert.Assert(t, req.From != nil)
+				assert.Equal(t, 0, *req.From)
+				assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, req.SearchAfter)
+				assert.Assert(t, req.TrackTotalHits != nil)
+				assert.Equal(t, false, req.TrackTotalHits)
+				assert.Equal(t, false, req.Source_)
+				assert.Assert(t, req.Timeout != nil)
+				assert.Equal(t, "30s", *req.Timeout)
+			},
 		},
 		{
 			name: "query_builder_search_params",
 			params: func() SearchRequest {
 				return query.NewSearch().
 					Where(query.TermValue(estype.Field("status"), "active")).
-					Limit(2).
+					Limit(0).
+					Offset(0).
+					SearchAfter("cursor-1", 42).
+					TrackTotalHits(true).
+					Source(false).
+					Timeout("30s").
 					Build()
 			},
-			size: 2,
+			assertRequest: func(t *testing.T, req *searchapi.Request) {
+				t.Helper()
+				assert.Assert(t, req.Query != nil)
+				assert.Assert(t, req.Query.Bool != nil)
+				assert.Assert(t, len(req.Query.Bool.Filter) == 1)
+				assert.Assert(t, req.Size != nil)
+				assert.Equal(t, 0, *req.Size)
+				assert.Assert(t, req.From != nil)
+				assert.Equal(t, 0, *req.From)
+				assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, req.SearchAfter)
+				assert.Assert(t, req.TrackTotalHits != nil)
+				assert.Equal(t, true, req.TrackTotalHits)
+				assert.Equal(t, false, req.Source_)
+				assert.Assert(t, req.Timeout != nil)
+				assert.Equal(t, "30s", *req.Timeout)
+			},
 		},
 	} {
 		tc := tc
@@ -81,17 +124,7 @@ func TestSearchHelpers_WithDirectParams(t *testing.T) {
 				client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
 					assert.Equal(t, estype.Alias("products"), aliasName)
 					assert.Assert(t, req != nil)
-					assert.Assert(t, req.Query != nil)
-
-					if req.Query.Bool != nil {
-						assert.Assert(t, len(req.Query.Bool.Filter) == 1)
-					} else {
-						assert.Assert(t, req.Query.Term != nil)
-						assert.Equal(t, "active", req.Query.Term["status"].Value)
-					}
-
-					assert.Assert(t, req.Size != nil)
-					assert.Equal(t, tc.size, *req.Size)
+					tc.assertRequest(t, req)
 
 					src, err := json.Marshal(searchTestDoc{
 						ID:    "doc-1",
@@ -134,8 +167,7 @@ func TestSearchHelpers_WithDirectParams(t *testing.T) {
 
 				client := searchClientFunc(func(ctx context.Context, aliasName estype.Alias, req *searchapi.Request) (*searchapi.Response, error) {
 					assert.Assert(t, req != nil)
-					assert.Assert(t, req.Size != nil)
-					assert.Equal(t, tc.size, *req.Size)
+					tc.assertRequest(t, req)
 
 					src1, err := json.Marshal(searchTestDoc{ID: "doc-1", Name: "Alpha", Price: 10})
 					assert.NilError(t, err)
@@ -192,16 +224,27 @@ func TestSearchParams_ToRequest_AllOptionalFields(t *testing.T) {
 			},
 		},
 	}
+	timeout := "30s"
+	source := types.SourceFilter{
+		Includes: []string{"title"},
+		Excludes: []string{"tags"},
+	}
 
 	req := (SearchParams{
-		Query:        query.TermValue(estype.Field("status"), "active"),
-		Sort:         sorts,
-		Aggregations: aggs,
-		Highlight:    highlight,
-		Collapse:     collapse,
-		ScriptFields: scriptFields,
-		Size:         3,
-		From:         7,
+		Query:          query.TermValue(estype.Field("status"), "active"),
+		Sort:           sorts,
+		Aggregations:   aggs,
+		Highlight:      highlight,
+		Collapse:       collapse,
+		ScriptFields:   scriptFields,
+		Size:           0,
+		HasSize:        true,
+		From:           0,
+		HasFrom:        true,
+		SearchAfter:    []types.FieldValue{"cursor-1", 42},
+		TrackTotalHits: false,
+		Source:         source,
+		Timeout:        &timeout,
 	}).ToRequest()
 
 	assert.Assert(t, req != nil)
@@ -212,12 +255,15 @@ func TestSearchParams_ToRequest_AllOptionalFields(t *testing.T) {
 	assert.Equal(t, collapse, req.Collapse)
 	assert.DeepEqual(t, scriptFields, req.ScriptFields)
 	assert.Assert(t, req.Size != nil)
-	assert.Equal(t, 3, *req.Size)
+	assert.Equal(t, 0, *req.Size)
 	assert.Assert(t, req.From != nil)
-	assert.Equal(t, 7, *req.From)
-	assert.Equal(t, true, req.Source_)
+	assert.Equal(t, 0, *req.From)
+	assert.DeepEqual(t, []types.FieldValue{"cursor-1", 42}, req.SearchAfter)
+	assert.Assert(t, req.TrackTotalHits != nil)
+	assert.Equal(t, false, req.TrackTotalHits)
+	assert.DeepEqual(t, source, req.Source_)
 	assert.Assert(t, req.Timeout != nil)
-	assert.Equal(t, "10s", *req.Timeout)
+	assert.Equal(t, "30s", *req.Timeout)
 }
 
 func TestSearch_EmptyHitsAndNilTotal(t *testing.T) {

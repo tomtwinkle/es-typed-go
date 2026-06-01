@@ -15,14 +15,20 @@ import (
 // It mirrors the commonly used parts of search.Request while staying focused on
 // the library's typed search workflow.
 type SearchParams struct {
-	Query        types.Query
-	Sort         []types.SortCombinations
-	Aggregations map[string]types.Aggregations
-	Highlight    *types.Highlight
-	Collapse     *types.FieldCollapse
-	ScriptFields map[string]types.ScriptField
-	Size         int
-	From         int
+	Query          types.Query
+	Sort           []types.SortCombinations
+	Aggregations   map[string]types.Aggregations
+	Highlight      *types.Highlight
+	Collapse       *types.FieldCollapse
+	ScriptFields   map[string]types.ScriptField
+	Size           int
+	HasSize        bool
+	From           int
+	HasFrom        bool
+	SearchAfter    []types.FieldValue
+	TrackTotalHits types.TrackHits
+	Source         types.SourceConfig
+	Timeout        *string
 }
 
 // ToRequest converts SearchParams into a typed Elasticsearch search.Request.
@@ -55,19 +61,34 @@ func (p SearchParams) ToV9Request() *search.Request {
 		req.ScriptFields = p.ScriptFields
 	}
 
-	if p.Size > 0 {
+	if p.HasSize || p.Size > 0 {
 		size := p.Size
 		req.Size = &size
 	}
 
-	if p.From > 0 {
+	if p.HasFrom || p.From > 0 {
 		from := p.From
 		req.From = &from
 	}
 
-	timeout := "10s"
-	req.Timeout = &timeout
-	req.Source_ = true
+	if len(p.SearchAfter) > 0 {
+		req.SearchAfter = append([]types.FieldValue(nil), p.SearchAfter...)
+	}
+	if p.TrackTotalHits != nil {
+		req.TrackTotalHits = p.TrackTotalHits
+	}
+	if p.Source != nil {
+		req.Source_ = p.Source
+	} else {
+		req.Source_ = true
+	}
+	if p.Timeout != nil {
+		timeout := *p.Timeout
+		req.Timeout = &timeout
+	} else {
+		timeout := "10s"
+		req.Timeout = &timeout
+	}
 
 	return req
 }

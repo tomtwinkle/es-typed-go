@@ -9,14 +9,20 @@ import (
 
 // SearchParams holds all parameters for a search request built by a SearchBuilder.
 type SearchParams struct {
-	Query        types.Query
-	Sort         []types.SortCombinations
-	Aggregations map[string]types.Aggregations
-	Highlight    *types.Highlight
-	Collapse     *types.FieldCollapse
-	ScriptFields map[string]types.ScriptField
-	Size         int
-	From         int
+	Query          types.Query
+	Sort           []types.SortCombinations
+	Aggregations   map[string]types.Aggregations
+	Highlight      *types.Highlight
+	Collapse       *types.FieldCollapse
+	ScriptFields   map[string]types.ScriptField
+	Size           int
+	HasSize        bool
+	From           int
+	HasFrom        bool
+	SearchAfter    []types.FieldValue
+	TrackTotalHits types.TrackHits
+	Source         types.SourceConfig
+	Timeout        *string
 }
 
 // ToV9Request converts SearchParams into a typed Elasticsearch v9 search.Request.
@@ -45,19 +51,34 @@ func (p SearchParams) ToRequest() *search.Request {
 		req.ScriptFields = p.ScriptFields
 	}
 
-	if p.Size > 0 {
+	if p.HasSize || p.Size > 0 {
 		size := p.Size
 		req.Size = &size
 	}
 
-	if p.From > 0 {
+	if p.HasFrom || p.From > 0 {
 		from := p.From
 		req.From = &from
 	}
 
-	timeout := "10s"
-	req.Timeout = &timeout
-	req.Source_ = true
+	if len(p.SearchAfter) > 0 {
+		req.SearchAfter = append([]types.FieldValue(nil), p.SearchAfter...)
+	}
+	if p.TrackTotalHits != nil {
+		req.TrackTotalHits = p.TrackTotalHits
+	}
+	if p.Source != nil {
+		req.Source_ = p.Source
+	} else {
+		req.Source_ = true
+	}
+	if p.Timeout != nil {
+		timeout := *p.Timeout
+		req.Timeout = &timeout
+	} else {
+		timeout := "10s"
+		req.Timeout = &timeout
+	}
 
 	return req
 }
@@ -108,6 +129,18 @@ type ISearchBuilder[B ISearchBuilder[B]] interface {
 	// Offset sets the number of results to skip.
 	Offset(from int) B
 
+	// SearchAfter sets the search_after cursor. Each call replaces the previous cursor.
+	SearchAfter(values ...types.FieldValue) B
+
+	// TrackTotalHits sets track_total_hits.
+	TrackTotalHits(v types.TrackHits) B
+
+	// Source sets the _source configuration.
+	Source(v types.SourceConfig) B
+
+	// Timeout sets the request timeout.
+	Timeout(v string) B
+
 	// Aggregation sets the aggregations. Each call replaces the previous aggregations.
 	Aggregation(aggs map[string]types.Aggregations) B
 
@@ -144,7 +177,13 @@ type SearchBuilder struct {
 	collapse           *types.FieldCollapse
 	scriptFields       map[string]types.ScriptField
 	size               int
+	hasSize            bool
 	from               int
+	hasFrom            bool
+	searchAfter        []types.FieldValue
+	trackTotalHits     types.TrackHits
+	source             types.SourceConfig
+	timeout            *string
 }
 
 // NewSearch returns a new empty SearchBuilder.
@@ -198,12 +237,38 @@ func (b *SearchBuilder) Sort(sorts ...types.SortCombinations) *SearchBuilder {
 // Limit sets the maximum number of results to return.
 func (b *SearchBuilder) Limit(size int) *SearchBuilder {
 	b.size = size
+	b.hasSize = true
 	return b
 }
 
 // Offset sets the number of results to skip.
 func (b *SearchBuilder) Offset(from int) *SearchBuilder {
 	b.from = from
+	b.hasFrom = true
+	return b
+}
+
+// SearchAfter sets the search_after cursor.
+func (b *SearchBuilder) SearchAfter(values ...types.FieldValue) *SearchBuilder {
+	b.searchAfter = append([]types.FieldValue(nil), values...)
+	return b
+}
+
+// TrackTotalHits sets track_total_hits.
+func (b *SearchBuilder) TrackTotalHits(v types.TrackHits) *SearchBuilder {
+	b.trackTotalHits = v
+	return b
+}
+
+// Source sets the _source configuration.
+func (b *SearchBuilder) Source(v types.SourceConfig) *SearchBuilder {
+	b.source = v
+	return b
+}
+
+// Timeout sets the request timeout.
+func (b *SearchBuilder) Timeout(v string) *SearchBuilder {
+	b.timeout = &v
 	return b
 }
 
@@ -258,14 +323,26 @@ func (b *SearchBuilder) Build() SearchParams {
 		q.Bool = bq
 	}
 
+	var timeout *string
+	if b.timeout != nil {
+		v := *b.timeout
+		timeout = &v
+	}
+
 	return SearchParams{
-		Query:        q,
-		Sort:         b.sorts,
-		Aggregations: b.aggs,
-		Highlight:    b.highlight,
-		Collapse:     b.collapse,
-		ScriptFields: b.scriptFields,
-		Size:         b.size,
-		From:         b.from,
+		Query:          q,
+		Sort:           b.sorts,
+		Aggregations:   b.aggs,
+		Highlight:      b.highlight,
+		Collapse:       b.collapse,
+		ScriptFields:   b.scriptFields,
+		Size:           b.size,
+		HasSize:        b.hasSize,
+		From:           b.from,
+		HasFrom:        b.hasFrom,
+		SearchAfter:    append([]types.FieldValue(nil), b.searchAfter...),
+		TrackTotalHits: b.trackTotalHits,
+		Source:         b.source,
+		Timeout:        timeout,
 	}
 }
