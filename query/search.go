@@ -94,6 +94,28 @@ func (p SearchParams) ToV9Request() *v9search.Request {
 	return &req
 }
 
+// ToJSON serializes the SearchParams into a JSON string.
+// It leverages ToV8Request() to ensure the output perfectly matches
+// the Elasticsearch JSON API structure. Useful for debugging or logging.
+func (p SearchParams) ToJSON() (string, error) {
+	req := p.ToV8Request()
+	jsonBytes, err := json.Marshal(req)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
+}
+
+// MustToJSON serializes the SearchParams into a JSON string,
+// ignoring any errors. It is strictly for quick debugging/logging purposes.
+func (p SearchParams) MustToJSON() string {
+	jsonStr, err := p.ToJSON()
+	if err != nil {
+		return "{}"
+	}
+	return jsonStr
+}
+
 // IsZeroQuery reports whether q is an empty query (serializes to "{}").
 // It accepts any to work with both v8 and v9 types.Query without coupling to
 // a specific Elasticsearch SDK version.
