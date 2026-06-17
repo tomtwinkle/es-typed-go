@@ -1,6 +1,7 @@
 package query_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
@@ -387,4 +388,46 @@ func TestSearchBuilder_NoBoolClausesNoQuery(t *testing.T) {
 
 	assert.DeepEqual(t, types.Query{}, params.Query)
 	assert.Equal(t, 10, params.Size)
+}
+
+func TestSearchParams_ToJSON(t *testing.T) {
+	t.Parallel()
+	params := query.NewSearch().
+		Where(query.TermValue(FieldStatus, "active")).
+		Limit(10).
+		Offset(20).
+		Build()
+
+	jsonStr, err := params.ToJSON()
+
+	assert.NilError(t, err)
+	assert.Assert(t, jsonStr != "")
+	assert.Assert(t, strings.Contains(jsonStr, `"size":10`))
+	assert.Assert(t, strings.Contains(jsonStr, `"from":20`))
+	assert.Assert(t, strings.Contains(jsonStr, `"query"`))
+	assert.Assert(t, strings.Contains(jsonStr, `"term"`))
+	assert.Assert(t, strings.Contains(jsonStr, `"active"`))
+}
+
+func TestSearchParams_MustToJSON(t *testing.T) {
+	t.Parallel()
+	params := query.NewSearch().
+		Limit(15).
+		Build()
+
+	jsonStr := params.MustToJSON()
+
+	assert.Assert(t, jsonStr != "")
+	assert.Assert(t, jsonStr != "{}")
+	assert.Assert(t, strings.Contains(jsonStr, `"size":15`))
+}
+
+func TestSearchParams_ToJSON_Empty(t *testing.T) {
+	t.Parallel()
+	params := query.NewSearch().Build()
+
+	jsonStr, err := params.ToJSON()
+
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(jsonStr, `"timeout":"10s"`))
 }
