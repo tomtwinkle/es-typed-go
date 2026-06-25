@@ -1,6 +1,10 @@
 package estype
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
 
 // Alias represents an Elasticsearch alias name as a distinct type to prevent misuse.
 type Alias string
@@ -17,13 +21,22 @@ func (a Alias) Ptr() *string {
 	return &s
 }
 
-// ParseESAlias parses an alias name string into an Alias type.
-// Returns an error if the name is empty.
-func ParseESAlias(name string) (Alias, error) {
-	if name == "" {
-		return "", fmt.Errorf("alias name must not be empty")
+// ParseESAlias parses one or more alias name strings into a single Alias.
+// Multiple names are joined with "," which Elasticsearch interprets as a
+// combined target — e.g. ParseESAlias("orders", "archive") produces the
+// alias "orders,archive" that queries both indices in one request.
+// Returns an error if no names are provided or any name is empty.
+func ParseESAlias(names ...string) (Alias, error) {
+	if len(names) == 0 {
+		return "", errors.New("at least one alias name must be provided")
 	}
-	return Alias(name), nil
+	for i, name := range names {
+		if name == "" {
+			return "", fmt.Errorf("alias name at position %d must not be empty", i+1)
+		}
+	}
+	}
+	return Alias(strings.Join(names, ",")), nil
 }
 
 // AliasProvider is implemented by types that declare a canonical Elasticsearch alias name.
