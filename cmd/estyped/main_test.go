@@ -6,6 +6,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/tomtwinkle/es-typed-go/estype"
+	"golang.org/x/tools/go/packages"
 )
 
 func TestToPascalCase(t *testing.T) {
@@ -131,22 +133,22 @@ func TestGenerate_ConstMode(t *testing.T) {
 	outFile := filepath.Join(dir, "model.go")
 
 	mapping := []byte(`{
-		"properties": {
-			"status": { "type": "keyword" },
-			"title": {
-				"type": "text",
-				"fields": {
-					"keyword": { "type": "keyword" }
-				}
-			},
-			"items": {
-				"type": "nested",
-				"properties": {
-					"color": { "type": "keyword" }
-				}
-			}
-		}
-	}`)
+       "properties": {
+          "status": { "type": "keyword" },
+          "title": {
+             "type": "text",
+             "fields": {
+                "keyword": { "type": "keyword" }
+             }
+          },
+          "items": {
+             "type": "nested",
+             "properties": {
+                "color": { "type": "keyword" }
+             }
+          }
+       }
+    }`)
 
 	generated := generateSource(t, mapping, "model", "")
 	err := os.WriteFile(outFile, generated, 0o644)
@@ -174,7 +176,8 @@ func TestGenerate_ConstMode(t *testing.T) {
 		"FieldTitle":        "title",
 		"FieldTitleKeyword": "title.keyword",
 	}
-	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts), len(consts))
+	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts),
+		len(consts))
 	for name, wantValue := range expectedConsts {
 		gotValue, ok := consts[name]
 		assert.Assert(t, ok, "missing constant %q", name)
@@ -190,22 +193,22 @@ func TestGenerate_StructMode(t *testing.T) {
 	outFile := filepath.Join(dir, "model.go")
 
 	mapping := []byte(`{
-		"properties": {
-			"status": { "type": "keyword" },
-			"title": {
-				"type": "text",
-				"fields": {
-					"keyword": { "type": "keyword" }
-				}
-			},
-			"items": {
-				"type": "nested",
-				"properties": {
-					"color": { "type": "keyword" }
-				}
-			}
-		}
-	}`)
+       "properties": {
+          "status": { "type": "keyword" },
+          "title": {
+             "type": "text",
+             "fields": {
+                "keyword": { "type": "keyword" }
+             }
+          },
+          "items": {
+             "type": "nested",
+             "properties": {
+                "color": { "type": "keyword" }
+             }
+          }
+       }
+    }`)
 
 	generated := generateSource(t, mapping, "model", "Sample")
 	err := os.WriteFile(outFile, generated, 0o644)
@@ -233,7 +236,8 @@ func TestGenerate_StructMode(t *testing.T) {
 		"Title":         "title",
 		"Title_Keyword": "title.keyword",
 	}
-	assert.Assert(t, len(structFields) == len(expectedFields), "expected %d struct fields, got %d", len(expectedFields), len(structFields))
+	assert.Assert(t, len(structFields) == len(expectedFields), "expected %d struct fields, got %d", len(expectedFields),
+		len(structFields))
 	for name, wantValue := range expectedFields {
 		gotValue, ok := structFields[name]
 		assert.Assert(t, ok, "missing struct field %q", name)
@@ -248,23 +252,23 @@ func TestGenerate_NestedFields(t *testing.T) {
 	outFile := filepath.Join(dir, "model.go")
 
 	mapping := []byte(`{
-		"mappings": {
-			"properties": {
-				"items": {
-					"type": "nested",
-					"properties": {
-						"name": { "type": "text" },
-						"tags": {
-							"type": "nested",
-							"properties": {
-								"value": { "type": "keyword" }
-							}
-						}
-					}
-				}
-			}
-		}
-	}`)
+       "mappings": {
+          "properties": {
+             "items": {
+                "type": "nested",
+                "properties": {
+                   "name": { "type": "text" },
+                   "tags": {
+                      "type": "nested",
+                      "properties": {
+                         "value": { "type": "keyword" }
+                      }
+                   }
+                }
+             }
+          }
+       }
+    }`)
 
 	generated := generateSource(t, mapping, "model", "")
 	err := os.WriteFile(outFile, generated, 0o644)
@@ -281,7 +285,8 @@ func TestGenerate_NestedFields(t *testing.T) {
 		"FieldItemsTags":      "items.tags",
 		"FieldItemsTagsValue": "items.tags.value",
 	}
-	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts), len(consts))
+	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts),
+		len(consts))
 	for name, wantValue := range expectedConsts {
 		gotValue, ok := consts[name]
 		assert.Assert(t, ok, "missing constant %q", name)
@@ -296,14 +301,14 @@ func TestGenerate_ObjectField(t *testing.T) {
 	outFile := filepath.Join(dir, "model.go")
 
 	mapping := []byte(`{
-		"properties": {
-			"data": {
-				"properties": {
-					"value": { "type": "keyword" }
-				}
-			}
-		}
-	}`)
+       "properties": {
+          "data": {
+             "properties": {
+                "value": { "type": "keyword" }
+             }
+          }
+       }
+    }`)
 
 	generated := generateSource(t, mapping, "model", "")
 	err := os.WriteFile(outFile, generated, 0o644)
@@ -322,11 +327,89 @@ func TestGenerate_ObjectField(t *testing.T) {
 }
 
 // writeGoFile writes src as a .go file named name in dir and returns its path.
+// It also initializes a basic go.mod to satisfy golang.org/x/tools/go/packages
+// for Go 1.26 compatibility.
 func writeGoFile(t *testing.T, dir, name, src string) string {
 	t.Helper()
+	modPath := filepath.Join(dir, "go.mod")
+	if _, err := os.Stat(modPath); os.IsNotExist(err) {
+		// Go 1.26 に修正
+		assert.NilError(t, os.WriteFile(modPath, []byte("module testmod\n\ngo 1.26\n"), 0o644))
+	}
 	path := filepath.Join(dir, name)
 	assert.NilError(t, os.WriteFile(path, []byte(src), 0o644))
 	return path
+}
+
+// TestResolveStructAndIsSlice covers the types.Type unwrapping utilities.
+func TestResolveStructAndIsSlice(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+import "time"
+
+type MyStruct struct { Field string }
+type AliasStruct = MyStruct
+type AliasInt = int
+
+type Document struct {
+	ValStruct   MyStruct
+	PtrStruct   *MyStruct
+	SliceStruct []MyStruct
+	ArrayStruct [2]MyStruct
+	AliasVal    AliasStruct
+	TimeVal     time.Time
+	PtrTime     *time.Time
+	BasicInt    int
+	BasicAlias  AliasInt
+}
+`)
+	cfg := &packages.Config{
+		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
+		Dir:  dir,
+	}
+	pkgs, err := packages.Load(cfg, ".")
+	assert.NilError(t, err)
+	assert.Assert(t, len(pkgs) > 0)
+	pkg := pkgs[0]
+	assert.Assert(t, len(pkg.Errors) == 0)
+
+	docObj := pkg.Types.Scope().Lookup("Document")
+	assert.Assert(t, docObj != nil)
+	named, ok := docObj.Type().(*types.Named)
+	assert.Assert(t, ok)
+	docStruct, ok := named.Underlying().(*types.Struct)
+	assert.Assert(t, ok)
+
+	type testCase struct {
+		isStruct bool
+		isSlice  bool
+	}
+	want := map[string]testCase{
+		"ValStruct":   {isStruct: true, isSlice: false},
+		"PtrStruct":   {isStruct: true, isSlice: false},
+		"SliceStruct": {isStruct: true, isSlice: true},
+		"ArrayStruct": {isStruct: true, isSlice: false}, // ← 配列は Slice ではないため false
+		"AliasVal":    {isStruct: true, isSlice: false},
+		"TimeVal":     {isStruct: false, isSlice: false},
+		"PtrTime":     {isStruct: false, isSlice: false},
+		"BasicInt":    {isStruct: false, isSlice: false},
+		"BasicAlias":  {isStruct: false, isSlice: false},
+	}
+
+	for i := 0; i < docStruct.NumFields(); i++ {
+		field := docStruct.Field(i)
+		expected, exists := want[field.Name()]
+		if !exists {
+			continue
+		}
+
+		_, isStruct := resolveStruct(field.Type())
+		isSlice := isSlice(field.Type()) // ← isSlice に変更
+
+		assert.Equal(t, expected.isStruct, isStruct, "field %s isStruct mismatch", field.Name())
+		assert.Equal(t, expected.isSlice, isSlice, "field %s isSlice mismatch", field.Name())
+	}
 }
 
 // TestParseGoStruct_FlatFields verifies that a flat struct with json tags produces
@@ -337,9 +420,9 @@ func TestParseGoStruct_FlatFields(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Document struct {
-	Status   string `+"`"+`json:"status"`+"`"+`
-	Title    string `+"`"+`json:"title"`+"`"+`
-	Price    int    `+"`"+`json:"price"`+"`"+`
+    Status   string `+"`"+`json:"status"`+"`"+`
+    Title    string `+"`"+`json:"title"`+"`"+`
+    Price    int    `+"`"+`json:"price"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -355,6 +438,37 @@ type Document struct {
 	assert.Equal(t, "title", got["Title"])
 }
 
+// TestParseGoStruct_TypeAliasesAndUnexported verifies that type aliases are properly
+// resolved and unexported fields are correctly ignored using go/types.
+func TestParseGoStruct_TypeAliasesAndUnexported(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	writeGoFile(t, dir, "doc.go", `package model
+	type CustomString string
+	type IntAlias = int
+	type innerStruct struct {
+		Public int `+"`json:\"public\"`"+`
+	}
+	type Document struct {
+		Title      CustomString `+"`json:\"title\"`"+`
+		Count      IntAlias     `+"`json:\"count\"`"+`
+		unexported string       `+"`json:\"unexported\"`"+`
+		innerStruct             // Anonymous embedded struct, should inline "public"
+	}
+	`)
+	entries, _, err := parseGoStruct(dir, "Document")
+	assert.NilError(t, err)
+
+	got := make(map[string]string)
+	for _, e := range entries {
+		got[e.Path] = e.Type
+	}
+	assert.Equal(t, 3, len(got))
+	assert.Equal(t, "unknown", got["title"])
+	assert.Equal(t, "unknown", got["count"])
+	assert.Equal(t, "unknown", got["public"]) // inlined from innerStruct
+}
+
 // TestParseGoStruct_NestedStruct verifies that a field whose type is another
 // struct defined in the same package is expanded recursively.
 func TestParseGoStruct_NestedStruct(t *testing.T) {
@@ -363,13 +477,13 @@ func TestParseGoStruct_NestedStruct(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Items  Item   `+"`"+`json:"items"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Items  Item   `+"`"+`json:"items"`+"`"+`
 }
 
 type Item struct {
-	Name  string `+"`"+`json:"name"`+"`"+`
-	Value int    `+"`"+`json:"value"`+"`"+`
+    Name  string `+"`"+`json:"name"`+"`"+`
+    Value int    `+"`"+`json:"value"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -394,11 +508,11 @@ func TestParseGoStruct_SliceOfStruct(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Document struct {
-	Tags []Tag `+"`"+`json:"tags"`+"`"+`
+    Tags []Tag `+"`"+`json:"tags"`+"`"+`
 }
 
 type Tag struct {
-	Value string `+"`"+`json:"value"`+"`"+`
+    Value string `+"`"+`json:"value"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -423,8 +537,8 @@ func TestParseGoStruct_SkipMinusTag(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Document struct {
-	Status  string `+"`"+`json:"status"`+"`"+`
-	Ignored string `+"`"+`json:"-"`+"`"+`
+    Status  string `+"`"+`json:"status"`+"`"+`
+    Ignored string `+"`"+`json:"-"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -442,8 +556,8 @@ func TestParseGoStruct_OmitemptyTag(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Document struct {
-	Status string `+"`"+`json:"status,omitempty"`+"`"+`
-	Title  string `+"`"+`json:"title,omitempty"`+"`"+`
+    Status string `+"`"+`json:"status,omitempty"`+"`"+`
+    Title  string `+"`"+`json:"title,omitempty"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -466,12 +580,12 @@ func TestParseGoStruct_EmbeddedStruct(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Base struct {
-	ID string `+"`"+`json:"id"`+"`"+`
+    ID string `+"`"+`json:"id"`+"`"+`
 }
 
 type Document struct {
-	Base
-	Status string `+"`"+`json:"status"`+"`"+`
+    Base
+    Status string `+"`"+`json:"status"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -494,7 +608,7 @@ func TestParseGoStruct_TypeNotFound(t *testing.T) {
 	writeGoFile(t, dir, "doc.go", `package model
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
 }
 `)
 	_, _, err := parseGoStruct(dir, "Missing")
@@ -509,12 +623,12 @@ func TestParseGoStruct_ConstModeOutput(t *testing.T) {
 	writeGoFile(t, srcDir, "doc.go", `package model
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Items  []Item `+"`"+`json:"items"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Items  []Item `+"`"+`json:"items"`+"`"+`
 }
 
 type Item struct {
-	Name string `+"`"+`json:"name"`+"`"+`
+    Name string `+"`"+`json:"name"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(srcDir, "Document")
@@ -543,7 +657,8 @@ type Item struct {
 		"FieldItemsName": "items.name",
 		"FieldStatus":    "status",
 	}
-	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts), len(consts))
+	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts),
+		len(consts))
 	for name, wantValue := range expectedConsts {
 		gotValue, ok := consts[name]
 		assert.Assert(t, ok, "missing constant %q", name)
@@ -559,12 +674,12 @@ func TestParseGoStruct_StructModeOutput(t *testing.T) {
 	writeGoFile(t, srcDir, "doc.go", `package model
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Items  []Item `+"`"+`json:"items"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Items  []Item `+"`"+`json:"items"`+"`"+`
 }
 
 type Item struct {
-	Name string `+"`"+`json:"name"`+"`"+`
+    Name string `+"`"+`json:"name"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(srcDir, "Document")
@@ -592,88 +707,12 @@ type Item struct {
 		"Items_Name": "items.name",
 		"Status":     "status",
 	}
-	assert.Assert(t, len(structFields) == len(expectedFields), "expected %d struct fields, got %d", len(expectedFields), len(structFields))
+	assert.Assert(t, len(structFields) == len(expectedFields), "expected %d struct fields, got %d", len(expectedFields),
+		len(structFields))
 	for name, wantValue := range expectedFields {
 		gotValue, ok := structFields[name]
 		assert.Assert(t, ok, "missing struct field %q", name)
 		assert.Equal(t, wantValue, gotValue, "struct field %s has wrong value", name)
-	}
-}
-
-// TestGoFieldJSONName covers struct field JSON-name extraction for tagged,
-// untagged, excluded, and unnamed fields.
-func TestGoFieldJSONName(t *testing.T) {
-	t.Parallel()
-
-	parseField := func(t *testing.T, src string) *ast.Field {
-		t.Helper()
-		fset := token.NewFileSet()
-		expr, err := parser.ParseExprFrom(fset, "", src, 0)
-		assert.NilError(t, err)
-
-		st, ok := expr.(*ast.StructType)
-		assert.Assert(t, ok)
-		assert.Assert(t, len(st.Fields.List) == 1)
-
-		return st.Fields.List[0]
-	}
-
-	tests := map[string]struct {
-		src  string
-		want string
-	}{
-		"tagged": {
-			src:  `struct{ Status string ` + "`json:\"status\"`" + ` }`,
-			want: "status",
-		},
-		"tagged_skip": {
-			src:  `struct{ Ignored string ` + "`json:\"-\"`" + ` }`,
-			want: "-",
-		},
-		"tagged_empty_name_falls_back_to_go_name": {
-			src:  `struct{ Status string ` + "`json:\",omitempty\"`" + ` }`,
-			want: "Status",
-		},
-		"untagged_named_field": {
-			src:  `struct{ Status string }`,
-			want: "Status",
-		},
-		"anonymous_field_without_tag": {
-			src:  `struct{ Embedded }`,
-			want: "",
-		},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			got := goFieldJSONName(parseField(t, tt.src))
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-// TestJSONTagKey covers the jsonTagKey helper for all relevant tag formats.
-func TestJSONTagKey(t *testing.T) {
-	t.Parallel()
-	tests := map[string]struct {
-		raw  string
-		want string
-	}{
-		"plain":            {raw: `json:"status"`, want: "status"},
-		"omitempty":        {raw: `json:"title,omitempty"`, want: "title"},
-		"skip":             {raw: `json:"-"`, want: "-"},
-		"no_json_tag":      {raw: `db:"col"`, want: ""},
-		"empty_name":       {raw: `json:",omitempty"`, want: ""},
-		"unterminated_tag": {raw: `json:"status`, want: ""},
-		"json_after_other": {raw: `xml:"status" json:"title,omitempty"`, want: "title"},
-	}
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			got := jsonTagKey(tt.raw)
-			assert.Equal(t, tt.want, got)
-		})
 	}
 }
 
@@ -707,40 +746,6 @@ func TestDerefTypeName(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got := derefTypeName(parseExpr(t, tt.src))
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-// TestIsSliceExpr covers pointer-unwrapping and distinguishes slices from
-// arrays and non-array expressions.
-func TestIsSliceExpr(t *testing.T) {
-	t.Parallel()
-
-	parseExpr := func(t *testing.T, src string) ast.Expr {
-		t.Helper()
-		fset := token.NewFileSet()
-		expr, err := parser.ParseExprFrom(fset, "", src, 0)
-		assert.NilError(t, err)
-		return expr
-	}
-
-	tests := map[string]struct {
-		src  string
-		want bool
-	}{
-		"slice":            {src: `[]Tag`, want: true},
-		"pointer_to_slice": {src: `*[]Tag`, want: true},
-		"array":            {src: `[2]Tag`, want: false},
-		"pointer_to_array": {src: `*[2]Tag`, want: false},
-		"pointer":          {src: `*Tag`, want: false},
-		"ident":            {src: `Tag`, want: false},
-	}
-
-	for name, tt := range tests {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			got := isSliceExpr(parseExpr(t, tt.src))
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -888,13 +893,13 @@ func TestParseMappingBody(t *testing.T) {
 	}{
 		"single_return_with_fields": {
 			src: `{
-				return estype.Mapping{
-					Fields: []estype.MappingField{
-						{Path: "status", Property: estype.FieldType("keyword")},
-						{Path: "title", Property: estype.NewTextProperty()},
-					},
-				}
-			}`,
+             return estype.Mapping{
+                Fields: []estype.MappingField{
+                   {Path: "status", Property: estype.FieldType("keyword")},
+                   {Path: "title", Property: estype.NewTextProperty()},
+                },
+             }
+          }`,
 			want: map[string]string{
 				"status": "keyword",
 				"title":  "text",
@@ -902,62 +907,62 @@ func TestParseMappingBody(t *testing.T) {
 		},
 		"ignores_non_return_statements": {
 			src: `{
-				x := 1
-				_ = x
-				return estype.Mapping{
-					Fields: []estype.MappingField{
-						{Path: "status", Property: estype.FieldType("keyword")},
-					},
-				}
-			}`,
+             x := 1
+             _ = x
+             return estype.Mapping{
+                Fields: []estype.MappingField{
+                   {Path: "status", Property: estype.FieldType("keyword")},
+                },
+             }
+          }`,
 			want: map[string]string{
 				"status": "keyword",
 			},
 		},
 		"ignores_multi_result_return": {
 			src: `{
-				return estype.Mapping{}, nil
-			}`,
+             return estype.Mapping{}, nil
+          }`,
 			want: map[string]string{},
 		},
 		"ignores_non_composite_return": {
 			src: `{
-				mapping := estype.Mapping{}
-				return mapping
-			}`,
+             mapping := estype.Mapping{}
+             return mapping
+          }`,
 			want: map[string]string{},
 		},
 		"ignores_non_fields_keys": {
 			src: `{
-				return estype.Mapping{
-					Name: "ignored",
-				}
-			}`,
+             return estype.Mapping{
+                Name: "ignored",
+             }
+          }`,
 			want: map[string]string{},
 		},
 		"ignores_non_composite_fields_value": {
 			src: `{
-				fields := []estype.MappingField{}
-				_ = fields
-				return estype.Mapping{
-					Fields: fields,
-				}
-			}`,
+             fields := []estype.MappingField{}
+             _ = fields
+             return estype.Mapping{
+                Fields: fields,
+             }
+          }`,
 			want: map[string]string{},
 		},
 		"ignores_invalid_field_elements": {
 			src: `{
-				return estype.Mapping{
-					Fields: []estype.MappingField{
-						123,
-						{Path: "status", Property: estype.FieldType("keyword")},
-						{Path: dynamicPath(), Property: estype.FieldType("text")},
-						{Path: "title", Property: propertyExpr()},
-						{Path: "price"},
-						{Property: estype.FieldType("integer")},
-					},
-				}
-			}`,
+             return estype.Mapping{
+                Fields: []estype.MappingField{
+                   123,
+                   {Path: "status", Property: estype.FieldType("keyword")},
+                   {Path: dynamicPath(), Property: estype.FieldType("text")},
+                   {Path: "title", Property: propertyExpr()},
+                   {Path: "price"},
+                   {Property: estype.FieldType("integer")},
+                },
+             }
+          }`,
 			want: map[string]string{
 				"status": "keyword",
 			},
@@ -996,17 +1001,17 @@ func TestExtractMappingMethod(t *testing.T) {
 import "github.com/tomtwinkle/es-typed-go/estype"
 
 type Document struct {
-	Status string ` + "`" + `json:"status"` + "`" + `
-	Title  string ` + "`" + `json:"title"` + "`" + `
+    Status string ` + "`" + `json:"status"` + "`" + `
+    Title  string ` + "`" + `json:"title"` + "`" + `
 }
 
 func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-			{Path: "title", Property: estype.FieldType("text")},
-		},
-	}
+    return estype.Mapping{
+       Fields: []estype.MappingField{
+          {Path: "status", Property: estype.FieldType("keyword")},
+          {Path: "title", Property: estype.FieldType("text")},
+       },
+    }
 }
 `,
 			typeName: "Document",
@@ -1018,15 +1023,15 @@ func (Document) Mapping() estype.Mapping {
 import "github.com/tomtwinkle/es-typed-go/estype"
 
 type Document struct {
-	Status string ` + "`" + `json:"status"` + "`" + `
+    Status string ` + "`" + `json:"status"` + "`" + `
 }
 
 func (d *Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-		},
-	}
+    return estype.Mapping{
+       Fields: []estype.MappingField{
+          {Path: "status", Property: estype.FieldType("keyword")},
+       },
+    }
 }
 `,
 			typeName: "Document",
@@ -1036,7 +1041,7 @@ func (d *Document) Mapping() estype.Mapping {
 			src: `package model
 
 type Document struct {
-	Status string ` + "`" + `json:"status"` + "`" + `
+    Status string ` + "`" + `json:"status"` + "`" + `
 }
 `,
 			typeName: "Document",
@@ -1051,11 +1056,11 @@ type Document struct{}
 type Other struct{}
 
 func (Other) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-		},
-	}
+    return estype.Mapping{
+       Fields: []estype.MappingField{
+          {Path: "status", Property: estype.FieldType("keyword")},
+       },
+    }
 }
 `,
 			typeName: "Document",
@@ -1067,22 +1072,22 @@ func (Other) Mapping() estype.Mapping {
 import "github.com/tomtwinkle/es-typed-go/estype"
 
 type Document struct {
-	Status string ` + "`" + `json:"status"` + "`" + `
-	Items  []Item ` + "`" + `json:"items"` + "`" + `
+    Status string ` + "`" + `json:"status"` + "`" + `
+    Items  []Item ` + "`" + `json:"items"` + "`" + `
 }
 
 type Item struct {
-	Name string ` + "`" + `json:"name"` + "`" + `
+    Name string ` + "`" + `json:"name"` + "`" + `
 }
 
 func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-			{Path: "items", Property: estype.FieldType("nested")},
-			{Path: "items.name", Property: estype.FieldType("text")},
-		},
-	}
+    return estype.Mapping{
+       Fields: []estype.MappingField{
+          {Path: "status", Property: estype.FieldType("keyword")},
+          {Path: "items", Property: estype.FieldType("nested")},
+          {Path: "items.name", Property: estype.FieldType("text")},
+       },
+    }
 }
 `,
 			typeName: "Document",
@@ -1098,19 +1103,19 @@ func (Document) Mapping() estype.Mapping {
 import "github.com/tomtwinkle/es-typed-go/estype"
 
 type Document struct {
-	Status string ` + "`" + `json:"status"` + "`" + `
-	Title  string ` + "`" + `json:"title"` + "`" + `
-	Price  int    ` + "`" + `json:"price"` + "`" + `
+    Status string ` + "`" + `json:"status"` + "`" + `
+    Title  string ` + "`" + `json:"title"` + "`" + `
+    Price  int    ` + "`" + `json:"price"` + "`" + `
 }
 
 func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.NewKeywordProperty()},
-			{Path: "title",  Property: estype.NewTextProperty(estype.WithSearchAnalyzer(estype.Analyzer("my_analyzer")))},
-			{Path: "price",  Property: estype.FieldType("integer")},
-		},
-	}
+    return estype.Mapping{
+       Fields: []estype.MappingField{
+          {Path: "status", Property: estype.NewKeywordProperty()},
+          {Path: "title",  Property: estype.NewTextProperty(estype.WithSearchAnalyzer(estype.Analyzer("my_analyzer")))},
+          {Path: "price",  Property: estype.FieldType("integer")},
+       },
+    }
 }
 `,
 			typeName: "Document",
@@ -1126,15 +1131,15 @@ func (Document) Mapping() estype.Mapping {
 import "github.com/tomtwinkle/es-typed-go/estype"
 
 type Document struct {
-	Status string ` + "`" + `json:"status"` + "`" + `
+    Status string ` + "`" + `json:"status"` + "`" + `
 }
 
 func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: NewKeywordProperty()},
-		},
-	}
+    return estype.Mapping{
+       Fields: []estype.MappingField{
+          {Path: "status", Property: NewKeywordProperty()},
+       },
+    }
 }
 `,
 			typeName: "Document",
@@ -1148,10 +1153,20 @@ func (Document) Mapping() estype.Mapping {
 			dir := t.TempDir()
 			writeGoFile(t, dir, "doc.go", tt.src)
 
-			pkgs, err := parser.ParseDir(token.NewFileSet(), dir, nil, 0)
+			dirEntries, err := os.ReadDir(dir)
 			assert.NilError(t, err)
 
-			got := extractMappingMethod(pkgs, tt.typeName)
+			fset := token.NewFileSet()
+			var files []*ast.File
+			for _, de := range dirEntries {
+				if strings.HasSuffix(de.Name(), ".go") {
+					f, err := parser.ParseFile(fset, filepath.Join(dir, de.Name()), nil, 0)
+					assert.NilError(t, err)
+					files = append(files, f)
+				}
+			}
+
+			got := extractMappingMethod(files, tt.typeName)
 			assert.Equal(t, len(tt.want), len(got))
 			for path, wantType := range tt.want {
 				gotType, ok := got[path]
@@ -1170,22 +1185,24 @@ func TestParseGoStruct_WithMapping(t *testing.T) {
 	dir := t.TempDir()
 	writeGoFile(t, dir, "doc.go", `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func FieldType(t string) any { return nil }
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Title  string `+"`"+`json:"title"`+"`"+`
-	Price  int    `+"`"+`json:"price"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Title  string `+"`"+`json:"title"`+"`"+`
+    Price  int    `+"`"+`json:"price"`+"`"+`
 }
 
-func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-			{Path: "title", Property: estype.FieldType("text")},
-			{Path: "price", Property: estype.FieldType("integer")},
-		},
-	}
+func (Document) Mapping() Mapping {
+    return Mapping{
+       Fields: []MappingField{
+          {Path: "status", Property: FieldType("keyword")},
+          {Path: "title", Property: FieldType("text")},
+          {Path: "price", Property: FieldType("integer")},
+       },
+    }
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -1208,18 +1225,20 @@ func TestParseGoStruct_WithMapping_PointerReceiver(t *testing.T) {
 	dir := t.TempDir()
 	writeGoFile(t, dir, "doc.go", `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func FieldType(t string) any { return nil }
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
 }
 
-func (d *Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-		},
-	}
+func (d *Document) Mapping() Mapping {
+    return Mapping{
+       Fields: []MappingField{
+          {Path: "status", Property: FieldType("keyword")},
+       },
+    }
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -1241,19 +1260,19 @@ func TestParseGoStruct_TagFallbacksAndPointers(t *testing.T) {
 import "time"
 
 type Base struct {
-	ID string `+"`"+`json:"id"`+"`"+`
+    ID string `+"`"+`json:"id"`+"`"+`
 }
 
 type Item struct {
-	Name string `+"`"+`json:"name"`+"`"+`
+    Name string `+"`"+`json:"name"`+"`"+`
 }
 
 type Document struct {
-	*Base
-	Status    string    `+"`"+`json:",omitempty"`+"`"+`
-	Item      *Item     `+"`"+`json:"item"`+"`"+`
-	ItemArray [2]Item   `+"`"+`json:"item_array"`+"`"+`
-	CreatedAt time.Time `+"`"+`json:"created_at"`+"`"+`
+    *Base
+    Status    string    `+"`"+`json:",omitempty"`+"`"+`
+    Item      *Item     `+"`"+`json:"item"`+"`"+`
+    ItemArray [2]Item   `+"`"+`json:"item_array"`+"`"+`
+    CreatedAt time.Time `+"`"+`json:"created_at"`+"`"+`
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -1288,20 +1307,22 @@ func TestParseGoStruct_WithMapping_PartialOverride(t *testing.T) {
 	dir := t.TempDir()
 	writeGoFile(t, dir, "doc.go", `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func FieldType(t string) any { return nil }
 
 type Document struct {
-	Status  string `+"`"+`json:"status"`+"`"+`
-	Title   string `+"`"+`json:"title"`+"`"+`
-	Enabled bool   `+"`"+`json:"enabled"`+"`"+`
+    Status  string `+"`"+`json:"status"`+"`"+`
+    Title   string `+"`"+`json:"title"`+"`"+`
+    Enabled bool   `+"`"+`json:"enabled"`+"`"+`
 }
 
-func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-		},
-	}
+func (Document) Mapping() Mapping {
+    return Mapping{
+       Fields: []MappingField{
+          {Path: "status", Property: FieldType("keyword")},
+       },
+    }
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -1324,27 +1345,29 @@ func TestParseGoStruct_WithMapping_NestedFields(t *testing.T) {
 	dir := t.TempDir()
 	writeGoFile(t, dir, "doc.go", `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func FieldType(t string) any { return nil }
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Items  []Item `+"`"+`json:"items"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Items  []Item `+"`"+`json:"items"`+"`"+`
 }
 
 type Item struct {
-	Name  string `+"`"+`json:"name"`+"`"+`
-	Value int    `+"`"+`json:"value"`+"`"+`
+    Name  string `+"`"+`json:"name"`+"`"+`
+    Value int    `+"`"+`json:"value"`+"`"+`
 }
 
-func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-			{Path: "items", Property: estype.FieldType("nested")},
-			{Path: "items.name", Property: estype.FieldType("text")},
-			{Path: "items.value", Property: estype.FieldType("integer")},
-		},
-	}
+func (Document) Mapping() Mapping {
+    return Mapping{
+       Fields: []MappingField{
+          {Path: "status", Property: FieldType("keyword")},
+          {Path: "items", Property: FieldType("nested")},
+          {Path: "items.name", Property: FieldType("text")},
+          {Path: "items.value", Property: FieldType("integer")},
+       },
+    }
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -1368,20 +1391,22 @@ func TestParseGoStruct_WithMapping_ConstOutput(t *testing.T) {
 	srcDir := t.TempDir()
 	writeGoFile(t, srcDir, "doc.go", `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func FieldType(t string) any { return nil }
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Title  string `+"`"+`json:"title"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Title  string `+"`"+`json:"title"`+"`"+`
 }
 
-func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.FieldType("keyword")},
-			{Path: "title", Property: estype.FieldType("text")},
-		},
-	}
+func (Document) Mapping() Mapping {
+    return Mapping{
+       Fields: []MappingField{
+          {Path: "status", Property: FieldType("keyword")},
+          {Path: "title", Property: FieldType("text")},
+       },
+    }
 }
 `)
 	entries, _, err := parseGoStruct(srcDir, "Document")
@@ -1399,8 +1424,32 @@ func (Document) Mapping() estype.Mapping {
 	td := templateData{Package: "model", Fields: entries}
 	var buf bytes.Buffer
 	assert.NilError(t, constTemplate.Execute(&buf, td))
-	_, err = format.Source(buf.Bytes())
+	formatted, err := format.Source(buf.Bytes())
 	assert.NilError(t, err)
+
+	// Parse the generated source and verify constants.
+	outDir := t.TempDir() // Safe here since we parse one generated file
+	outFile := filepath.Join(outDir, "fields.go")
+	assert.NilError(t, os.WriteFile(outFile, formatted, 0o644))
+
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, outFile, nil, parser.AllErrors)
+	assert.NilError(t, err)
+
+	assertImport(t, f, `"github.com/tomtwinkle/es-typed-go/estype"`)
+
+	consts := collectConstDecls(f)
+	expectedConsts := map[string]string{
+		"FieldStatus": "status",
+		"FieldTitle":  "title",
+	}
+	assert.Assert(t, len(consts) == len(expectedConsts), "expected %d constants, got %d", len(expectedConsts),
+		len(consts))
+	for name, wantValue := range expectedConsts {
+		gotValue, ok := consts[name]
+		assert.Assert(t, ok, "missing constant %q", name)
+		assert.Equal(t, wantValue, gotValue, "constant %s has wrong value", name)
+	}
 }
 
 // TestParseGoStruct_WithMapping_TypedProperty verifies that Mapping() using
@@ -1411,25 +1460,33 @@ func TestParseGoStruct_WithMapping_TypedProperty(t *testing.T) {
 	dir := t.TempDir()
 	writeGoFile(t, dir, "doc.go", `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func FieldType(t string) any { return nil }
+func NewKeywordProperty(args ...any) any { return nil }
+func NewTextProperty(args ...any) any { return nil }
+func WithIgnoreAbove(i int) any { return nil }
+func WithSearchAnalyzer(a any) any { return nil }
+func WithIndexAnalyzer(a any) any { return nil }
+func Analyzer(s string) any { return nil }
 
 type Document struct {
-	Status string `+"`"+`json:"status"`+"`"+`
-	Title  string `+"`"+`json:"title"`+"`"+`
-	Price  int    `+"`"+`json:"price"`+"`"+`
+    Status string `+"`"+`json:"status"`+"`"+`
+    Title  string `+"`"+`json:"title"`+"`"+`
+    Price  int    `+"`"+`json:"price"`+"`"+`
 }
 
-func (Document) Mapping() estype.Mapping {
-	return estype.Mapping{
-		Fields: []estype.MappingField{
-			{Path: "status", Property: estype.NewKeywordProperty(estype.WithIgnoreAbove(256))},
-			{Path: "title",  Property: estype.NewTextProperty(
-				estype.WithSearchAnalyzer(estype.Analyzer("my_search_analyzer")),
-				estype.WithIndexAnalyzer(estype.Analyzer("my_index_analyzer")),
-			)},
-			{Path: "price",  Property: estype.FieldType("integer")},
-		},
-	}
+func (Document) Mapping() Mapping {
+    return Mapping{
+       Fields: []MappingField{
+          {Path: "status", Property: NewKeywordProperty(WithIgnoreAbove(256))},
+          {Path: "title",  Property: NewTextProperty(
+             WithSearchAnalyzer(Analyzer("my_search_analyzer")),
+             WithIndexAnalyzer(Analyzer("my_index_analyzer")),
+          )},
+          {Path: "price",  Property: FieldType("integer")},
+       },
+    }
 }
 `)
 	entries, _, err := parseGoStruct(dir, "Document")
@@ -1439,6 +1496,7 @@ func (Document) Mapping() estype.Mapping {
 	for _, e := range entries {
 		got[e.Path] = e.Type
 	}
+
 	assert.Equal(t, 3, len(got))
 	assert.Equal(t, "keyword", got["status"])
 	assert.Equal(t, "text", got["title"])
@@ -1533,194 +1591,198 @@ func collectStructVarFields(f *ast.File, varName string) map[string]string {
 }
 
 func TestExtractStringReturnMethod(t *testing.T) {
-t.Parallel()
+	t.Parallel()
 
-tests := map[string]struct {
-src        string
-typeName   string
-methodName string
-want       string
-wantFound  bool
-}{
-"alias_plain_string": {
-src: `package model
-
-import "github.com/tomtwinkle/es-typed-go/estype"
+	tests := map[string]struct {
+		src        string
+		typeName   string
+		methodName string
+		want       string
+		wantFound  bool
+	}{
+		"alias_plain_string": {
+			src: `package model
 
 type Document struct{}
 
-func (Document) Alias() estype.Alias { return "my-alias" }
+func (Document) Alias() string { return "my-alias" }
 `,
-typeName:   "Document",
-methodName: "Alias",
-want:       "my-alias",
-wantFound:  true,
-},
-"alias_conversion_call": {
-src: `package model
+			typeName:   "Document",
+			methodName: "Alias",
+			want:       "my-alias",
+			wantFound:  true,
+		},
+		"alias_conversion_call": {
+			src: `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Alias string
+type Document struct{}
+
+func (Document) Alias() Alias { return Alias("product") }
+`,
+			typeName:   "Document",
+			methodName: "Alias",
+			want:       "product",
+			wantFound:  true,
+		},
+		"index_plain_string": {
+			src: `package model
 
 type Document struct{}
 
-func (Document) Alias() estype.Alias { return estype.Alias("product") }
+func (Document) Index() string { return "product-000001" }
 `,
-typeName:   "Document",
-methodName: "Alias",
-want:       "product",
-wantFound:  true,
-},
-"index_plain_string": {
-src: `package model
+			typeName:   "Document",
+			methodName: "Index",
+			want:       "product-000001",
+			wantFound:  true,
+		},
+		"index_conversion_call": {
+			src: `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
-
+type Index string
 type Document struct{}
 
-func (Document) Index() estype.Index { return "product-000001" }
+func (Document) Index() Index { return Index("product-000001") }
 `,
-typeName:   "Document",
-methodName: "Index",
-want:       "product-000001",
-wantFound:  true,
-},
-"index_conversion_call": {
-src: `package model
-
-import "github.com/tomtwinkle/es-typed-go/estype"
-
-type Document struct{}
-
-func (Document) Index() estype.Index { return estype.Index("product-000001") }
-`,
-typeName:   "Document",
-methodName: "Index",
-want:       "product-000001",
-wantFound:  true,
-},
-"method_not_found": {
-src: `package model
+			typeName:   "Document",
+			methodName: "Index",
+			want:       "product-000001",
+			wantFound:  true,
+		},
+		"method_not_found": {
+			src: `package model
 
 type Document struct{}
 `,
-typeName:   "Document",
-methodName: "Alias",
-want:       "",
-wantFound:  false,
-},
-"pointer_receiver": {
-src: `package model
-
-import "github.com/tomtwinkle/es-typed-go/estype"
+			typeName:   "Document",
+			methodName: "Alias",
+			want:       "",
+			wantFound:  false,
+		},
+		"pointer_receiver": {
+			src: `package model
 
 type Document struct{}
 
-func (d *Document) Alias() estype.Alias { return "ptr-alias" }
+func (d *Document) Alias() string { return "ptr-alias" }
 `,
-typeName:   "Document",
-methodName: "Alias",
-want:       "ptr-alias",
-wantFound:  true,
-},
-}
+			typeName:   "Document",
+			methodName: "Alias",
+			want:       "ptr-alias",
+			wantFound:  true,
+		},
+	}
 
-for name, tt := range tests {
-t.Run(name, func(t *testing.T) {
-t.Parallel()
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-dir := t.TempDir()
-if err := os.WriteFile(filepath.Join(dir, "doc.go"), []byte(tt.src), 0o644); err != nil {
-t.Fatal(err)
-}
+			dir := t.TempDir()
+			writeGoFile(t, dir, "doc.go", tt.src)
 
-fset := token.NewFileSet()
-pkgs, err := parser.ParseDir(fset, dir, nil, 0)
-assert.NilError(t, err)
+			dirEntries, err := os.ReadDir(dir)
+			assert.NilError(t, err)
 
-got, found := extractStringReturnMethod(pkgs, tt.typeName, tt.methodName)
-assert.Equal(t, tt.wantFound, found)
-assert.Equal(t, tt.want, got)
-})
-}
+			fset := token.NewFileSet()
+			var files []*ast.File
+			for _, de := range dirEntries {
+				if strings.HasSuffix(de.Name(), ".go") {
+					f, err := parser.ParseFile(fset, filepath.Join(dir, de.Name()), nil, 0)
+					assert.NilError(t, err)
+					files = append(files, f)
+				}
+			}
+
+			got, found := extractStringReturnMethod(files, tt.typeName, tt.methodName)
+			assert.Equal(t, tt.wantFound, found)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
 // collectModelVarFields extracts the Fields sub-struct field values and top-level
 // Alias/Index string values from a generated model variable.
 // Returns fields as map[fieldName]path, alias, index (empty strings if absent).
 func collectModelVarFields(f *ast.File, varName string) (fields map[string]string, alias, index string) {
-fields = make(map[string]string)
-for _, decl := range f.Decls {
-gd, ok := decl.(*ast.GenDecl)
-if !ok || gd.Tok != token.VAR {
-continue
-}
-for _, spec := range gd.Specs {
-vs, ok := spec.(*ast.ValueSpec)
-if !ok || len(vs.Names) == 0 || vs.Names[0].Name != varName {
-continue
-}
-if len(vs.Values) == 0 {
-continue
-}
-// Outer composite literal: struct{...}{...}
-outerCL, ok := vs.Values[0].(*ast.CompositeLit)
-if !ok {
-continue
-}
-for _, elt := range outerCL.Elts {
-kv, ok := elt.(*ast.KeyValueExpr)
-if !ok {
-continue
-}
-keyIdent, ok := kv.Key.(*ast.Ident)
-if !ok {
-continue
-}
-switch keyIdent.Name {
-case "Fields":
-// Inner composite literal: struct{...}{field: "path", ...}
-innerCL, ok := kv.Value.(*ast.CompositeLit)
-if !ok {
-continue
-}
-for _, fElt := range innerCL.Elts {
-fkv, ok := fElt.(*ast.KeyValueExpr)
-if !ok {
-continue
-}
-fKey, ok := fkv.Key.(*ast.Ident)
-if !ok {
-continue
-}
-fVal, ok := fkv.Value.(*ast.BasicLit)
-if !ok {
-continue
-}
-fields[fKey.Name] = strings.Trim(fVal.Value, `"`)
-}
-case "Alias":
-valLit, ok := kv.Value.(*ast.BasicLit)
-if ok {
-alias = strings.Trim(valLit.Value, `"`)
-}
-case "Index":
-valLit, ok := kv.Value.(*ast.BasicLit)
-if ok {
-index = strings.Trim(valLit.Value, `"`)
-}
-}
-}
-}
-}
-return fields, alias, index
+	fields = make(map[string]string)
+	for _, decl := range f.Decls {
+		gd, ok := decl.(*ast.GenDecl)
+		if !ok || gd.Tok != token.VAR {
+			continue
+		}
+		for _, spec := range gd.Specs {
+			vs, ok := spec.(*ast.ValueSpec)
+			if !ok || len(vs.Names) == 0 || vs.Names[0].Name != varName {
+				continue
+			}
+			if len(vs.Values) == 0 {
+				continue
+			}
+			// Outer composite literal: struct{...}{...}
+			outerCL, ok := vs.Values[0].(*ast.CompositeLit)
+			if !ok {
+				continue
+			}
+			for _, elt := range outerCL.Elts {
+				kv, ok := elt.(*ast.KeyValueExpr)
+				if !ok {
+					continue
+				}
+				keyIdent, ok := kv.Key.(*ast.Ident)
+				if !ok {
+					continue
+				}
+				switch keyIdent.Name {
+				case "Fields":
+					// Inner composite literal: struct{...}{field: "path", ...}
+					innerCL, ok := kv.Value.(*ast.CompositeLit)
+					if !ok {
+						continue
+					}
+					for _, fElt := range innerCL.Elts {
+						fkv, ok := fElt.(*ast.KeyValueExpr)
+						if !ok {
+							continue
+						}
+						fKey, ok := fkv.Key.(*ast.Ident)
+						if !ok {
+							continue
+						}
+						fVal, ok := fkv.Value.(*ast.BasicLit)
+						if !ok {
+							continue
+						}
+						fields[fKey.Name] = strings.Trim(fVal.Value, `"`)
+					}
+				case "Alias":
+					valLit, ok := kv.Value.(*ast.BasicLit)
+					if ok {
+						alias = strings.Trim(valLit.Value, `"`)
+					}
+				case "Index":
+					valLit, ok := kv.Value.(*ast.BasicLit)
+					if ok {
+						index = strings.Trim(valLit.Value, `"`)
+					}
+				}
+			}
+		}
+	}
+	return fields, alias, index
 }
 
 func TestGenerate_ModelFormat(t *testing.T) {
-t.Parallel()
+	t.Parallel()
 
-src := `package model
+	src := `package model
 
-import "github.com/tomtwinkle/es-typed-go/estype"
+type Alias string
+type Index string
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+func NewKeywordProperty() any { return nil }
+func NewTextProperty() any { return nil }
 
 //go:generate go tool estyped -struct Product -package esmodel -out ../esmodel/product_gen.go -group Product
 
@@ -1730,66 +1792,64 @@ Title    string ` + "`" + `json:"title"` + "`" + `
 Category string ` + "`" + `json:"category"` + "`" + `
 }
 
-func (Product) Alias() estype.Alias { return "product" }
-func (Product) Index() estype.Index { return "product-000001" }
+func (Product) Alias() Alias { return "product" }
+func (Product) Index() Index { return "product-000001" }
 
-func (Product) Mapping() estype.Mapping {
-return estype.Mapping{
-Fields: []estype.MappingField{
-{Path: "status",   Property: estype.NewKeywordProperty()},
-{Path: "title",    Property: estype.NewTextProperty()},
-{Path: "category", Property: estype.NewKeywordProperty()},
+func (Product) Mapping() Mapping {
+return Mapping{
+Fields: []MappingField{
+{Path: "status",   Property: NewKeywordProperty()},
+{Path: "title",    Property: NewTextProperty()},
+{Path: "category", Property: NewKeywordProperty()},
 },
 }
 }
 `
-dir := t.TempDir()
-outFile := filepath.Join(dir, "product_gen.go")
-if err := os.WriteFile(filepath.Join(dir, "product.go"), []byte(src), 0o644); err != nil {
-t.Fatal(err)
-}
+	dir := t.TempDir()
+	outFile := filepath.Join(dir, "product_gen.go")
+	writeGoFile(t, dir, "product.go", src)
 
-entries, pkgs, err := parseGoStruct(dir, "Product")
-assert.NilError(t, err)
-assert.Equal(t, 3, len(entries))
+	entries, files, err := parseGoStruct(dir, "Product")
+	assert.NilError(t, err)
+	assert.Equal(t, 3, len(entries))
 
-alias, hasAlias := extractStringReturnMethod(pkgs, "Product", "Alias")
-index, hasIndex := extractStringReturnMethod(pkgs, "Product", "Index")
-assert.Assert(t, hasAlias, "expected Alias() to be found")
-assert.Assert(t, hasIndex, "expected Index() to be found")
-assert.Equal(t, "product", alias)
-assert.Equal(t, "product-000001", index)
+	alias, hasAlias := extractStringReturnMethod(files, "Product", "Alias")
+	index, hasIndex := extractStringReturnMethod(files, "Product", "Index")
+	assert.Assert(t, hasAlias, "expected Alias() to be found")
+	assert.Assert(t, hasIndex, "expected Index() to be found")
+	assert.Equal(t, "product", alias)
+	assert.Equal(t, "product-000001", index)
 
-var buf bytes.Buffer
-mdata := modelTemplateData{
-Package:  "esmodel",
-Name:     "Product",
-Fields:   entries,
-Alias:    alias,
-Index:    index,
-HasAlias: hasAlias,
-HasIndex: hasIndex,
-}
-assert.NilError(t, modelTemplate.Execute(&buf, mdata))
+	var buf bytes.Buffer
+	mdata := modelTemplateData{
+		Package:  "esmodel",
+		Name:     "Product",
+		Fields:   entries,
+		Alias:    alias,
+		Index:    index,
+		HasAlias: hasAlias,
+		HasIndex: hasIndex,
+	}
+	assert.NilError(t, modelTemplate.Execute(&buf, mdata))
 
-formatted, err := format.Source(buf.Bytes())
-assert.NilError(t, err)
+	formatted, err := format.Source(buf.Bytes())
+	assert.NilError(t, err)
 
-if err := os.WriteFile(outFile, formatted, 0o644); err != nil {
-t.Fatal(err)
-}
+	if err := os.WriteFile(outFile, formatted, 0o644); err != nil {
+		t.Fatal(err)
+	}
 
-fset := token.NewFileSet()
-f, err := parser.ParseFile(fset, outFile, nil, 0)
-assert.NilError(t, err)
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, outFile, nil, 0)
+	assert.NilError(t, err)
 
-assertImport(t, f, `"github.com/tomtwinkle/es-typed-go/estype"`)
+	assertImport(t, f, `"github.com/tomtwinkle/es-typed-go/estype"`)
 
-fields, gotAlias, gotIndex := collectModelVarFields(f, "Product")
+	fields, gotAlias, gotIndex := collectModelVarFields(f, "Product")
 
-assert.Equal(t, "status", fields["Status"])
-assert.Equal(t, "title", fields["Title"])
-assert.Equal(t, "category", fields["Category"])
-assert.Equal(t, "product", gotAlias)
-assert.Equal(t, "product-000001", gotIndex)
+	assert.Equal(t, "status", fields["Status"])
+	assert.Equal(t, "title", fields["Title"])
+	assert.Equal(t, "category", fields["Category"])
+	assert.Equal(t, "product", gotAlias)
+	assert.Equal(t, "product-000001", gotIndex)
 }
