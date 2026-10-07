@@ -365,7 +365,7 @@ type Document struct {
 }
 `)
 	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
+		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps,
 		Dir:  dir,
 	}
 	pkgs, err := packages.Load(cfg, ".")
@@ -436,6 +436,124 @@ type Document struct {
 	assert.Equal(t, "price", got["Price"])
 	assert.Equal(t, "status", got["Status"])
 	assert.Equal(t, "title", got["Title"])
+}
+
+func writeExternalAliasFixture(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	writeGoFile(t, root, "root.go", "package testmod\n")
+	externalDir := filepath.Join(root, "external")
+	assert.NilError(t, os.MkdirAll(externalDir, 0o755))
+	assert.NilError(t, os.WriteFile(filepath.Join(externalDir, "external.go"), []byte(`package external
+
+type Mapping struct { Fields []MappingField }
+type MappingField struct { Path string; Property any }
+type FieldType string
+
+type Document struct {
+	Status string `+"`"+`json:"status"`+"`"+`
+}
+
+func (Document) Mapping() Mapping {
+	return Mapping{Fields: []MappingField{
+		{Path: "status", Property: FieldType("keyword")},
+		{Path: "status.raw", Property: FieldType("keyword")},
+	}}
+}
+
+func (Document) Alias() string { return "documents" }
+func (Document) Index() string { return "documents-000001" }
+`), 0o644))
+
+	modelDir := filepath.Join(root, "model")
+	assert.NilError(t, os.MkdirAll(modelDir, 0o755))
+	assert.NilError(t, os.WriteFile(filepath.Join(modelDir, "document.go"), []byte(`package model
+
+import external "testmod/external"
+
+type DocumentAlias = external.Document
+type DocumentPointerAlias = *external.Document
+`), 0o644))
+	return modelDir
+}
+
+// TestParseGoStruct_ImportedRootAliasMapping verifies that Mapping() metadata
+// declared alongside an imported type is used when the root is a local alias.
+func TestParseGoStruct_ImportedRootAliasMapping(t *testing.T) {
+	t.Parallel()
+	modelDir := writeExternalAliasFixture(t)
+
+	entries, _, err := parseGoStruct(modelDir, "DocumentAlias")
+	assert.NilError(t, err)
+
+	got := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		got[entry.Path] = entry.Type
+	}
+	assert.Equal(t, "keyword", got["status"])
+	assert.Equal(t, "keyword", got["status.raw"])
+}
+
+func TestParseGoStruct_ImportedRootAliasGroupMetadata(t *testing.T) {
+	t.Parallel()
+	modelDir := writeExternalAliasFixture(t)
+
+	entries, files, methodTypeName, err := parseGoStructForModelGeneration(modelDir, "DocumentAlias")
+	assert.NilError(t, err)
+	assert.Equal(t, "Document", methodTypeName)
+
+	alias, hasAlias := extractStringReturnMethod(files, methodTypeName, "Alias")
+	assert.Assert(t, hasAlias, "expected external Alias() to be found through the root alias")
+	assert.Equal(t, "documents", alias)
+	index, hasIndex := extractStringReturnMethod(files, methodTypeName, "Index")
+	assert.Assert(t, hasIndex, "expected external Index() to be found through the root alias")
+	assert.Equal(t, "documents-000001", index)
+	assertGeneratedGroupMetadata(t, entries, alias, index)
+}
+
+func TestParseGoStruct_ImportedPointerAlias(t *testing.T) {
+	t.Parallel()
+	modelDir := writeExternalAliasFixture(t)
+
+	entries, files, methodTypeName, err := parseGoStructForModelGeneration(modelDir, "DocumentPointerAlias")
+	assert.NilError(t, err)
+	assert.Equal(t, "Document", methodTypeName)
+
+	got := make(map[string]string, len(entries))
+	for _, entry := range entries {
+		got[entry.Path] = entry.Type
+	}
+	assert.Equal(t, "keyword", got["status"])
+	assert.Equal(t, "keyword", got["status.raw"])
+
+	alias, hasAlias := extractStringReturnMethod(files, methodTypeName, "Alias")
+	assert.Assert(t, hasAlias, "expected external Alias() to be found through the pointer alias")
+	assert.Equal(t, "documents", alias)
+	index, hasIndex := extractStringReturnMethod(files, methodTypeName, "Index")
+	assert.Assert(t, hasIndex, "expected external Index() to be found through the pointer alias")
+	assert.Equal(t, "documents-000001", index)
+	assertGeneratedGroupMetadata(t, entries, alias, index)
+}
+
+func assertGeneratedGroupMetadata(t *testing.T, entries []fieldEntry, alias, index string) {
+	t.Helper()
+	var buf bytes.Buffer
+	assert.NilError(t, modelTemplate.Execute(&buf, modelTemplateData{
+		Package:  "model",
+		Name:     "Document",
+		Fields:   entries,
+		Alias:    alias,
+		Index:    index,
+		HasAlias: true,
+		HasIndex: true,
+	}))
+	generated, err := format.Source(buf.Bytes())
+	assert.NilError(t, err)
+	f, err := parser.ParseFile(token.NewFileSet(), "generated.go", generated, parser.AllErrors)
+	assert.NilError(t, err)
+	_, gotAlias, gotIndex := collectModelVarFields(f, "Document")
+	assert.Equal(t, alias, gotAlias)
+	assert.Equal(t, index, gotIndex)
 }
 
 // TestParseGoStruct_TypeAliasesAndUnexported verifies that type aliases are properly

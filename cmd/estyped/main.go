@@ -222,10 +222,11 @@ func main() {
 			srcDir = filepath.Dir(*filePath)
 		}
 		var (
-			files []*ast.File
-			err   error
+			files          []*ast.File
+			methodTypeName string
+			err            error
 		)
-		entries, files, err = parseGoStruct(srcDir, *structType)
+		entries, files, methodTypeName, err = parseGoStructForModelGeneration(srcDir, *structType)
 		if err != nil {
 			log.Fatalf("failed to parse struct %s: %v", *structType, err)
 		}
@@ -234,8 +235,8 @@ func main() {
 		// (Fields sub-struct + optional Alias and Index fields) if the source
 		// type implements AliasProvider or IndexProvider.
 		if *structName != "" {
-			alias, hasAlias := extractStringReturnMethod(files, *structType, "Alias")
-			index, hasIndex := extractStringReturnMethod(files, *structType, "Index")
+			alias, hasAlias := extractStringReturnMethod(files, methodTypeName, "Alias")
+			index, hasIndex := extractStringReturnMethod(files, methodTypeName, "Index")
 
 			if hasAlias || hasIndex {
 				var buf bytes.Buffer
@@ -375,40 +376,69 @@ func fieldType(t string) string {
 // It uses golang.org/x/tools/go/packages to perfectly resolve Types, ensuring
 // future compatibility with Go language changes like type aliases and generics.
 func parseGoStruct(srcDir, typeName string) ([]fieldEntry, []*ast.File, error) {
+	entries, files, _, _, err := parseGoStructInternal(srcDir, typeName)
+	return entries, files, err
+}
+
+// parseGoStructForModelGeneration also returns the files and receiver name for
+// methods declared on the named type behind a root alias.
+func parseGoStructForModelGeneration(srcDir, typeName string) ([]fieldEntry, []*ast.File, string, error) {
+	entries, _, methodFiles, methodTypeName, err := parseGoStructInternal(srcDir, typeName)
+	return entries, methodFiles, methodTypeName, err
+}
+
+func parseGoStructInternal(srcDir, typeName string) ([]fieldEntry, []*ast.File, []*ast.File, string, error) {
 	cfg := &packages.Config{
-		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports,
+		Mode: packages.NeedName | packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo | packages.NeedImports | packages.NeedDeps,
 		Dir:  srcDir,
 	}
 
 	pkgs, err := packages.Load(cfg, ".")
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load package in %s: %w", srcDir, err)
+		return nil, nil, nil, "", fmt.Errorf("failed to load package in %s: %w", srcDir, err)
 	}
 	if len(pkgs) == 0 {
-		return nil, nil, fmt.Errorf("no packages found in %s", srcDir)
+		return nil, nil, nil, "", fmt.Errorf("no packages found in %s", srcDir)
 	}
 	pkg := pkgs[0]
 	if len(pkg.Errors) > 0 {
-		return nil, nil, pkg.Errors[0]
+		return nil, nil, nil, "", pkg.Errors[0]
 	}
 
 	// Lookup the specified type in the package scope.
 	obj := pkg.Types.Scope().Lookup(typeName)
 	if obj == nil {
-		return nil, nil, fmt.Errorf("type %q not found in %s", typeName, srcDir)
+		return nil, nil, nil, "", fmt.Errorf("type %q not found in %s", typeName, srcDir)
 	}
 
-	named, ok := obj.Type().(*types.Named)
-	if !ok {
-		return nil, nil, fmt.Errorf("type %q is not a named type", typeName)
+	rootType := types.Unalias(obj.Type())
+	rootStructType := rootType
+	for {
+		rootStructType = types.Unalias(rootStructType)
+		pointer, ok := rootStructType.(*types.Pointer)
+		if !ok {
+			break
+		}
+		rootStructType = pointer.Elem()
+	}
+	if _, ok := rootStructType.Underlying().(*types.Struct); !ok {
+		return nil, nil, nil, "", fmt.Errorf("type %q is not a struct", typeName)
 	}
 
 	// Extract ES field types from the optional Mapping() method.
 	// We pass pkg.Syntax (the parsed AST files) to maintain compatibility with AST-based method extraction.
-	mappingTypes := extractMappingMethod(pkg.Syntax, typeName)
+	methodTypeName := typeName
+	mappingFiles := pkg.Syntax
+	if named, ok := rootStructType.(*types.Named); ok {
+		methodTypeName = named.Obj().Name()
+		if ownerPkg := findLoadedPackage(pkg, named.Obj().Pkg()); ownerPkg != nil {
+			mappingFiles = ownerPkg.Syntax
+		}
+	}
+	mappingTypes := extractMappingMethod(mappingFiles, methodTypeName)
 
 	var entries []fieldEntry
-	extractStructFields(named, "", mappingTypes, &entries)
+	extractStructFields(rootType, "", mappingTypes, &entries)
 
 	// Deduplicate entries (since injected multi-fields might overlap)
 	seen := make(map[string]bool)
@@ -424,7 +454,33 @@ func parseGoStruct(srcDir, typeName string) ([]fieldEntry, []*ast.File, error) {
 		return uniqueEntries[i].Path < uniqueEntries[j].Path
 	})
 
-	return uniqueEntries, pkg.Syntax, nil
+	return uniqueEntries, pkg.Syntax, mappingFiles, methodTypeName, nil
+}
+
+// findLoadedPackage searches a package and its dependencies by types.Package
+// identity. NeedDeps is required in the load mode to retain dependency syntax.
+func findLoadedPackage(root *packages.Package, target *types.Package) *packages.Package {
+	if target == nil {
+		return nil
+	}
+	seen := make(map[*packages.Package]bool)
+	var find func(*packages.Package) *packages.Package
+	find = func(pkg *packages.Package) *packages.Package {
+		if pkg == nil || seen[pkg] {
+			return nil
+		}
+		seen[pkg] = true
+		if pkg.Types == target {
+			return pkg
+		}
+		for _, imported := range pkg.Imports {
+			if found := find(imported); found != nil {
+				return found
+			}
+		}
+		return nil
+	}
+	return find(root)
 }
 
 // extractStructFields uses go/types to recursively walk the named struct
@@ -576,9 +632,41 @@ func derefTypeName(expr ast.Expr) string {
 	return ""
 }
 
+// resolveAliasTypeName follows local type aliases to the named type that owns
+// their methods. Aliases to imported types cannot be resolved from these files.
+func resolveAliasTypeName(files []*ast.File, typeName string) string {
+	aliases := make(map[string]string)
+	for _, file := range files {
+		for _, decl := range file.Decls {
+			genDecl, ok := decl.(*ast.GenDecl)
+			if !ok || genDecl.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range genDecl.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				if !ok || typeSpec.Assign == token.NoPos {
+					continue
+				}
+				alias, ok := typeSpec.Type.(*ast.Ident)
+				if ok {
+					aliases[typeSpec.Name.Name] = alias.Name
+				}
+			}
+		}
+	}
+
+	seen := make(map[string]bool)
+	for aliases[typeName] != "" && !seen[typeName] {
+		seen[typeName] = true
+		typeName = aliases[typeName]
+	}
+	return typeName
+}
+
 // extractMappingMethod searches the parsed files for a method named
 // "Mapping" with a value or pointer receiver of the given type name.
 func extractMappingMethod(files []*ast.File, typeName string) map[string]string {
+	typeName = resolveAliasTypeName(files, typeName)
 	fieldTypes := make(map[string]string)
 	for _, file := range files {
 		ast.Inspect(file, func(n ast.Node) bool {
@@ -604,6 +692,7 @@ func extractMappingMethod(files []*ast.File, typeName string) map[string]string 
 // extractStringReturnMethod searches the parsed files for a method with the given
 // name on the given type.
 func extractStringReturnMethod(files []*ast.File, typeName, methodName string) (string, bool) {
+	typeName = resolveAliasTypeName(files, typeName)
 	var result string
 	var found bool
 	for _, file := range files {
