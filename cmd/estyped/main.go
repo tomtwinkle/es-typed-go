@@ -438,7 +438,9 @@ func parseGoStructInternal(srcDir, typeName string) ([]fieldEntry, []*ast.File, 
 	mappingTypes := extractMappingMethod(mappingFiles, methodTypeName)
 
 	var entries []fieldEntry
-	extractStructFields(rootType, "", mappingTypes, &entries)
+	if err := extractStructFields(rootType, "", mappingTypes, &entries, make(map[*types.Struct]bool)); err != nil {
+		return nil, nil, nil, "", err
+	}
 
 	// Deduplicate entries (since injected multi-fields might overlap)
 	seen := make(map[string]bool)
@@ -486,11 +488,16 @@ func findLoadedPackage(root *packages.Package, target *types.Package) *packages.
 // extractStructFields uses go/types to recursively walk the named struct
 // and append fieldEntry values for every JSON-visible field.
 // This approach safely traverses embedded structs across different packages.
-func extractStructFields(t types.Type, prefix string, mappingTypes map[string]string, entries *[]fieldEntry) {
+func extractStructFields(t types.Type, prefix string, mappingTypes map[string]string, entries *[]fieldEntry, active map[*types.Struct]bool) error {
 	strct, ok := resolveStruct(t)
 	if !ok {
-		return
+		return nil
 	}
+	if active[strct] {
+		return fmt.Errorf("recursive struct at field path %q cannot be expanded into finite field definitions", prefix)
+	}
+	active[strct] = true
+	defer delete(active, strct)
 
 	for i := 0; i < strct.NumFields(); i++ {
 		field := strct.Field(i)
@@ -505,7 +512,9 @@ func extractStructFields(t types.Type, prefix string, mappingTypes map[string]st
 		if jsonName == "" {
 			if field.Anonymous() {
 				// Anonymous embedded field: inline its fields at the same nesting level.
-				extractStructFields(field.Type(), prefix, mappingTypes, entries)
+				if err := extractStructFields(field.Type(), prefix, mappingTypes, entries, active); err != nil {
+					return err
+				}
 				continue
 			}
 			jsonName = field.Name()
@@ -538,7 +547,9 @@ func extractStructFields(t types.Type, prefix string, mappingTypes map[string]st
 				Path:      path,
 				Type:      esType,
 			})
-			extractStructFields(elemStruct, path, mappingTypes, entries)
+			if err := extractStructFields(elemStruct, path, mappingTypes, entries, active); err != nil {
+				return err
+			}
 			continue
 		}
 
@@ -568,6 +579,7 @@ func extractStructFields(t types.Type, prefix string, mappingTypes map[string]st
 			}
 		}
 	}
+	return nil
 }
 
 // resolveStruct recursively unwraps pointers, slices, arrays, and named types
@@ -575,6 +587,7 @@ func extractStructFields(t types.Type, prefix string, mappingTypes map[string]st
 // Go 1.26 type aliases. It intentionally prevents expanding specific domain types
 // like time.Time.
 func resolveStruct(t types.Type) (*types.Struct, bool) {
+	seen := make(map[*types.Named]bool)
 	for {
 		t = types.Unalias(t)
 		switch u := t.(type) {
@@ -585,6 +598,12 @@ func resolveStruct(t types.Type) (*types.Struct, bool) {
 		case *types.Array:
 			t = u.Elem()
 		case *types.Named:
+			// Recursive container types (for example type Items []Items)
+			// never resolve to a struct; stop instead of unwrapping forever.
+			if seen[u] {
+				return nil, false
+			}
+			seen[u] = true
 			if pkg := u.Obj().Pkg(); pkg != nil {
 				if pkg.Path() == "time" && u.Obj().Name() == "Time" {
 					return nil, false

@@ -2,15 +2,18 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"go/ast"
 	"go/format"
 	"go/parser"
 	"go/token"
 	"go/types"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"gotest.tools/v3/assert"
 
@@ -436,6 +439,63 @@ type Document struct {
 	assert.Equal(t, "price", got["Price"])
 	assert.Equal(t, "status", got["Status"])
 	assert.Equal(t, "title", got["Title"])
+}
+
+func writeImportedStructFixture(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	writeGoFile(t, root, "root.go", "package testmod\n")
+	for directory, source := range map[string]string{
+		"external": "package external\ntype Node struct { Items *Node `json:\"items\"` }\ntype Leaf struct { Name string `json:\"name\"` }\ntype RecursiveList []RecursiveList\n",
+		"model":    "package model\nimport \"testmod/external\"\ntype Recursive struct { Items *external.Node `json:\"items\"` }\ntype Siblings struct { Status external.Leaf `json:\"status\"`; Title external.Leaf `json:\"title\"` }\ntype Wrapper struct { Items external.RecursiveList `json:\"items\"` }\n",
+	} {
+		path := filepath.Join(root, directory)
+		assert.NilError(t, os.MkdirAll(path, 0o755))
+		assert.NilError(t, os.WriteFile(filepath.Join(path, "types.go"), []byte(source), 0o644))
+	}
+	return filepath.Join(root, "model")
+}
+
+func TestParseGoStruct_ImportedRecursiveType(t *testing.T) {
+	t.Parallel()
+	if fixture := os.Getenv("ESTYPED_RECURSIVE_FIXTURE"); fixture != "" {
+		typeName := os.Getenv("ESTYPED_RECURSIVE_TYPE")
+		entries, _, err := parseGoStruct(fixture, typeName)
+		if typeName == "Wrapper" {
+			assert.NilError(t, err)
+			assert.Equal(t, len(entries), 1)
+			assert.Equal(t, entries[0].Path, "items")
+			assert.Equal(t, entries[0].Type, "unknown")
+			return
+		}
+		assert.ErrorContains(t, err, "recursive struct")
+		assert.ErrorContains(t, err, "items.items")
+		return
+	}
+	fixture := writeImportedStructFixture(t)
+	for _, typeName := range []string{"Recursive", "Wrapper"} {
+		t.Run(typeName, func(t *testing.T) {
+			t.Parallel()
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			command := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestParseGoStruct_ImportedRecursiveType$")
+			command.Env = append(os.Environ(), "ESTYPED_RECURSIVE_FIXTURE="+fixture, "ESTYPED_RECURSIVE_TYPE="+typeName)
+			output, err := command.CombinedOutput()
+			assert.NilError(t, ctx.Err(), "recursive imported types must terminate: %s", output)
+			assert.NilError(t, err, "recursive imported types must report their bounded result: %s", output)
+		})
+	}
+}
+
+func TestParseGoStruct_ImportedSiblingTypes(t *testing.T) {
+	t.Parallel()
+	entries, _, err := parseGoStruct(writeImportedStructFixture(t), "Siblings")
+	assert.NilError(t, err)
+	paths := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		paths = append(paths, entry.Path)
+	}
+	assert.DeepEqual(t, paths, []string{"status", "status.name", "title", "title.name"})
 }
 
 func writeExternalAliasFixture(t *testing.T) string {
